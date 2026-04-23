@@ -11,7 +11,8 @@ id: Date.now(),
 name: "New Event",
 attendees: 0,
 nights: 0,
-outOfMarket: 0
+outOfMarket: 0,
+incentive: 0
 };
 
 
@@ -26,16 +27,33 @@ e.id === id ? { ...e, [field]: value } : e
 ));
 }
 
-function calculateScore(e) {
+function calculate(e) {
 const roomNights = e.attendees * e.nights;
-const weighted = roomNights * (e.outOfMarket / 100);
+const qualifiedNights = roomNights * (e.outOfMarket / 100);
 
 
-if (weighted > 5000) return "STRONG GO";
-if (weighted > 2000) return "GO";
-if (weighted > 500) return "MAYBE";
-return "NO-GO";
+const adr = 140; // avg daily rate (adjust later)
+const hotelRevenue = qualifiedNights * adr;
 
+const hotRate = 0.07; // McKinney local HOT
+const hotRevenue = hotelRevenue * hotRate;
+
+const roi = e.incentive > 0 ? (hotRevenue / e.incentive).toFixed(2) : 0;
+
+let decision = "NO-GO";
+if (roi > 3) decision = "STRONG GO";
+else if (roi > 2) decision = "GO";
+else if (roi > 1) decision = "MAYBE";
+
+return {
+  roomNights,
+  qualifiedNights,
+  hotelRevenue,
+  hotRevenue,
+  roi,
+  decision
+};
+```
 
 }
 
@@ -50,7 +68,7 @@ return (
   ) : (
     <div style={{ marginTop: "20px" }}>
       {events.map((event) => {
-        const score = calculateScore(event);
+        const c = calculate(event);
 
         return (
           <div
@@ -60,45 +78,54 @@ return (
               borderRadius: "8px",
               padding: "16px",
               marginBottom: "12px",
-              maxWidth: "500px"
+              maxWidth: "520px"
             }}
           >
-            {/* Event Name */}
             <input
               value={event.name}
               onChange={(e) => updateEvent(event.id, "name", e.target.value)}
-              style={{ width: "100%", marginBottom: "10px", fontSize: "16px" }}
+              style={{ width: "100%", marginBottom: "10px" }}
             />
 
-            {/* Attendees */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+              <input
+                type="number"
+                placeholder="Attendees"
+                value={event.attendees}
+                onChange={(e) => updateEvent(event.id, "attendees", Number(e.target.value))}
+              />
+              <input
+                type="number"
+                placeholder="Nights"
+                value={event.nights}
+                onChange={(e) => updateEvent(event.id, "nights", Number(e.target.value))}
+              />
+              <input
+                type="number"
+                placeholder="% OOM"
+                value={event.outOfMarket}
+                onChange={(e) => updateEvent(event.id, "outOfMarket", Number(e.target.value))}
+              />
+            </div>
+
             <input
               type="number"
-              placeholder="Attendees"
-              value={event.attendees}
-              onChange={(e) => updateEvent(event.id, "attendees", Number(e.target.value))}
-              style={{ marginRight: "8px" }}
+              placeholder="City Incentive ($)"
+              value={event.incentive}
+              onChange={(e) => updateEvent(event.id, "incentive", Number(e.target.value))}
+              style={{ marginBottom: "10px" }}
             />
 
-            {/* Nights */}
-            <input
-              type="number"
-              placeholder="Nights"
-              value={event.nights}
-              onChange={(e) => updateEvent(event.id, "nights", Number(e.target.value))}
-              style={{ marginRight: "8px" }}
-            />
+            <div>
+              <div>Room Nights: {Math.round(c.roomNights)}</div>
+              <div>Qualified Nights: {Math.round(c.qualifiedNights)}</div>
+              <div>Hotel Revenue: ${Math.round(c.hotelRevenue).toLocaleString()}</div>
+              <div>HOT Revenue: ${Math.round(c.hotRevenue).toLocaleString()}</div>
+              <div>ROI: {c.roi}x</div>
+            </div>
 
-            {/* Out of Market % */}
-            <input
-              type="number"
-              placeholder="% Out of Market"
-              value={event.outOfMarket}
-              onChange={(e) => updateEvent(event.id, "outOfMarket", Number(e.target.value))}
-            />
-
-            {/* Result */}
             <div style={{ marginTop: "10px", fontWeight: "bold" }}>
-              Decision: {score}
+              Decision: {c.decision}
             </div>
           </div>
         );
