@@ -14,9 +14,9 @@ nights: 0,
 outOfMarket: 0
 };
 
-```
+
 setEvents([newEvent, ...events]);
-```
+
 
 }
 
@@ -30,19 +30,19 @@ function calculateScore(e) {
 const roomNights = e.attendees * e.nights;
 const weighted = roomNights * (e.outOfMarket / 100);
 
-```
+
 if (weighted > 5000) return "STRONG GO";
 if (weighted > 2000) return "GO";
 if (weighted > 500) return "MAYBE";
 return "NO-GO";
-```
+
 
 }
 
 return (
 <div style={{ padding: "40px" }}> <h1>ETF Playbook</h1>
 
-```
+
   <button onClick={addEvent}>Add Event</button>
 
   {events.length === 0 ? (
@@ -106,7 +106,7 @@ return (
     </div>
   )}
 </div>
-```
+
 
 );
 }
