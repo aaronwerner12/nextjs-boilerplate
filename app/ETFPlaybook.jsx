@@ -23,15 +23,21 @@ return (
 
   <button onClick={addEvent}>Add Event</button>
 
-  {events.length === 0 ? (
-    <p>No events yet</p>
-  ) : (
-   <div>
+  <div style={{ marginTop: "20px" }}>
   {events.map((event) => (
-    <div key={event.id}>{event.name}</div>
+    <div
+      key={event.id}
+      style={{
+        border: "1px solid #ddd",
+        borderRadius: "8px",
+        padding: "12px 16px",
+        marginBottom: "10px",
+        maxWidth: "420px",
+      }}
+    >
+      {event.name}
+    </div>
   ))}
-</div>
-  )}
 </div>
 
 
