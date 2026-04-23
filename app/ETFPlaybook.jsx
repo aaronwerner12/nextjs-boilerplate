@@ -13,6 +13,8 @@ export default function ETFPlaybook() {
       nights: "",
       outOfMarket: "",
       incentive: "",
+      adr: "140",
+      hotRate: "7",
     };
 
     setEvents([newEvent, ...events]);
@@ -26,28 +28,39 @@ export default function ETFPlaybook() {
     );
   }
 
+  function deleteEvent(id) {
+    setEvents(events.filter((e) => e.id !== id));
+  }
+
   function calculate(e) {
     const attendees = Number(e.attendees) || 0;
     const nights = Number(e.nights) || 0;
     const outOfMarket = Number(e.outOfMarket) || 0;
     const incentive = Number(e.incentive) || 0;
+    const adr = Number(e.adr) || 0;
+    const hotRate = (Number(e.hotRate) || 0) / 100;
 
     const roomNights = attendees * nights;
     const qualifiedNights = roomNights * (outOfMarket / 100);
-
-    const adr = 140;
     const hotelRevenue = qualifiedNights * adr;
-
-    const hotRate = 0.07;
     const hotRevenue = hotelRevenue * hotRate;
 
     const roi =
       incentive > 0 ? (hotRevenue / incentive).toFixed(2) : "0.00";
 
     let decision = "NO-GO";
-    if (Number(roi) > 3) decision = "STRONG GO";
-    else if (Number(roi) > 2) decision = "GO";
-    else if (Number(roi) > 1) decision = "MAYBE";
+    let decisionColor = "#991b1b";
+
+    if (Number(roi) > 3) {
+      decision = "STRONG GO";
+      decisionColor = "#065f46";
+    } else if (Number(roi) > 2) {
+      decision = "GO";
+      decisionColor = "#166534";
+    } else if (Number(roi) > 1) {
+      decision = "MAYBE";
+      decisionColor = "#92400e";
+    }
 
     return {
       roomNights,
@@ -56,12 +69,13 @@ export default function ETFPlaybook() {
       hotRevenue,
       roi,
       decision,
+      decisionColor,
     };
   }
 
   return (
     <div style={{ padding: "40px", fontFamily: "Arial, sans-serif" }}>
-      <h1>ETF Playbook</h1>
+      <h1 style={{ marginBottom: "12px" }}>ETF Playbook</h1>
 
       <button
         onClick={addEvent}
@@ -73,6 +87,7 @@ export default function ETFPlaybook() {
           borderRadius: "8px",
           cursor: "pointer",
           marginBottom: "20px",
+          fontWeight: "600",
         }}
       >
         Add Event
@@ -93,24 +108,48 @@ export default function ETFPlaybook() {
                   borderRadius: "10px",
                   padding: "16px",
                   marginBottom: "14px",
-                  maxWidth: "620px",
+                  maxWidth: "720px",
+                  background: "#fff",
                 }}
               >
-                <input
-                  value={event.name}
-                  onChange={(e) =>
-                    updateEvent(event.id, "name", e.target.value)
-                  }
+                <div
                   style={{
-                    width: "100%",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "12px",
                     marginBottom: "14px",
-                    padding: "10px",
-                    fontSize: "18px",
-                    border: "1px solid #ccc",
-                    borderRadius: "6px",
-                    boxSizing: "border-box",
+                    alignItems: "center",
                   }}
-                />
+                >
+                  <input
+                    value={event.name}
+                    onChange={(e) =>
+                      updateEvent(event.id, "name", e.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      fontSize: "18px",
+                      border: "1px solid #ccc",
+                      borderRadius: "6px",
+                      boxSizing: "border-box",
+                    }}
+                  />
+
+                  <button
+                    onClick={() => deleteEvent(event.id)}
+                    style={{
+                      background: "#f3f4f6",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
 
                 <div
                   style={{
@@ -203,9 +242,51 @@ export default function ETFPlaybook() {
                       }}
                     />
                   </div>
+
+                  <div>
+                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
+                      ADR ($)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Enter ADR"
+                      value={event.adr}
+                      onChange={(e) =>
+                        updateEvent(event.id, "adr", e.target.value)
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid #ccc",
+                        borderRadius: "6px",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
+                      HOT Rate (%)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Enter HOT %"
+                      value={event.hotRate}
+                      onChange={(e) =>
+                        updateEvent(event.id, "hotRate", e.target.value)
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid #ccc",
+                        borderRadius: "6px",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ lineHeight: "1.8" }}>
+                <div style={{ lineHeight: "1.8", marginTop: "8px" }}>
                   <div>Room Nights: {Math.round(c.roomNights)}</div>
                   <div>Qualified Nights: {Math.round(c.qualifiedNights)}</div>
                   <div>Hotel Revenue: ${Math.round(c.hotelRevenue).toLocaleString()}</div>
@@ -213,7 +294,13 @@ export default function ETFPlaybook() {
                   <div>ROI: {c.roi}x</div>
                 </div>
 
-                <div style={{ marginTop: "12px", fontWeight: "bold" }}>
+                <div
+                  style={{
+                    marginTop: "14px",
+                    fontWeight: "bold",
+                    color: c.decisionColor,
+                  }}
+                >
                   Decision: {c.decision}
                 </div>
               </div>
