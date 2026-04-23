@@ -1,23 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function ETFPlaybook() {
 const [events, setEvents] = useState([]);
 
-const addEvent = () => {
+function addEvent() {
 const newEvent = {
 id: Date.now(),
-name: `New Event ${events.length + 1}`,
-};
-setEvents([newEvent, ...events]);
+name: "New Event " + (events.length + 1),
 };
 
+```
+setEvents((prev) => [newEvent, ...prev]);
+```
+
+}
+
 return (
-<div style={{ padding: 40, fontFamily: "Arial" }}> <h1>ETF Playbook</h1>
+<div style={{ padding: "40px", fontFamily: "Arial, sans-serif" }}> <h1>ETF Playbook</h1>
 
 ```
   <button
+    type="button"
     onClick={addEvent}
     style={{
       backgroundColor: "#111",
@@ -29,7 +34,7 @@ return (
       fontSize: "16px",
       fontWeight: "600",
       marginTop: "12px",
-      marginBottom: "24px"
+      marginBottom: "24px",
     }}
   >
     Add Event
@@ -47,7 +52,7 @@ return (
             border: "1px solid #ddd",
             borderRadius: "8px",
             marginBottom: "10px",
-            maxWidth: "400px"
+            maxWidth: "400px",
           }}
         >
           {event.name}
