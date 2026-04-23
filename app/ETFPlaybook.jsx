@@ -1,9 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function ETFPlaybook() {
   const [events, setEvents] = useState([]);
+
+  // Load from browser storage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("etf_events");
+      if (saved) setEvents(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // Save to browser storage
+  useEffect(() => {
+    try {
+      localStorage.setItem("etf_events", JSON.stringify(events));
+    } catch {}
+  }, [events]);
 
   function addEvent() {
     const newEvent = {
@@ -15,9 +30,14 @@ export default function ETFPlaybook() {
       incentive: "",
       adr: "140",
       hotRate: "7",
+      confidence: "Medium",
     };
 
     setEvents([newEvent, ...events]);
+  }
+
+  function deleteEvent(id) {
+    setEvents(events.filter((e) => e.id !== id));
   }
 
   function updateEvent(id, field, value) {
@@ -26,10 +46,6 @@ export default function ETFPlaybook() {
         e.id === id ? { ...e, [field]: value } : e
       )
     );
-  }
-
-  function deleteEvent(id) {
-    setEvents(events.filter((e) => e.id !== id));
   }
 
   function calculate(e) {
@@ -49,17 +65,17 @@ export default function ETFPlaybook() {
       incentive > 0 ? (hotRevenue / incentive).toFixed(2) : "0.00";
 
     let decision = "NO-GO";
-    let decisionColor = "#991b1b";
+    let color = "#991b1b";
 
     if (Number(roi) > 3) {
       decision = "STRONG GO";
-      decisionColor = "#065f46";
+      color = "#065f46";
     } else if (Number(roi) > 2) {
       decision = "GO";
-      decisionColor = "#166534";
+      color = "#166534";
     } else if (Number(roi) > 1) {
       decision = "MAYBE";
-      decisionColor = "#92400e";
+      color = "#92400e";
     }
 
     return {
@@ -69,34 +85,51 @@ export default function ETFPlaybook() {
       hotRevenue,
       roi,
       decision,
-      decisionColor,
+      color,
     };
   }
 
+  // Summary totals
+  const totals = events.reduce(
+    (acc, e) => {
+      const c = calculate(e);
+      acc.incentives += Number(e.incentive) || 0;
+      acc.hot += c.hotRevenue;
+      return acc;
+    },
+    { incentives: 0, hot: 0 }
+  );
+
   return (
     <div style={{ padding: "40px", fontFamily: "Arial, sans-serif" }}>
-      <h1 style={{ marginBottom: "12px" }}>ETF Playbook</h1>
+      <h1>ETF Playbook</h1>
 
       <button
         onClick={addEvent}
         style={{
           background: "#111",
           color: "#fff",
-          border: "none",
           padding: "10px 16px",
           borderRadius: "8px",
+          border: "none",
           cursor: "pointer",
           marginBottom: "20px",
-          fontWeight: "600",
         }}
       >
         Add Event
       </button>
 
+      {/* Summary */}
+      {events.length > 0 && (
+        <div style={{ marginBottom: "20px", fontWeight: "bold" }}>
+          Total Incentives: ${totals.incentives.toLocaleString()} | Estimated HOT: ${Math.round(totals.hot).toLocaleString()}
+        </div>
+      )}
+
       {events.length === 0 ? (
         <p>No events yet</p>
       ) : (
-        <div style={{ marginTop: "20px" }}>
+        <div>
           {events.map((event) => {
             const c = calculate(event);
 
@@ -109,184 +142,29 @@ export default function ETFPlaybook() {
                   padding: "16px",
                   marginBottom: "14px",
                   maxWidth: "720px",
-                  background: "#fff",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    marginBottom: "14px",
-                    alignItems: "center",
-                  }}
-                >
+                <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
                   <input
                     value={event.name}
                     onChange={(e) =>
                       updateEvent(event.id, "name", e.target.value)
                     }
-                    style={{
-                      width: "100%",
-                      padding: "10px",
-                      fontSize: "18px",
-                      border: "1px solid #ccc",
-                      borderRadius: "6px",
-                      boxSizing: "border-box",
-                    }}
+                    style={{ flex: 1 }}
                   />
-
-                  <button
-                    onClick={() => deleteEvent(event.id)}
-                    style={{
-                      background: "#f3f4f6",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      padding: "10px 12px",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Delete
-                  </button>
+                  <button onClick={() => deleteEvent(event.id)}>Delete</button>
                 </div>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <div>
-                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-                      Attendees
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Enter attendees"
-                      value={event.attendees}
-                      onChange={(e) =>
-                        updateEvent(event.id, "attendees", e.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px",
-                        border: "1px solid #ccc",
-                        borderRadius: "6px",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-                      Nights
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Enter nights"
-                      value={event.nights}
-                      onChange={(e) =>
-                        updateEvent(event.id, "nights", e.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px",
-                        border: "1px solid #ccc",
-                        borderRadius: "6px",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-                      % Out of Market
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Enter %"
-                      value={event.outOfMarket}
-                      onChange={(e) =>
-                        updateEvent(event.id, "outOfMarket", e.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px",
-                        border: "1px solid #ccc",
-                        borderRadius: "6px",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-                      City Incentive ($)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Enter incentive"
-                      value={event.incentive}
-                      onChange={(e) =>
-                        updateEvent(event.id, "incentive", e.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px",
-                        border: "1px solid #ccc",
-                        borderRadius: "6px",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-                      ADR ($)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Enter ADR"
-                      value={event.adr}
-                      onChange={(e) =>
-                        updateEvent(event.id, "adr", e.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px",
-                        border: "1px solid #ccc",
-                        borderRadius: "6px",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", marginBottom: "6px", fontSize: "14px" }}>
-                      HOT Rate (%)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Enter HOT %"
-                      value={event.hotRate}
-                      onChange={(e) =>
-                        updateEvent(event.id, "hotRate", e.target.value)
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px",
-                        border: "1px solid #ccc",
-                        borderRadius: "6px",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <input type="number" placeholder="Attendees" value={event.attendees} onChange={(e)=>updateEvent(event.id,"attendees",e.target.value)} />
+                  <input type="number" placeholder="Nights" value={event.nights} onChange={(e)=>updateEvent(event.id,"nights",e.target.value)} />
+                  <input type="number" placeholder="% Out of Market" value={event.outOfMarket} onChange={(e)=>updateEvent(event.id,"outOfMarket",e.target.value)} />
+                  <input type="number" placeholder="Incentive $" value={event.incentive} onChange={(e)=>updateEvent(event.id,"incentive",e.target.value)} />
+                  <input type="number" placeholder="ADR" value={event.adr} onChange={(e)=>updateEvent(event.id,"adr",e.target.value)} />
+                  <input type="number" placeholder="HOT %" value={event.hotRate} onChange={(e)=>updateEvent(event.id,"hotRate",e.target.value)} />
                 </div>
 
-                <div style={{ lineHeight: "1.8", marginTop: "8px" }}>
+                <div style={{ marginTop: "10px", lineHeight: "1.8" }}>
                   <div>Room Nights: {Math.round(c.roomNights)}</div>
                   <div>Qualified Nights: {Math.round(c.qualifiedNights)}</div>
                   <div>Hotel Revenue: ${Math.round(c.hotelRevenue).toLocaleString()}</div>
@@ -294,13 +172,7 @@ export default function ETFPlaybook() {
                   <div>ROI: {c.roi}x</div>
                 </div>
 
-                <div
-                  style={{
-                    marginTop: "14px",
-                    fontWeight: "bold",
-                    color: c.decisionColor,
-                  }}
-                >
+                <div style={{ marginTop: "10px", fontWeight: "bold", color: c.color }}>
                   Decision: {c.decision}
                 </div>
               </div>
