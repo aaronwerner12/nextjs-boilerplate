@@ -3,43 +3,43 @@
 import { useState } from "react";
 
 export default function ETFPlaybook() {
-const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState([]);
 
-function addEvent() {
-const newEvent = {
-id: Date.now(),
-name: "New Event " + (events.length + 1),
-};
+  function addEvent() {
+    const newEvent = {
+      id: Date.now(),
+      name: "New Event " + (events.length + 1),
+    };
 
+    setEvents([newEvent, ...events]);
+  }
 
-setEvents([newEvent, ...events]);
+  return (
+    <div style={{ padding: "40px" }}>
+      <h1>ETF Playbook</h1>
 
+      <button onClick={addEvent}>Add Event</button>
 
-}
-
-return (
-<div style={{ padding: "40px" }}> <h1>ETF Playbook</h1>
-
-
-  <button onClick={addEvent}>Add Event</button>
-
-  <div style={{ marginTop: "20px" }}>
-  {events.map((event) => (
-    <div
-      key={event.id}
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "12px 16px",
-        marginBottom: "10px",
-        maxWidth: "420px",
-      }}
-    >
-      {event.name}
+      {events.length === 0 ? (
+        <p>No events yet</p>
+      ) : (
+        <div style={{ marginTop: "20px" }}>
+          {events.map((event) => (
+            <div
+              key={event.id}
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "10px",
+                maxWidth: "420px",
+              }}
+            >
+              {event.name}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-  ))}
-</div>
-
-
-);
+  );
 }
