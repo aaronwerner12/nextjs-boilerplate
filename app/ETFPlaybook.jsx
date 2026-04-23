@@ -14,6 +14,12 @@ export default function ETFPlaybook() {
     setEvents([newEvent, ...events]);
   }
 
+  function updateEventName(id, value) {
+    setEvents(events.map(e => 
+      e.id === id ? { ...e, name: value } : e
+    ));
+  }
+
   return (
     <div style={{ padding: "40px" }}>
       <h1>ETF Playbook</h1>
@@ -35,7 +41,16 @@ export default function ETFPlaybook() {
                 maxWidth: "420px",
               }}
             >
-              {event.name}
+              <input
+                value={event.name}
+                onChange={(e) => updateEventName(event.id, e.target.value)}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  fontSize: "16px",
+                  outline: "none"
+                }}
+              />
             </div>
           ))}
         </div>
