@@ -3,13 +3,37 @@
 import { useState } from "react";
 
 export default function ETFPlaybook() {
-  const [count, setCount] = useState(0);
+const [events, setEvents] = useState([]);
 
-  return (
+function addEvent() {
+const newEvent = {
+id: Date.now(),
+name: "New Event " + (events.length + 1),
+};
+
+```
+setEvents([newEvent, ...events]);
+```
+
+}
+
+return (
+<div style={{ padding: "40px" }}> <h1>ETF Playbook</h1>
+
+```
+  <button onClick={addEvent}>Add Event</button>
+
+  {events.length === 0 ? (
+    <p>No events yet</p>
+  ) : (
     <div>
-      <h1>ETF Playbook</h1>
-      <button onClick={() => setCount(count + 1)}>Add Event</button>
-      <p>Count: {count}</p>
+      {events.map((event) => (
+        <div key={event.id}>{event.name}</div>
+      ))}
     </div>
-  );
+  )}
+</div>
+```
+
+);
 }
