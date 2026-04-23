@@ -1,3 +1,5 @@
-"use client";
+import ETFPlaybook from "./ETFPlaybook";
 
-import { useState, useEffect } from "react";
+export default function Page() {
+  return <ETFPlaybook />;
+}
