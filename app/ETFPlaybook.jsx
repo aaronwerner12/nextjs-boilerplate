@@ -26,11 +26,11 @@ return (
   {events.length === 0 ? (
     <p>No events yet</p>
   ) : (
-    <div>
-      {events.map((event) => (
-        <div key={event.id}>{event.name}</div>
-      ))}
-    </div>
+   <div>
+  {events.map((event) => (
+    <div key={event.id}>{event.name}</div>
+  ))}
+</div>
   )}
 </div>
 
