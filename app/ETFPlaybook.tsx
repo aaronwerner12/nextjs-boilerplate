@@ -272,10 +272,30 @@ const ATTENDEE_CATS = [
   { key: "spectators", label: "Friends/Family/Spectators", perRoom: 4 },
 ];
 
-// Default venue list — update with your city's venues
-// Users can freely add or remove any of these
+// McKinney sports venues
 const DEFAULT_MCKINNEY_VENUES = [
-  "Enter your local venues here...",
+  "Al Ruschhaupt Soccer Complex — 2701 Northbrook Drive",
+  "Alex Clark Memorial Disc Golf Course — 1986 Park View Ave",
+  "Arete Athletics Center — 1720 Bray Central Dr.",
+  "Baseball Nation Aviator Ballpark — 6151 CR 124",
+  "Children's Health StarCenter at Craig Ranch — 6993 Stars Av",
+  "Erwin Park — 4300 CR 1006",
+  "Frozen Ropes of McKinney — 6161 CR 124",
+  "Gabe Nesbitt Baseball Complex — 7001 Eldorado Parkway",
+  "Gabe Nesbitt Softball Complex — 3205 Alma Road",
+  "Grady Littlejohn Softball & Baseball Complex — 1401 Wilson Creek Pkwy",
+  "McKinney ISD Stadium — 4201 S. Hardin Blvd.",
+  "McKinney Soccer Complex at Craig Ranch — 6375 Collin McKinney Pkwy",
+  "Mouzon Ball Fields — 1307 East Greenville Ave.",
+  "Oak Hollow Golf Course — 3005 N McDonald St",
+  "PSA McKinney — 7205 Eldorado Pkwy",
+  "Ron Poe Stadium - McKinney ISD — 1 Duval Street",
+  "Stonebridge Ranch Hills Course — 5901 Glen Oaks Drive",
+  "The Beach at Craig Ranch — 6145 Alma Road",
+  "Towne Lake Disc Golf Course — 1405 Wilson Creek Parkway",
+  "TPC Craig Ranch — 8000 Collin McKinney Pkwy.",
+  "Velocity Badminton — 4220 Ridge Rd.",
+  "Westridge Golf Course — 9055 N. Cotton Ridge Rd.",
 ];
 
 // Timeline deadlines (days relative to first day of event)
