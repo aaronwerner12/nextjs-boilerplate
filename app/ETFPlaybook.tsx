@@ -1,5 +1,8 @@
 // @ts-nocheck
 "use client";
+// @ts-nocheck
+"use client";
+
 import React, { useState, useEffect, useMemo } from "react";
 import {
   ChevronRight, ChevronDown, CheckCircle2, XCircle, AlertCircle,
@@ -10,12 +13,172 @@ import {
 } from "lucide-react";
 
 // ————————————————————————————————————————————————————————————————
-// Texas ETF Pursuit Tool
-// An independent planning tool for DMOs evaluating, applying to,
-// and managing Texas Events Trust Fund submissions.
-// NOT an official state form. NOT affiliated with the Office of
-// the Governor or EDT. For internal planning purposes only.
+// Texas ETF Pursuit Tool — monday.com Edition
+// Shared team tool: events sync to/from a monday.com board so the
+// whole team sees the same pipeline.
+// NOT an official state form. NOT affiliated with EDT.
 // ————————————————————————————————————————————————————————————————
+
+// ————————————————————————————————————————————————————————————————
+// Monday.com API layer
+// All calls go through the v2 GraphQL endpoint.
+// Token and board ID are stored in localStorage (browser-only).
+// ————————————————————————————————————————————————————————————————
+const MONDAY_API = "https://api.monday.com/v2";
+
+const mondayQuery = async (token, query, variables = {}) => {
+  const res = await fetch(MONDAY_API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": token,
+      "API-Version": "2024-01",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message);
+  return json.data;
+};
+
+// Column IDs we'll use — created once, stored in localStorage
+const COL = {
+  status:       "status",
+  firstDay:     "date4",
+  lastDay:      "date",
+  siteOrg:      "text",
+  projectedFund:"numbers",
+  localMatch:   "numbers1",
+  roomNights:   "numbers2",
+  outOfMarket:  "numbers3",
+  recommendation: "text1",
+  eligPass:     "checkbox",
+  hotelBlock:   "checkbox1",
+  appDeadline:  "date0",
+  docsComplete: "numbers4",
+  notes:        "long_text",
+  mondayId:     "__monday_item_id__", // not a real column — stored in event obj
+};
+
+// Convert a local event object → Monday column values object
+const eventToMonday = (event, calc, decision) => {
+  const appDeadline = event.firstDay
+    ? addDays(event.firstDay, -120)?.toISOString().split("T")[0]
+    : null;
+  const docsComplete = event.docs
+    ? Object.values(event.docs).filter((d) => d.done).length
+    : 0;
+
+  return {
+    [COL.firstDay]:      event.firstDay ? JSON.stringify({ date: event.firstDay }) : null,
+    [COL.lastDay]:       event.lastDay  ? JSON.stringify({ date: event.lastDay })  : null,
+    [COL.siteOrg]:       event.siteSelectionOrg || "",
+    [COL.projectedFund]: Math.round(decision?.estimate || 0),
+    [COL.localMatch]:    Math.round(calc?.requiredLocalMatch || 0),
+    [COL.roomNights]:    Math.round(event.roomNights || calc?.totalRoomNights || 0),
+    [COL.outOfMarket]:   event.outOfMarketPct || 0,
+    [COL.recommendation]: decision?.recommendation || "",
+    [COL.eligPass]:      JSON.stringify({ checked: !!(event.elig?.competitiveBid && event.elig?.siteSelectionLetter && event.elig?.annualOrOnce && event.elig?.soleSiteOrRegional && event.elig?.notHeldElsewhere) }),
+    [COL.hotelBlock]:    JSON.stringify({ checked: !!event.hotelBlockConfirmed }),
+    [COL.appDeadline]:   appDeadline ? JSON.stringify({ date: appDeadline }) : null,
+    [COL.docsComplete]:  docsComplete,
+    [COL.notes]:         event.notes || "",
+  };
+};
+
+// Status label map (Monday status column uses label text)
+const STATUS_LABELS = {
+  analysis:    "Analysis",
+  application: "Application",
+  approved:    "Approved",
+  "post-event":"Post-Event",
+  complete:    "Complete",
+};
+
+// Create all needed columns on the board (idempotent — safe to call multiple times)
+const ensureBoardColumns = async (token, boardId) => {
+  // We'll use Monday's "create_column" mutation — if columns already exist it'll error, we just ignore those errors
+  const cols = [
+    { title: "Status",             column_type: "color" },
+    { title: "First Day",          column_type: "date" },
+    { title: "Last Day",           column_type: "date" },
+    { title: "Site Selection Org", column_type: "text" },
+    { title: "Projected Fund",     column_type: "numeric" },
+    { title: "Local Match",        column_type: "numeric" },
+    { title: "Room Nights",        column_type: "numeric" },
+    { title: "Out-of-Market %",    column_type: "numeric" },
+    { title: "Recommendation",     column_type: "text" },
+    { title: "Eligibility Pass",   column_type: "checkbox" },
+    { title: "Hotel Block",        column_type: "checkbox" },
+    { title: "App Deadline",       column_type: "date" },
+    { title: "Docs Complete",      column_type: "numeric" },
+    { title: "Notes",              column_type: "long_text" },
+  ];
+  // Fire-and-forget — columns may already exist
+  for (const col of cols) {
+    try {
+      await mondayQuery(token, `
+        mutation {
+          create_column(board_id: ${boardId}, title: "${col.title}", column_type: ${col.column_type}) { id }
+        }
+      `);
+    } catch (_) { /* column likely already exists */ }
+  }
+};
+
+// Fetch all items from the board and map to local event summaries
+const fetchBoardItems = async (token, boardId) => {
+  const data = await mondayQuery(token, `
+    {
+      boards(ids: [${boardId}]) {
+        items_page(limit: 200) {
+          items {
+            id
+            name
+            column_values {
+              id
+              text
+              value
+            }
+          }
+        }
+      }
+    }
+  `);
+  return data?.boards?.[0]?.items_page?.items || [];
+};
+
+// Create a new item on the board, return the Monday item ID
+const createBoardItem = async (token, boardId, name) => {
+  const data = await mondayQuery(token, `
+    mutation {
+      create_item(board_id: ${boardId}, item_name: "${name.replace(/"/g, "'")}") { id }
+    }
+  `);
+  return data?.create_item?.id;
+};
+
+// Update column values for an existing item
+const updateBoardItem = async (token, boardId, itemId, columnValues) => {
+  // Remove nulls
+  const clean = {};
+  Object.entries(columnValues).forEach(([k, v]) => {
+    if (v !== null && v !== undefined && k !== COL.mondayId) clean[k] = v;
+  });
+  const colValStr = JSON.stringify(JSON.stringify(clean));
+  await mondayQuery(token, `
+    mutation {
+      change_multiple_column_values(board_id: ${boardId}, item_id: ${itemId}, column_values: ${colValStr}) { id }
+    }
+  `);
+};
+
+// Delete an item from the board
+const deleteBoardItem = async (token, boardId, itemId) => {
+  await mondayQuery(token, `
+    mutation { delete_item(item_id: ${itemId}) { id } }
+  `);
+};
 
 const fmtMoney = (n) => {
   if (n == null || isNaN(n)) return "$0";
@@ -302,43 +465,103 @@ function evaluateDecision(event, calcResult) {
 }
 
 // ————————————————————————————————————————————————————————————————
-// Component — Main App
+// Component — Main App (Monday.com edition)
 // ————————————————————————————————————————————————————————————————
 export default function ETFPlaybook() {
   const [events, setEvents] = useState([]);
   const [currentEventId, setCurrentEventId] = useState(null);
   const [tab, setTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
-  const [saveStatus, setSaveStatus] = useState("");
+  const [saveStatus, setSaveStatus] = useState(""); // "saving" | "saved" | "error" | "syncing" | "synced"
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Load from persistent storage
+  // Monday config — stored in localStorage
+  const [mondayToken, setMondayToken] = useState(() => localStorage.getItem("etf_monday_token") || "");
+  const [mondayBoardId, setMondayBoardId] = useState(() => localStorage.getItem("etf_monday_board") || "18410218031");
+  const mondayEnabled = !!(mondayToken && mondayBoardId);
+
+  // ── Load: first from localStorage, then sync from Monday ──────
   useEffect(() => {
     (async () => {
+      // 1. Load local cache immediately so UI is fast
       try {
-        const res = await window.storage.get("dmo_etf_events");
-        if (res && res.value) {
-          const parsed = JSON.parse(res.value);
-          setEvents(parsed);
+        const raw = localStorage.getItem("etf_events_cache");
+        if (raw) setEvents(JSON.parse(raw));
+      } catch (_) {}
+
+      // 2. If Monday is configured, pull latest from board
+      if (mondayToken && mondayBoardId) {
+        try {
+          setSaveStatus("syncing");
+          const items = await fetchBoardItems(mondayToken, mondayBoardId);
+          if (items.length > 0) {
+            // Merge Monday items with local cache — Monday is source of truth for shared fields
+            setEvents((prev) => {
+              const merged = [...prev];
+              items.forEach((item) => {
+                const existing = merged.find((e) => e.mondayItemId === item.id);
+                if (!existing) {
+                  // New item from Monday — add as minimal event
+                  merged.push({
+                    ...blankEvent(),
+                    id: "mon_" + item.id,
+                    mondayItemId: item.id,
+                    name: item.name,
+                  });
+                }
+              });
+              return merged;
+            });
+          }
+          setSaveStatus("synced");
+          setTimeout(() => setSaveStatus(""), 2000);
+        } catch (e) {
+          setSaveStatus("error");
         }
-      } catch (e) {
-        // no data yet
       }
       setLoading(false);
     })();
-  }, []);
+  }, [mondayToken, mondayBoardId]);
 
-  // Save on change
+  // ── Save: local cache always, Monday when configured ──────────
+  const syncToMonday = async (eventsToSync) => {
+    if (!mondayEnabled) return;
+    setSaveStatus("syncing");
+    try {
+      for (const event of eventsToSync) {
+        const calc = calculateTrustFund(event);
+        const decision = evaluateDecision(event, calc);
+        const colVals = eventToMonday(event, calc, decision);
+
+        if (event.mondayItemId) {
+          // Update existing item
+          await updateBoardItem(mondayToken, mondayBoardId, event.mondayItemId, colVals);
+        } else if (event.name) {
+          // Create new item
+          const newId = await createBoardItem(mondayToken, mondayBoardId, event.name || "Untitled event");
+          if (newId) {
+            await updateBoardItem(mondayToken, mondayBoardId, newId, colVals);
+            // Store Monday ID back on the event
+            setEvents((prev) =>
+              prev.map((e) => e.id === event.id ? { ...e, mondayItemId: newId } : e)
+            );
+          }
+        }
+      }
+      setSaveStatus("synced");
+      setTimeout(() => setSaveStatus(""), 2000);
+    } catch (e) {
+      console.error("Monday sync error:", e);
+      setSaveStatus("error");
+    }
+  };
+
   useEffect(() => {
     if (loading) return;
-    const t = setTimeout(async () => {
-      try {
-        await window.storage.set("dmo_etf_events", JSON.stringify(events));
-        setSaveStatus("saved");
-        setTimeout(() => setSaveStatus(""), 1500);
-      } catch (e) {
-        setSaveStatus("error");
-      }
-    }, 400);
+    // Always save to local cache
+    localStorage.setItem("etf_events_cache", JSON.stringify(events));
+    // Debounce Monday sync
+    const t = setTimeout(() => syncToMonday(events), 1500);
     return () => clearTimeout(t);
   }, [events, loading]);
 
@@ -357,17 +580,42 @@ export default function ETFPlaybook() {
     setTab("overview");
   };
 
-  const deleteEvent = (id) => {
+  const deleteEvent = async (id) => {
     if (!window.confirm("Delete this event and all its data?")) return;
+    const event = events.find((e) => e.id === id);
+    if (event?.mondayItemId && mondayEnabled) {
+      try { await deleteBoardItem(mondayToken, mondayBoardId, event.mondayItemId); } catch (_) {}
+    }
     setEvents((prev) => prev.filter((e) => e.id !== id));
     if (currentEventId === id) setCurrentEventId(null);
+  };
+
+  const saveSettings = (token, boardId) => {
+    localStorage.setItem("etf_monday_token", token);
+    localStorage.setItem("etf_monday_board", boardId);
+    setMondayToken(token);
+    setMondayBoardId(boardId);
+    setShowSettings(false);
   };
 
   if (loading) {
     return (
       <div style={styles.loadingScreen}>
-        <div style={styles.loadingText}>Loading ETF Playbook…</div>
+        <div style={styles.loadingText}>
+          {mondayEnabled ? "Syncing with monday.com…" : "Loading ETF Pursuit Tool…"}
+        </div>
       </div>
+    );
+  }
+
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        initialToken={mondayToken}
+        initialBoardId={mondayBoardId}
+        onSave={saveSettings}
+        onCancel={() => setShowSettings(false)}
+      />
     );
   }
 
@@ -382,10 +630,18 @@ export default function ETFPlaybook() {
         onDelete={deleteEvent}
         onHome={() => { setCurrentEventId(null); setTab("dashboard"); }}
         saveStatus={saveStatus}
+        mondayEnabled={mondayEnabled}
+        onSettings={() => setShowSettings(true)}
       />
       <main style={styles.main}>
         {!currentEvent ? (
-          <Dashboard events={events} onOpen={(id) => { setCurrentEventId(id); setTab("overview"); }} onCreate={createEvent} />
+          <Dashboard
+            events={events}
+            onOpen={(id) => { setCurrentEventId(id); setTab("overview"); }}
+            onCreate={createEvent}
+            mondayEnabled={mondayEnabled}
+            onSettings={() => setShowSettings(true)}
+          />
         ) : (
           <EventView
             event={currentEvent}
@@ -400,9 +656,117 @@ export default function ETFPlaybook() {
 }
 
 // ————————————————————————————————————————————————————————————————
+// Settings Screen — Monday.com configuration
+// ————————————————————————————————————————————————————————————————
+function SettingsScreen({ initialToken, initialBoardId, onSave, onCancel }) {
+  const [token, setToken] = useState(initialToken);
+  const [boardId, setBoardId] = useState(initialBoardId);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  const testConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const data = await mondayQuery(token, `{ me { name email } boards(ids: [${boardId}]) { name } }`);
+      setTestResult({
+        ok: true,
+        msg: `Connected as ${data.me.name} · Board: "${data.boards?.[0]?.name || boardId}"`,
+      });
+    } catch (e) {
+      setTestResult({ ok: false, msg: e.message });
+    }
+    setTesting(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#faf8f4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 40, maxWidth: 540, width: "100%" }}>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 600, marginBottom: 6 }}>
+          monday.com Settings
+        </div>
+        <p style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 28, lineHeight: 1.6 }}>
+          Connect to your monday.com board so your whole team shares the same ETF pipeline. Your token is stored only in this browser.
+        </p>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 6 }}>
+            API Token
+          </label>
+          <input
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="Paste your monday.com API token"
+            style={{ width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13.5, fontFamily: "monospace", boxSizing: "border-box" }}
+          />
+          <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>
+            monday.com → Profile picture → Developers → My Access Tokens
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 6 }}>
+            Board ID
+          </label>
+          <input
+            value={boardId}
+            onChange={(e) => setBoardId(e.target.value)}
+            placeholder="e.g. 18410218031"
+            style={{ width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13.5, fontFamily: "monospace", boxSizing: "border-box" }}
+          />
+          <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>
+            Found in the board URL: monday.com/boards/<strong>XXXXXXXXXX</strong>
+          </div>
+        </div>
+
+        {testResult && (
+          <div style={{
+            padding: "10px 14px",
+            borderRadius: 4,
+            marginBottom: 20,
+            fontSize: 13,
+            background: testResult.ok ? "#f0fdf4" : "#fef2f2",
+            color: testResult.ok ? "#065f46" : "#991b1b",
+            border: `1px solid ${testResult.ok ? "#bbf7d0" : "#fecaca"}`,
+          }}>
+            {testResult.ok ? "✓ " : "✗ "}{testResult.msg}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={testConnection}
+            disabled={!token || !boardId || testing}
+            style={{ padding: "10px 18px", background: "#fff", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13.5, fontWeight: 500, cursor: "pointer" }}
+          >
+            {testing ? "Testing…" : "Test Connection"}
+          </button>
+          <button
+            onClick={() => onSave(token, boardId)}
+            disabled={!token || !boardId}
+            style={{ padding: "10px 18px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}
+          >
+            Save & Connect
+          </button>
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              style={{ padding: "10px 14px", background: "transparent", border: "none", fontSize: 13.5, color: "#6b6660", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
 // Sidebar
 // ————————————————————————————————————————————————————————————————
-function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus }) {
+function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, mondayEnabled, onSettings }) {
   return (
     <aside style={styles.sidebar}>
       <div style={styles.brand} onClick={onHome}>
@@ -453,9 +817,19 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
       </div>
 
       <div style={styles.sidebarFooter}>
-        {saveStatus === "saved" && <><CheckCircle2 size={11} /> Saved</>}
-        {saveStatus === "error" && <><AlertCircle size={11} /> Save failed</>}
-        {!saveStatus && <>Auto-saves locally in this browser</>}
+        <div style={{ marginBottom: 8 }}>
+          {saveStatus === "syncing" && <span style={{ color: "#d97706" }}>⟳ Syncing to monday…</span>}
+          {saveStatus === "synced"  && <span style={{ color: "#059669" }}>✓ Synced to monday</span>}
+          {saveStatus === "error"   && <span style={{ color: "#dc2626" }}>✗ Sync error</span>}
+          {!saveStatus && mondayEnabled && <span style={{ color: "#059669" }}>● monday.com connected</span>}
+          {!saveStatus && !mondayEnabled && <span style={{ color: "#d97706" }}>○ monday not connected</span>}
+        </div>
+        <button
+          onClick={onSettings}
+          style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+        >
+          monday.com settings
+        </button>
       </div>
     </aside>
   );
@@ -476,7 +850,7 @@ function StatusPill({ status }) {
 // ————————————————————————————————————————————————————————————————
 // Dashboard (no event selected)
 // ————————————————————————————————————————————————————————————————
-function Dashboard({ events, onOpen, onCreate }) {
+function Dashboard({ events, onOpen, onCreate, mondayEnabled, onSettings }) {
   const stats = useMemo(() => {
     let projected = 0;
     let active = 0;
@@ -515,6 +889,18 @@ function Dashboard({ events, onOpen, onCreate }) {
           }}>
             <strong>⚠ Planning tool only.</strong> This tool is NOT affiliated with the Texas Office of the Governor or the Economic Development and Tourism division (EDT). It does not submit applications or constitute official program participation. All official submissions must be made directly to EDT at <strong>eventsfund@gov.texas.gov</strong> using the official state templates.
           </div>
+
+          {mondayEnabled ? (
+            <div style={{ marginTop: 10, padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderLeft: "3px solid #059669", borderRadius: 3, fontSize: 12.5, color: "#065f46" }}>
+              <strong>● monday.com connected</strong> — events sync automatically across your team.{" "}
+              <button onClick={onSettings} style={{ background: "none", border: "none", color: "#065f46", textDecoration: "underline", cursor: "pointer", fontSize: 12.5, padding: 0 }}>Manage settings</button>
+            </div>
+          ) : (
+            <div style={{ marginTop: 10, padding: "10px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderLeft: "3px solid #d97706", borderRadius: 3, fontSize: 12.5, color: "#92400e" }}>
+              <strong>○ monday.com not connected</strong> — events are saved in this browser only.{" "}
+              <button onClick={onSettings} style={{ background: "none", border: "none", color: "#92400e", textDecoration: "underline", cursor: "pointer", fontSize: 12.5, padding: 0 }}>Connect now →</button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -1957,24 +2343,20 @@ function VenuePicker({ selected, legacyValue, onChange }) {
 
   // Load custom venues from storage (shared across all events for this user)
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await window.storage.get("vm_custom_venues");
-        if (res && res.value) {
-          const parsed = JSON.parse(res.value);
-          if (Array.isArray(parsed)) setCustomVenues(parsed);
-        }
-      } catch (e) {
-        // none yet
+    try {
+      const raw = localStorage.getItem("etf_custom_venues");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setCustomVenues(parsed);
       }
-      setLoaded(true);
-    })();
+    } catch (e) { /* none yet */ }
+    setLoaded(true);
   }, []);
 
   // Persist custom venues
   useEffect(() => {
     if (!loaded) return;
-    window.storage.set("vm_custom_venues", JSON.stringify(customVenues)).catch(() => {});
+    try { localStorage.setItem("etf_custom_venues", JSON.stringify(customVenues)); } catch (_) {}
   }, [customVenues, loaded]);
 
   // Migrate legacy single-venue string into the selected array on first load
