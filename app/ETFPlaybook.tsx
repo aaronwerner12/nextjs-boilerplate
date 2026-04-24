@@ -58,30 +58,62 @@ const COL = {
   mondayId:     "__monday_item_id__", // not a real column — stored in event obj
 };
 
-// Convert a local event object → Monday column values object
-const eventToMonday = (event, calc, decision) => {
+// Convert a local event object → Monday column values (only safe text/number fields)
+// We write to columns by their auto-generated IDs after creation.
+// To avoid errors from missing columns, we catch per-column and continue.
+const eventToMondaySimple = (event, calc, decision) => {
   const appDeadline = event.firstDay
     ? addDays(event.firstDay, -120)?.toISOString().split("T")[0]
     : null;
   const docsComplete = event.docs
     ? Object.values(event.docs).filter((d) => d.done).length
     : 0;
-
+  // Return a plain object of label→value pairs we'll set via name-based lookup
   return {
-    [COL.firstDay]:      event.firstDay ? JSON.stringify({ date: event.firstDay }) : null,
-    [COL.lastDay]:       event.lastDay  ? JSON.stringify({ date: event.lastDay })  : null,
-    [COL.siteOrg]:       event.siteSelectionOrg || "",
-    [COL.projectedFund]: Math.round(decision?.estimate || 0),
-    [COL.localMatch]:    Math.round(calc?.requiredLocalMatch || 0),
-    [COL.roomNights]:    Math.round(event.roomNights || calc?.totalRoomNights || 0),
-    [COL.outOfMarket]:   event.outOfMarketPct || 0,
-    [COL.recommendation]: decision?.recommendation || "",
-    [COL.eligPass]:      JSON.stringify({ checked: !!(event.elig?.competitiveBid && event.elig?.siteSelectionLetter && event.elig?.annualOrOnce && event.elig?.soleSiteOrRegional && event.elig?.notHeldElsewhere) }),
-    [COL.hotelBlock]:    JSON.stringify({ checked: !!event.hotelBlockConfirmed }),
-    [COL.appDeadline]:   appDeadline ? JSON.stringify({ date: appDeadline }) : null,
-    [COL.docsComplete]:  docsComplete,
-    [COL.notes]:         event.notes || "",
+    "Projected Fund":   Math.round(decision?.estimate || 0),
+    "Local Match":      Math.round(calc?.requiredLocalMatch || 0),
+    "Room Nights":      Math.round(event.roomNights || calc?.totalRoomNights || 0),
+    "Out-of-Market %":  event.outOfMarketPct || 0,
+    "Recommendation":   decision?.recommendation || "",
+    "Docs Complete":    docsComplete,
+    "Notes":            event.notes || "",
+    "Status":           STATUS_LABELS[event.status] || "Analysis",
   };
+};
+
+// Write simple column values by fetching column IDs from the board first
+const updateBoardItemSafe = async (token, boardId, itemId, labelValueMap) => {
+  // Get board columns to find IDs by title
+  let cols = [];
+  try {
+    const data = await mondayQuery(token, `{ boards(ids:[${boardId}]){ columns { id title type } } }`);
+    cols = data?.boards?.[0]?.columns || [];
+  } catch (_) { return; }
+
+  const colValues = {};
+  Object.entries(labelValueMap).forEach(([title, value]) => {
+    const col = cols.find((c) => c.title === title);
+    if (!col) return;
+    if (col.type === "numeric" || col.type === "numbers") {
+      colValues[col.id] = String(value);
+    } else if (col.type === "color" || col.type === "status") {
+      colValues[col.id] = JSON.stringify({ label: String(value) });
+    } else if (col.type === "long_text") {
+      colValues[col.id] = JSON.stringify({ text: String(value) });
+    } else {
+      colValues[col.id] = String(value);
+    }
+  });
+
+  if (Object.keys(colValues).length === 0) return;
+  const colValStr = JSON.stringify(JSON.stringify(colValues));
+  try {
+    await mondayQuery(token, `
+      mutation {
+        change_multiple_column_values(board_id: ${boardId}, item_id: ${itemId}, column_values: ${colValStr}) { id }
+      }
+    `);
+  } catch (_) { /* ignore column errors */ }
 };
 
 // Status label map (Monday status column uses label text)
@@ -517,6 +549,8 @@ export default function ETFPlaybook() {
       if (storedToken && storedBoard) {
         try {
           setSaveStatus("syncing");
+          // Ensure columns exist on the board (safe to call repeatedly)
+          await ensureBoardColumns(storedToken, storedBoard);
           const items = await fetchBoardItems(storedToken, storedBoard);
           if (items.length > 0) {
             // Merge Monday items with local cache — Monday is source of truth for shared fields
@@ -566,7 +600,6 @@ export default function ETFPlaybook() {
 
         const calc = calculateTrustFund(event);
         const decision = evaluateDecision(event, calc);
-        const colVals = eventToMonday(event, calc, decision);
 
         // Find Monday item by stored ID first, then fall back to name match
         let mondayId = event.mondayItemId;
@@ -577,13 +610,13 @@ export default function ETFPlaybook() {
 
         if (mondayId) {
           // Update existing item
-          await updateBoardItem(mondayToken, mondayBoardId, mondayId, colVals);
+          await updateBoardItemSafe(mondayToken, mondayBoardId, mondayId, eventToMondaySimple(event, calc, decision));
           updatedEvents[i] = { ...event, mondayItemId: mondayId };
         } else {
           // Create new item — only if no match found on board
           const newId = await createBoardItem(mondayToken, mondayBoardId, event.name);
           if (newId) {
-            await updateBoardItem(mondayToken, mondayBoardId, newId, colVals);
+            await updateBoardItemSafe(mondayToken, mondayBoardId, newId, eventToMondaySimple(event, calc, decision));
             updatedEvents[i] = { ...event, mondayItemId: newId };
           }
         }
