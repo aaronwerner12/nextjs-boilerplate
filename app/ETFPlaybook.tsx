@@ -549,8 +549,12 @@ export default function ETFPlaybook() {
       if (storedToken && storedBoard) {
         try {
           setSaveStatus("syncing");
-          // Ensure columns exist on the board (safe to call repeatedly)
-          await ensureBoardColumns(storedToken, storedBoard);
+          // Ensure columns exist — only run ONCE per board, tracked in localStorage
+          const colsKey = `etf_cols_created_${storedBoard}`;
+          if (!localStorage.getItem(colsKey)) {
+            await ensureBoardColumns(storedToken, storedBoard);
+            localStorage.setItem(colsKey, "1");
+          }
           const items = await fetchBoardItems(storedToken, storedBoard);
           if (items.length > 0) {
             // Merge Monday items with local cache — Monday is source of truth for shared fields
