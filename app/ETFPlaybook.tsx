@@ -552,26 +552,47 @@ export default function ETFPlaybook() {
     if (!mondayEnabled) return;
     setSaveStatus("syncing");
     try {
-      for (const event of eventsToSync) {
+      // Fetch current Monday items to use as dedup reference
+      let existingItems = [];
+      try {
+        existingItems = await fetchBoardItems(mondayToken, mondayBoardId);
+      } catch (_) {}
+
+      const updatedEvents = [...eventsToSync];
+
+      for (let i = 0; i < updatedEvents.length; i++) {
+        const event = updatedEvents[i];
+        if (!event.name) continue; // skip unnamed events
+
         const calc = calculateTrustFund(event);
         const decision = evaluateDecision(event, calc);
         const colVals = eventToMonday(event, calc, decision);
 
-        if (event.mondayItemId) {
+        // Find Monday item by stored ID first, then fall back to name match
+        let mondayId = event.mondayItemId;
+        if (!mondayId) {
+          const match = existingItems.find((item) => item.name === event.name);
+          if (match) mondayId = match.id;
+        }
+
+        if (mondayId) {
           // Update existing item
-          await updateBoardItem(mondayToken, mondayBoardId, event.mondayItemId, colVals);
-        } else if (event.name) {
-          // Create new item
-          const newId = await createBoardItem(mondayToken, mondayBoardId, event.name || "Untitled event");
+          await updateBoardItem(mondayToken, mondayBoardId, mondayId, colVals);
+          updatedEvents[i] = { ...event, mondayItemId: mondayId };
+        } else {
+          // Create new item — only if no match found on board
+          const newId = await createBoardItem(mondayToken, mondayBoardId, event.name);
           if (newId) {
             await updateBoardItem(mondayToken, mondayBoardId, newId, colVals);
-            // Store Monday ID back on the event
-            setEvents((prev) =>
-              prev.map((e) => e.id === event.id ? { ...e, mondayItemId: newId } : e)
-            );
+            updatedEvents[i] = { ...event, mondayItemId: newId };
           }
         }
       }
+
+      // Persist updated events (with mondayItemIds) to local cache
+      localStorage.setItem("etf_events_cache", JSON.stringify(updatedEvents));
+      setEvents(updatedEvents);
+
       setSaveStatus("synced");
       setTimeout(() => setSaveStatus(""), 2000);
     } catch (e) {
@@ -582,10 +603,10 @@ export default function ETFPlaybook() {
 
   useEffect(() => {
     if (loading) return;
-    // Always save to local cache
+    // Always save to local cache immediately
     localStorage.setItem("etf_events_cache", JSON.stringify(events));
     // Debounce Monday sync
-    const t = setTimeout(() => syncToMonday(events), 1500);
+    const t = setTimeout(() => syncToMonday(events), 2000);
     return () => clearTimeout(t);
   }, [events, loading]);
 
