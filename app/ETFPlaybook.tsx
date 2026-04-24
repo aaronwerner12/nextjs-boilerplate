@@ -1,6 +1,5 @@
 // @ts-nocheck
 "use client";
-
 import React, { useState, useEffect, useMemo } from "react";
 import {
   ChevronRight, ChevronDown, CheckCircle2, XCircle, AlertCircle,
@@ -11,9 +10,11 @@ import {
 } from "lucide-react";
 
 // ————————————————————————————————————————————————————————————————
-// Visit McKinney — ETF Playbook
-// A full-cycle tool for evaluating, applying to, and managing
-// Texas Events Trust Fund submissions.
+// Texas ETF Pursuit Tool
+// An independent planning tool for DMOs evaluating, applying to,
+// and managing Texas Events Trust Fund submissions.
+// NOT an official state form. NOT affiliated with the Office of
+// the Governor or EDT. For internal planning purposes only.
 // ————————————————————————————————————————————————————————————————
 
 const fmtMoney = (n) => {
@@ -33,32 +34,6 @@ const addDays = (dateStr, days) => {
   d.setDate(d.getDate() + days);
   return d;
 };
-
-const getConfidenceMultiplier = (confidence) => ({
-  low: 0.8,
-  medium: 0.9,
-  high: 1,
-}[confidence] || 0.9);
-
-const getConfidenceLabel = (confidence) => ({
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-}[confidence] || "Medium");
-
-const downloadTextFile = (filename, content) => {
-  if (typeof window === "undefined") return;
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
-
 
 // ————————————————————————————————————————————————————————————————
 // Default event template
@@ -88,9 +63,6 @@ const blankEvent = () => ({
   roomNights: 0,
   outOfMarketPct: 50,
   hotelBlockConfirmed: false,
-  confidence: "medium", // low | medium | high
-  cityIncentive: 0,
-  cityCashInvestment: 0,
   // Detailed calc inputs (mirrors the Adidas EIS)
   calc: {
     days: [], // {date, schedule, players, coaches, staff, scouts, media, spectators}
@@ -139,21 +111,10 @@ const ATTENDEE_CATS = [
   { key: "spectators", label: "Friends/Family/Spectators", perRoom: 4 },
 ];
 
-// Default McKinney-area sports venues (from visitmckinney.com/sports/top-sporting-facilities/)
-// User can add or remove any of these
+// Default venue list — update with your city's venues
+// Users can freely add or remove any of these
 const DEFAULT_MCKINNEY_VENUES = [
-  "Al Ruschhaupt Soccer Complex — 2701 Northbrook Drive",
-  "Alex Clark Memorial Disc Golf Course — 1986 Park View Ave",
-  "Arete Athletics Center — 1720 Bray Central Dr.",
-  "Bonnie Wenk Park — 2996 Virginia Parkway",
-  "Children's Health StarCenter at Craig Ranch — 6993 Stars Av",
-  "Erwin Park — 4300 CR 1006",
-  "Finch Park — 301 West Standifer St.",
-  "Gabe Nesbitt Softball Complex — 3205 Alma Road",
-  "Grady Littlejohn Softball & Baseball Complex — 1401 Wilson Creek Pkwy",
-  "McKinney ISD Stadium — 4201 S. Hardin Blvd.",
-  "McKinney Soccer Complex at Craig Ranch — 6375 Collin McKinney Pkwy",
-  "Oak Hollow Golf Course — 3005 N McDonald St",
+  "Enter your local venues here...",
 ];
 
 // Timeline deadlines (days relative to first day of event)
@@ -225,7 +186,8 @@ function calculateTrustFund(event) {
 
   // Tax rates (TX state + typical local)
   // State sales/use: 6.25%, State hotel occupancy: 6%
-  // Local sales: ~2% (McKinney city+county combined local cap), Local HOT: 7% McKinney
+  // Local sales: ~2% (city+county combined local cap), Local HOT: ~7% (typical TX city)
+  // ⚙ Update these if your city's actual local rates differ
   const stateTaxRates = {
     sales: 0.0625,
     hotel: 0.06,
@@ -273,83 +235,12 @@ function calculateTrustFund(event) {
   };
 }
 
-function buildRiskFlags(event, calcResult) {
-  const flags = [];
-  const projectedRoomNights = event.roomNights || calcResult.totalRoomNights || 0;
-  const projectedFund = calcResult.totalFund > 0 ? calcResult.totalFund : calcResult.quickEstimate;
-
-  if (!event.elig.competitiveBid) flags.push({ level: "high", label: "No confirmed competitive bid against out-of-state sites" });
-  if (!event.elig.siteSelectionLetter) flags.push({ level: "high", label: "No site selection letter identified yet" });
-  if ((event.outOfMarketPct || 0) < 50) flags.push({ level: "medium", label: "Projected out-of-market attendance is below 50%" });
-  if (projectedRoomNights > 0 && projectedRoomNights < 1500) flags.push({ level: "medium", label: "Projected room nights are below the 1,500 Visit McKinney floor" });
-  if (!event.hotelBlockConfirmed) flags.push({ level: "medium", label: "Hotel block utilization has not been confirmed" });
-
-  if (event.firstDay) {
-    const appDeadline = addDays(event.firstDay, -120);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (appDeadline && appDeadline < today && !event.docs?.application?.done) {
-      flags.push({ level: "high", label: "120-day application deadline has already passed" });
-    }
-  }
-
-  if (projectedFund < 75000) flags.push({ level: "high", label: "Projected ETF value is below the $75K viability floor" });
-
-  return flags;
-}
-
-function buildInvestmentSummary(event, calcResult) {
-  const stateReturn = calcResult.stateTaxTotal || 0;
-  const requiredLocalMatch = calcResult.requiredLocalMatch || 0;
-  const cityIncentive = Number(event.cityIncentive) || 0;
-  const cityCashInvestment = Number(event.cityCashInvestment) || 0;
-  const totalCityInvestment = requiredLocalMatch + cityIncentive + cityCashInvestment;
-  const returnRatio = totalCityInvestment > 0 ? stateReturn / totalCityInvestment : null;
-
-  return {
-    stateReturn,
-    requiredLocalMatch,
-    cityIncentive,
-    cityCashInvestment,
-    totalCityInvestment,
-    returnRatio,
-    leveragedImpact: stateReturn + totalCityInvestment,
-  };
-}
-
-function buildGoNoGoSummary(event, calcResult, decision) {
-  const investment = buildInvestmentSummary(event, calcResult);
-  const riskFlags = buildRiskFlags(event, calcResult);
-  return [
-    `Event: ${event.name || "Untitled Event"}`,
-    `Status: ${event.status || "analysis"}`,
-    `Confidence: ${getConfidenceLabel(event.confidence)}`,
-    `Dates: ${event.firstDay ? fmtDate(event.firstDay) : "TBD"}${event.lastDay ? ` to ${fmtDate(event.lastDay)}` : ""}`,
-    `Venue(s): ${(event.venues && event.venues.length > 0) ? event.venues.join(", ") : (event.venue || "TBD")}`,
-    "",
-    `Recommendation: ${decision.recommendation}`,
-    `Rationale: ${decision.rationale}`,
-    `Planning Estimate: ${fmtMoney(decision.estimate)}`,
-    `State Share: ${fmtMoney(calcResult.stateTaxTotal)}`,
-    `Required Local Match: ${fmtMoney(calcResult.requiredLocalMatch)}`,
-    "",
-    `City Incentive: ${fmtMoney(event.cityIncentive || 0)}`,
-    `Other City Cash Investment: ${fmtMoney(event.cityCashInvestment || 0)}`,
-    `Total City Investment: ${fmtMoney(investment.totalCityInvestment)}`,
-    `State Return Ratio: ${investment.returnRatio != null ? `${investment.returnRatio.toFixed(2)}x` : "N/A"}`,
-    "",
-    "Top Risk Flags:",
-    ...(riskFlags.length ? riskFlags.map((flag) => `- ${flag.label}`) : ["- No major risk flags triggered"]),
-  ].join("\n");
-}
-
 // ————————————————————————————————————————————————————————————————
-// Decision framework — Visit McKinney rules
+// Decision framework — pursuit evaluation logic
 // ————————————————————————————————————————————————————————————————
 function evaluateDecision(event, calcResult) {
   const checks = [];
   const elig = event.elig;
-  const confidenceMultiplier = getConfidenceMultiplier(event.confidence);
 
   // Hard gates
   const eligibilityPassed =
@@ -363,8 +254,7 @@ function evaluateDecision(event, calcResult) {
   });
 
   // Financial threshold
-  const baseEstimate = calcResult.totalFund > 0 ? calcResult.totalFund : calcResult.quickEstimate;
-  const estimate = baseEstimate * confidenceMultiplier;
+  const estimate = calcResult.totalFund > 0 ? calcResult.totalFund : calcResult.quickEstimate;
   checks.push({
     label: "ETF value exceeds $75K viability floor",
     pass: estimate >= 75000,
@@ -374,7 +264,7 @@ function evaluateDecision(event, calcResult) {
 
   // Hotel performance
   checks.push({
-    label: "Room nights ≥ 1,500 (Visit McKinney floor)",
+    label: "Room nights ≥ 1,500 (recommended floor for ETF viability)",
     pass: (event.roomNights || calcResult.totalRoomNights || 0) >= 1500,
     critical: false,
     detail: `Projected: ${fmtNum(event.roomNights || calcResult.totalRoomNights)} room nights`,
@@ -396,7 +286,7 @@ function evaluateDecision(event, calcResult) {
     rationale = "Statutory eligibility not met. Without a competitive bid and site selection letter, the event cannot qualify for ETF.";
   } else if (estimate < 75000) {
     recommendation = "DO NOT PURSUE";
-    rationale = "Projected ETF value below $75K — not worth the administrative burden per Visit McKinney framework.";
+    rationale = "Projected ETF value below $75K — administrative burden likely exceeds the fund value.";
   } else if (estimate >= 300000) {
     recommendation = "STRATEGIC PRIORITY";
     rationale = "High-value event meeting all criteria. Move to application immediately.";
@@ -408,7 +298,7 @@ function evaluateDecision(event, calcResult) {
     rationale = "Moderate ETF value. Validate room block and out-of-market assumptions before committing.";
   }
 
-  return { checks, recommendation, rationale, estimate, baseEstimate, confidenceMultiplier, riskFlags: buildRiskFlags(event, calcResult) };
+  return { checks, recommendation, rationale, estimate };
 }
 
 // ————————————————————————————————————————————————————————————————
@@ -423,23 +313,26 @@ export default function ETFPlaybook() {
 
   // Load from persistent storage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("vm_etf_events");
-      if (stored) {
-        setEvents(JSON.parse(stored));
+    (async () => {
+      try {
+        const res = await window.storage.get("dmo_etf_events");
+        if (res && res.value) {
+          const parsed = JSON.parse(res.value);
+          setEvents(parsed);
+        }
+      } catch (e) {
+        // no data yet
       }
-    } catch (e) {
-      // no data yet
-    }
-    setLoading(false);
+      setLoading(false);
+    })();
   }, []);
 
   // Save on change
   useEffect(() => {
     if (loading) return;
-    const t = setTimeout(() => {
+    const t = setTimeout(async () => {
       try {
-        localStorage.setItem("vm_etf_events", JSON.stringify(events));
+        await window.storage.set("dmo_etf_events", JSON.stringify(events));
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus(""), 1500);
       } catch (e) {
@@ -513,10 +406,10 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
   return (
     <aside style={styles.sidebar}>
       <div style={styles.brand} onClick={onHome}>
-        <div style={styles.brandMark}>VM</div>
+        <div style={styles.brandMark}>ETF</div>
         <div>
-          <div style={styles.brandTitle}>ETF Playbook</div>
-          <div style={styles.brandSub}>Visit McKinney</div>
+          <div style={styles.brandTitle}>ETF Pursuit Tool</div>
+          <div style={styles.brandSub}>Texas Events Trust Fund</div>
         </div>
       </div>
 
@@ -587,40 +480,47 @@ function Dashboard({ events, onOpen, onCreate }) {
   const stats = useMemo(() => {
     let projected = 0;
     let active = 0;
-    let strategic = 0;
-    let atRisk = 0;
     events.forEach((e) => {
       const calc = calculateTrustFund(e);
-      const decision = evaluateDecision(e, calc);
-      projected += decision.estimate;
+      const est = calc.totalFund > 0 ? calc.totalFund : calc.quickEstimate;
+      projected += est;
       if (e.status !== "complete") active++;
-      if (decision.recommendation === "STRATEGIC PRIORITY" || decision.recommendation === "STRONG PURSUE") strategic++;
-      if (decision.riskFlags.some((flag) => flag.level === "high")) atRisk++;
     });
-    return { projected, active, total: events.length, strategic, atRisk };
+    return { projected, active, total: events.length };
   }, [events]);
 
   return (
     <div style={styles.dashboard}>
       <header style={styles.dashHeader}>
         <div>
-          <div style={styles.eyebrow}>Texas Events Trust Fund · Program Support Tool</div>
+          <div style={styles.eyebrow}>Texas Events Trust Fund · Independent DMO Planning Tool</div>
           <h1 style={styles.h1}>
             <em>Events Trust Fund</em> evaluation and administration.
           </h1>
           <p style={styles.lede}>
-            Analyze prospective events against Visit McKinney's decision framework,
+            Analyze prospective events against ETF eligibility requirements,
             project state and local tax contributions, generate your complete deadline
             timeline, and track every required document from application through disbursement.
           </p>
+          <div style={{
+            marginTop: 14,
+            padding: "10px 16px",
+            background: "#fef3c7",
+            border: "1px solid #fcd34d",
+            borderLeft: "3px solid #d97706",
+            borderRadius: 3,
+            fontSize: 12.5,
+            color: "#78350f",
+            lineHeight: 1.6,
+          }}>
+            <strong>⚠ Planning tool only.</strong> This tool is NOT affiliated with the Texas Office of the Governor or the Economic Development and Tourism division (EDT). It does not submit applications or constitute official program participation. All official submissions must be made directly to EDT at <strong>eventsfund@gov.texas.gov</strong> using the official state templates.
+          </div>
         </div>
       </header>
 
       <div style={styles.statGrid}>
         <StatCard label="Active Events" value={stats.active} icon={<Target size={16} />} />
         <StatCard label="Total in Pipeline" value={stats.total} icon={<Folder size={16} />} />
-        <StatCard label="Priority Pursuits" value={stats.strategic} icon={<TrendingUp size={16} />} />
-        <StatCard label="At-Risk Events" value={stats.atRisk} icon={<AlertCircle size={16} />} />
         <StatCard label="Projected Fund Value" value={fmtMoney(stats.projected)} icon={<DollarSign size={16} />} />
       </div>
 
@@ -629,7 +529,7 @@ function Dashboard({ events, onOpen, onCreate }) {
         <div style={styles.flowGrid}>
           {[
             { n: "01", t: "Capture the Event", d: "Enter event details, dates, and the site selection organization's pitch." },
-            { n: "02", t: "Run the Decision Framework", d: "Answer five eligibility questions. The tool weighs them against Visit McKinney's pursuit rules." },
+            { n: "02", t: "Run the Decision Framework", d: "Answer five eligibility questions from § 480.0051. Weigh results against financial thresholds to decide whether to pursue." },
             { n: "03", t: "Model Economic Impact", d: "Build out attendee days by category. The engine computes state/local tax generation and the required local match." },
             { n: "04", t: "Work the Timeline", d: "Every deadline — application, support contract, attendance certification, local share, disbursement — auto-calculated from your event date." },
             { n: "05", t: "Check Documents", d: "Track the seven application docs plus post-event deliverables. Never miss a submission." },
@@ -648,7 +548,7 @@ function Dashboard({ events, onOpen, onCreate }) {
         <section style={styles.recentSection}>
           <h2 style={styles.h2}>Your Events</h2>
           <div style={styles.recentList}>
-            {[...events].sort((a, b) => evaluateDecision(b, calculateTrustFund(b)).estimate - evaluateDecision(a, calculateTrustFund(a)).estimate).map((e) => {
+            {events.map((e) => {
               const calc = calculateTrustFund(e);
               const est = calc.totalFund > 0 ? calc.totalFund : calc.quickEstimate;
               return (
@@ -1082,7 +982,7 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
             <input style={styles.input} value={event.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. 2025 Regional Basketball Championship" />
           </Field>
           <Field label="Site Selection Organization">
-            <input style={styles.input} value={event.siteSelectionOrg} onChange={(e) => set("siteSelectionOrg", e.target.value)} placeholder="The organization that selected McKinney" />
+            <input style={styles.input} value={event.siteSelectionOrg} onChange={(e) => set("siteSelectionOrg", e.target.value)} placeholder="The organization that selected your city" />
           </Field>
           <div style={styles.twoFields}>
             <Field label="First Day">
@@ -1139,21 +1039,6 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
               <input type="number" min="0" max="100" style={styles.input} value={event.outOfMarketPct || ""} onChange={(e) => set("outOfMarketPct", Number(e.target.value))} />
             </Field>
           </div>
-          <div style={styles.threeFields}>
-            <Field label="Confidence Level">
-              <select style={styles.input} value={event.confidence || "medium"} onChange={(e) => set("confidence", e.target.value)}>
-                <option value="low">Low confidence</option>
-                <option value="medium">Medium confidence</option>
-                <option value="high">High confidence</option>
-              </select>
-            </Field>
-            <Field label="City Incentive ($)">
-              <input type="number" style={styles.input} value={event.cityIncentive || ""} onChange={(e) => set("cityIncentive", Number(e.target.value))} />
-            </Field>
-            <Field label="Other City Cash Investment ($)">
-              <input type="number" style={styles.input} value={event.cityCashInvestment || ""} onChange={(e) => set("cityCashInvestment", Number(e.target.value))} />
-            </Field>
-          </div>
           <label style={styles.checkRow}>
             <input type="checkbox" checked={event.hotelBlockConfirmed} onChange={(e) => set("hotelBlockConfirmed", e.target.checked)} />
             <span>Hotel block utilization is confirmed with partners</span>
@@ -1170,18 +1055,6 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
           <div style={styles.summaryDivider} />
 
           <div style={styles.summaryStat}>
-            <span>Confidence Level</span>
-            <strong>{getConfidenceLabel(event.confidence)}</strong>
-          </div>
-          <div style={styles.summaryStat}>
-            <span>Base Fund Value</span>
-            <strong>{fmtMoney(decision.baseEstimate)}</strong>
-          </div>
-          <div style={styles.summaryStat}>
-            <span>Planning Estimate</span>
-            <strong style={{ fontSize: 16 }}>{fmtMoney(decision.estimate)}</strong>
-          </div>
-          <div style={styles.summaryStat}>
             <span>Projected State Share</span>
             <strong>{fmtMoney(calc.stateTaxTotal || decision.estimate * 0.862)}</strong>
           </div>
@@ -1190,40 +1063,13 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
             <strong>{fmtMoney(calc.requiredLocalMatch || decision.estimate * 0.138)}</strong>
           </div>
           <div style={styles.summaryStat}>
+            <span>Total Fund Value</span>
+            <strong style={{ fontSize: 16 }}>{fmtMoney(decision.estimate)}</strong>
+          </div>
+          <div style={styles.summaryStat}>
             <span>State:Local Ratio</span>
             <strong>6.25 : 1</strong>
           </div>
-
-          <div style={styles.summaryDivider} />
-
-          <div style={styles.summaryLabel}>City Investment vs Return</div>
-          <div style={styles.summaryStat}>
-            <span>City Incentive</span>
-            <strong>{fmtMoney(event.cityIncentive || 0)}</strong>
-          </div>
-          <div style={styles.summaryStat}>
-            <span>Other City Cash</span>
-            <strong>{fmtMoney(event.cityCashInvestment || 0)}</strong>
-          </div>
-          <div style={styles.summaryStat}>
-            <span>Total City Investment</span>
-            <strong>{fmtMoney(buildInvestmentSummary(event, calc).totalCityInvestment)}</strong>
-          </div>
-          <div style={styles.summaryStat}>
-            <span>State Return</span>
-            <strong>{fmtMoney(buildInvestmentSummary(event, calc).stateReturn)}</strong>
-          </div>
-          <div style={styles.summaryStat}>
-            <span>Return Ratio</span>
-            <strong>{buildInvestmentSummary(event, calc).returnRatio != null ? `${buildInvestmentSummary(event, calc).returnRatio.toFixed(2)}x` : "N/A"}</strong>
-          </div>
-
-          <button
-            style={{ ...styles.textBtn, marginTop: 14 }}
-            onClick={() => downloadTextFile(`${(event.name || "etf-summary").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.txt`, buildGoNoGoSummary(event, calc, decision))}
-          >
-            <Download size={14} /> Export Go / No-Go Summary
-          </button>
         </div>
 
         {nextDeadline && (
@@ -1252,26 +1098,6 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
             Review framework <ArrowRight size={14} />
           </button>
         </div>
-
-        <div style={styles.eligibilitySummary}>
-          <div style={styles.summaryLabel}>Risk Flags</div>
-          {decision.riskFlags.length === 0 ? (
-            <div style={styles.checkSummary}>
-              <CheckCircle2 size={16} color="#059669" />
-              <div style={styles.checkSummaryLabel}>No major risk flags triggered</div>
-            </div>
-          ) : (
-            decision.riskFlags.map((flag, i) => (
-              <div key={i} style={styles.checkSummary}>
-                <AlertCircle size={16} color={flag.level === "high" ? "#dc2626" : "#d97706"} />
-                <div style={{ flex: 1 }}>
-                  <div style={styles.checkSummaryLabel}>{flag.label}</div>
-                  <div style={styles.checkSummaryDetail}>{flag.level === "high" ? "High risk" : "Moderate risk"}</div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
       </div>
       </div>
     </div>
@@ -1293,7 +1119,7 @@ function DecisionTab({ event, update, calc, decision }) {
     },
     {
       key: "siteSelectionLetter",
-      q: "Will the site selection organization provide a signed Selection Letter naming McKinney?",
+      q: "Will the site selection organization provide a signed Selection Letter naming your city?",
       help: "The letter must describe the competitive process, list the out-of-state alternatives considered, and name the LOC/municipality.",
     },
     {
@@ -1303,7 +1129,7 @@ function DecisionTab({ event, update, calc, decision }) {
     },
     {
       key: "soleSiteOrRegional",
-      q: "Is McKinney the sole site (or the sole regional site) for this event?",
+      q: "Is your city the sole site (or the sole regional site) for this event?",
       help: "The selected site must be the only location in Texas, or the only location in a region including Texas and adjoining states.",
     },
     {
@@ -1338,7 +1164,7 @@ function DecisionTab({ event, update, calc, decision }) {
         ))}
       </Section>
 
-      <Section title="Visit McKinney Financial Framework" subtitle="Thresholds set by your decision framework document">
+      <Section title="Financial Framework" subtitle="Recommended thresholds — adjust to your organization's capacity and cost structure">
         <div style={styles.thresholdGrid}>
           {[
             { range: "< $75K", label: "Not worth pursuing", color: "#991b1b", bg: "#fee2e2" },
@@ -1377,8 +1203,7 @@ function DecisionTab({ event, update, calc, decision }) {
           <p style={styles.finalRationale}>{decision.rationale}</p>
           <div style={styles.summaryDivider} />
           <div style={styles.finalDetail}>
-            <div><strong>Planning estimate:</strong> {fmtMoney(decision.estimate)}</div>
-            <div><strong>Confidence:</strong> {getConfidenceLabel(event.confidence)}</div>
+            <div><strong>Projected ETF value:</strong> {fmtMoney(decision.estimate)}</div>
             <div><strong>Room nights:</strong> {fmtNum(event.roomNights || calc.totalRoomNights)}</div>
             <div><strong>Out-of-market %:</strong> {event.outOfMarketPct || 0}%</div>
           </div>
@@ -1516,10 +1341,10 @@ function CalculatorTab({ event, update, calc }) {
           <Field label="Out-of-State %">
             <input type="number" style={styles.input} value={event.calc.mix.outOfState} onChange={(e) => setMix("outOfState", e.target.value)} />
           </Field>
-          <Field label="Texas (50+ mi from McKinney) %">
+          <Field label="Texas (50+ mi from your city) %">
             <input type="number" style={styles.input} value={event.calc.mix.texasOutOfMarket} onChange={(e) => setMix("texasOutOfMarket", e.target.value)} />
           </Field>
-          <Field label="Day Visitors (DFW local) %">
+          <Field label="Day Visitors (local market) %">
             <input type="number" style={styles.input} value={event.calc.mix.dayVisitor} onChange={(e) => setMix("dayVisitor", e.target.value)} />
           </Field>
         </div>
@@ -1720,7 +1545,7 @@ function DocumentsTab({ event, update }) {
   const DOC_LIST = [
     { key: "application", label: "Events Trust Fund Application", phase: "Pre-Event (by Day -120)", desc: "Completed and signed by an official authorized to bind the applying entity." },
     { key: "endorsement", label: "Endorsement Documentation", phase: "Pre-Event (by Day -120)", desc: "Letter from the endorsing municipality/county requesting participation; signed by an authorized person and naming the LOC if applicable." },
-    { key: "selectionLetter", label: "Selection Letter", phase: "Pre-Event (by Day -120)", desc: "Signed by the site selection organization, describing the competitive process, listing out-of-state alternatives considered, and naming McKinney." },
+    { key: "selectionLetter", label: "Selection Letter", phase: "Pre-Event (by Day -120)", desc: "Signed by the site selection organization, describing the competitive process, listing out-of-state alternatives considered, and naming your city." },
     { key: "economicImpact", label: "Economic Impact Study", phase: "Pre-Event (by Day -120)", desc: "Detailed study with attendance, spending rates, and tax-by-tax projections (the Calculator tab produces this data)." },
     { key: "attendanceChart", label: "Estimated Attendance Chart", phase: "Pre-Event (by Day -120)", desc: "Day-by-day attendance by category, aligned with the Economic Impact Study." },
     { key: "affidavitEIS", label: "Affidavit for Economic Impact", phase: "Pre-Event (by Day -120)", desc: "Signed by whoever prepared the Economic Impact Study." },
@@ -1949,7 +1774,7 @@ function ReferenceTab() {
       body: (
         <div>
           <p><strong>What it is:</strong> The Texas Events Trust Fund (ETF) reimburses cities and local organizing committees for eligible costs of hosting qualifying events that compete against out-of-state locations.</p>
-          <p><strong>How the money works:</strong> The state deposits 6.25× whatever the local entity contributes, up to the estimated incremental tax gain from the event. If McKinney puts in $24K local match, the state matches with up to $150K — a total fund of $174K.</p>
+          <p><strong>How the money works:</strong> The state deposits 6.25× whatever the local entity contributes, up to the estimated incremental tax gain from the event. If your city puts in $24K local match, the state matches with up to $150K — a total fund of $174K.</p>
           <p><strong>The money is a reimbursement</strong>, not a grant. You must front the costs, submit documentation, and receive disbursement <em>after</em> the event.</p>
           <p><strong>Key deadlines:</strong></p>
           <ul>
@@ -1984,14 +1809,15 @@ function ReferenceTab() {
     },
     {
       k: "mckinney",
-      t: "Visit McKinney Decision Framework — Why These Thresholds",
+      t: "Financial Framework — Why These Thresholds",
       body: (
         <div>
           <p><strong>$6–$12 per attendee quick estimate:</strong> Based on observed patterns across completed ETFs. A regional youth sports event averages ~$9/attendee in ETF generation; premium national events hit $12+.</p>
-          <p><strong>$75K minimum:</strong> Below this, the administrative lift (application, support contract, cert, disbursement paperwork) consumes more staff time than the fund is worth.</p>
+          <p><strong>$75K minimum:</strong> Below this, the administrative lift (application, support contract, cert, disbursement paperwork) typically consumes more staff time than the fund is worth for most DMOs.</p>
           <p><strong>$150K target:</strong> Comparable to the Adidas 3SSB benchmark ($168K). Enough to materially subsidize facility rental, staffing, and safety costs.</p>
           <p><strong>1,500–2,000 room nights minimum:</strong> Validates that the event is drawing overnight visitors — the single biggest driver of both state HOT tax and local HOT tax, which is what makes the math work.</p>
-          <p><strong>50%+ out-of-market:</strong> Ensures incremental tax gain is real, not cannibalized from existing McKinney visitors.</p>
+          <p><strong>50%+ out-of-market:</strong> Ensures incremental tax gain is real, not cannibalized from existing local visitors.</p>
+          <p style={{ color: "#6b7280", fontSize: 12, marginTop: 12 }}>These thresholds are guidelines, not ETF program rules. Adjust them to fit your organization's administrative capacity and strategic priorities.</p>
         </div>
       ),
     },
@@ -2131,26 +1957,24 @@ function VenuePicker({ selected, legacyValue, onChange }) {
 
   // Load custom venues from storage (shared across all events for this user)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("vm_custom_venues");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) setCustomVenues(parsed);
+    (async () => {
+      try {
+        const res = await window.storage.get("vm_custom_venues");
+        if (res && res.value) {
+          const parsed = JSON.parse(res.value);
+          if (Array.isArray(parsed)) setCustomVenues(parsed);
+        }
+      } catch (e) {
+        // none yet
       }
-    } catch (e) {
-      // none yet
-    }
-    setLoaded(true);
+      setLoaded(true);
+    })();
   }, []);
 
   // Persist custom venues
   useEffect(() => {
     if (!loaded) return;
-    try {
-      localStorage.setItem("vm_custom_venues", JSON.stringify(customVenues));
-    } catch (e) {
-      // ignore storage errors
-    }
+    window.storage.set("vm_custom_venues", JSON.stringify(customVenues)).catch(() => {});
   }, [customVenues, loaded]);
 
   // Migrate legacy single-venue string into the selected array on first load
@@ -2255,7 +2079,7 @@ function VenuePicker({ selected, legacyValue, onChange }) {
                   <Trash2 size={11} />
                 </button>
               )}
-              {!isCustom && <span style={venueStyles.defaultTag}>McKinney</span>}
+              {!isCustom && <span style={venueStyles.defaultTag}>Default</span>}
             </label>
           );
         })}
@@ -3202,4 +3026,3 @@ const styles = {
     color: INK,
   },
 };
-
