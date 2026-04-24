@@ -475,13 +475,19 @@ export default function ETFPlaybook() {
   const [saveStatus, setSaveStatus] = useState(""); // "saving" | "saved" | "error" | "syncing" | "synced"
   const [showSettings, setShowSettings] = useState(false);
 
-  // Monday config — stored in localStorage
-  const [mondayToken, setMondayToken] = useState(() => localStorage.getItem("etf_monday_token") || "");
-  const [mondayBoardId, setMondayBoardId] = useState(() => localStorage.getItem("etf_monday_board") || "18410218031");
+  // Monday config — initialized empty, loaded from localStorage in useEffect (SSR-safe)
+  const [mondayToken, setMondayToken] = useState("");
+  const [mondayBoardId, setMondayBoardId] = useState("18410218031");
   const mondayEnabled = !!(mondayToken && mondayBoardId);
 
   // ── Load: first from localStorage, then sync from Monday ──────
   useEffect(() => {
+    // Safe to access localStorage here — this only runs in the browser
+    const storedToken = localStorage.getItem("etf_monday_token") || "";
+    const storedBoard = localStorage.getItem("etf_monday_board") || "18410218031";
+    if (storedToken) setMondayToken(storedToken);
+    if (storedBoard) setMondayBoardId(storedBoard);
+
     (async () => {
       // 1. Load local cache immediately so UI is fast
       try {
@@ -490,10 +496,10 @@ export default function ETFPlaybook() {
       } catch (_) {}
 
       // 2. If Monday is configured, pull latest from board
-      if (mondayToken && mondayBoardId) {
+      if (storedToken && storedBoard) {
         try {
           setSaveStatus("syncing");
-          const items = await fetchBoardItems(mondayToken, mondayBoardId);
+          const items = await fetchBoardItems(storedToken, storedBoard);
           if (items.length > 0) {
             // Merge Monday items with local cache — Monday is source of truth for shared fields
             setEvents((prev) => {
