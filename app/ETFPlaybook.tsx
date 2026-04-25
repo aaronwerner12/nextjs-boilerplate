@@ -55,7 +55,7 @@ const api = {
 
 const ELIG_KEYS = ["competitive", "annual", "solesite", "notelsewhere"];
 
-
+const fmtMoney = (n) => {
   if (n == null || isNaN(n)) return "$0";
   return "$" + Math.round(n).toLocaleString();
 };
