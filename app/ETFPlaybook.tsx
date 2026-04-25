@@ -192,13 +192,15 @@ const TIMELINE = [
 // Calculation engine — mirrors the Texas ETF tax methodology
 // ————————————————————————————————————————————————————————————————
 function calculateTrustFund(event) {
-  const { calc, roomNights, outOfMarketPct, attendeeEst, qualityPerAttendee } = event;
+  if (!event) return { quickEstimate: 0, totalFund: 0, totalRoomNights: 0, requiredLocalMatch: 0, days: [] };
+  const { calc = { days: [] }, roomNights, outOfMarketPct, attendeeEst, qualityPerAttendee } = event;
+  const safeDays = calc?.days || [];
 
   // Quick estimate if no detailed calc
   const quickEstimate = (attendeeEst || 0) * (qualityPerAttendee || 0);
 
   // Detailed calc (following the Adidas EIS pattern)
-  const totalDays = calc.days.length;
+  const totalDays = safeDays.length;
   let totalAttendance = 0;
   let totalHotelSpend = 0;
   let totalFoodBev = 0;
@@ -212,10 +214,10 @@ function calculateTrustFund(event) {
   const mixTX = (calc.mix.texasOutOfMarket || 0) / 100;
   // Day visitors don't contribute to hotel/incremental tax in same way
   // but still generate food/entertainment sales tax
-  const r = calc.rates;
+  const r = calc?.rates || {};
 
   // Sum attendee-days across all categories and days
-  calc.days.forEach((day) => {
+  safeDays.forEach((day) => {
     ATTENDEE_CATS.forEach((cat) => {
       const n = Number(day[cat.key]) || 0;
       totalAttendance += n;
@@ -290,6 +292,7 @@ function calculateTrustFund(event) {
     localTaxTotal,
     requiredLocalMatch,
     totalFund,
+    days: safeDays,
   };
 }
 
@@ -577,10 +580,18 @@ export default function ETFPlaybook() {
             onCreate={createEvent}
             teamMember={teamMember}
             orgData={orgData}
-            onEventCreated={(id) => {
-              setCurrentEventId(id);
+            onEventCreated={(eventOrId) => {
+              if (typeof eventOrId === "object") {
+                // Full event object from intake promote — add directly to pipeline
+                setEvents((prev) => [eventOrId, ...prev]);
+                setCurrentEventId(eventOrId.id);
+                api.saveEvent(eventOrId, orgId).catch(() => {});
+              } else {
+                // Just an ID — refresh from API
+                setCurrentEventId(eventOrId);
+                api.getEvents(orgId).then(setEvents).catch(() => {});
+              }
               setTab("overview");
-              api.getEvents(orgId).then(setEvents).catch(() => {});
             }}
           />
         ) : (
@@ -1030,8 +1041,34 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
       });
       const data = await res.json();
       setIntakeItems((prev) => prev.filter((i) => i.id !== item.id));
-      if (data.eventId && onEventCreated) onEventCreated(data.eventId);
-    } catch (_) {}
+      if (onEventCreated) {
+        // Create event locally with blankEvent base so all fields exist
+        const newEvent = {
+          ...blankEvent(),
+          name: item.eventName || "Untitled Event",
+          status: "analysis",
+          firstDay: item.firstDay || "",
+          lastDay: item.lastDay || "",
+          siteSelectionOrg: item.siteSelectionOrg || "",
+          roomNights: parseInt((item.roomNightsNeeded || "0").replace(/[^0-9]/g, "")) || 0,
+          outOfMarketPct: parseInt((item.outOfMarketPct || "50").replace(/[^0-9]/g, "")) || 50,
+          attendeeEst: parseInt((item.totalAttendance || "0").replace(/[^0-9]/g, "")) || 0,
+          notes: [item.notes, `Submitted by ${item.contactName} (${item.contactEmail})`].filter(Boolean).join("\n\n"),
+          intakeId: item.id,
+          elig: {
+            competitiveBid: item.elig?.competitive ?? null,
+            siteSelectionLetter: null,
+            annualOrOnce: item.elig?.annual ?? null,
+            soleSiteOrRegional: item.elig?.solesite ?? null,
+            notHeldElsewhere: item.elig?.notelsewhere ?? null,
+          },
+          createdBy: `Intake: ${item.contactName || "Unknown"}`,
+        };
+        onEventCreated(newEvent);
+      }
+    } catch (e) {
+      console.error("Promote error:", e);
+    }
     setPromoting(null);
   };
 
@@ -1879,16 +1916,18 @@ function recColor(rec) {
 // Tab 3 — Calculator
 // ————————————————————————————————————————————————————————————————
 function CalculatorTab({ event, update, calc }) {
+  const safeDays = event?.calc?.days || [];
   const addDay = () => {
     update((e) => {
-      const lastDate = e.calc.days.length ? e.calc.days[e.calc.days.length - 1].date : e.firstDay;
+      const days = e.calc?.days || [];
+      const lastDate = days.length ? days[days.length - 1].date : e.firstDay;
       const nextDate = lastDate ? addDays(lastDate, 1) : null;
       const dateStr = nextDate ? nextDate.toISOString().split("T")[0] : "";
       return {
         ...e,
         calc: {
           ...e.calc,
-          days: [...e.calc.days, {
+          days: [...days, {
             id: "d" + Date.now(),
             date: dateStr,
             schedule: "",
@@ -1929,7 +1968,7 @@ function CalculatorTab({ event, update, calc }) {
     }));
   };
 
-  const mixTotal = event.calc.mix.outOfState + event.calc.mix.texasOutOfMarket + event.calc.mix.dayVisitor;
+  const mixTotal = event.calc?.mix?.outOfState || 0 + event.calc?.mix?.texasOutOfMarket || 0 + event.calc?.mix?.dayVisitor || 0;
 
   return (
     <div>
@@ -1937,7 +1976,7 @@ function CalculatorTab({ event, update, calc }) {
         title="Attendance Model"
         subtitle="Enter attendance by category for each day of the event. Load-in and load-out days count too."
       >
-        {event.calc.days.length === 0 ? (
+        {safeDays.length === 0 ? (
           <div style={styles.emptyState}>
             <Users size={32} color="#ccc" />
             <div>No days added yet</div>
@@ -1959,7 +1998,7 @@ function CalculatorTab({ event, update, calc }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {event.calc.days.map((d) => {
+                  {safeDays.map((d) => {
                     const total = ATTENDEE_CATS.reduce((s, c) => s + (Number(d[c.key]) || 0), 0);
                     return (
                       <tr key={d.id}>
@@ -1992,13 +2031,13 @@ function CalculatorTab({ event, update, calc }) {
       <Section title="Visitor Mix" subtitle="Percentage breakdown of all attendees. Should sum to 100%.">
         <div style={styles.threeFields}>
           <Field label="Out-of-State %">
-            <input type="number" style={styles.input} value={event.calc.mix.outOfState} onChange={(e) => setMix("outOfState", e.target.value)} />
+            <input type="number" style={styles.input} value={event.calc?.mix?.outOfState || 0} onChange={(e) => setMix("outOfState", e.target.value)} />
           </Field>
           <Field label="Texas (50+ mi from your city) %">
-            <input type="number" style={styles.input} value={event.calc.mix.texasOutOfMarket} onChange={(e) => setMix("texasOutOfMarket", e.target.value)} />
+            <input type="number" style={styles.input} value={event.calc?.mix?.texasOutOfMarket || 0} onChange={(e) => setMix("texasOutOfMarket", e.target.value)} />
           </Field>
           <Field label="Day Visitors (local market) %">
-            <input type="number" style={styles.input} value={event.calc.mix.dayVisitor} onChange={(e) => setMix("dayVisitor", e.target.value)} />
+            <input type="number" style={styles.input} value={event.calc?.mix?.dayVisitor || 0} onChange={(e) => setMix("dayVisitor", e.target.value)} />
           </Field>
         </div>
         <div style={{ ...styles.mixBanner, background: mixTotal === 100 ? "#f0fdf4" : "#fef3c7" }}>
