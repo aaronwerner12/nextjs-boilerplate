@@ -495,26 +495,55 @@ export default function ETFPlaybook() {
     );
   }
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // Venues from org database, falling back to McKinney defaults
   const venues = orgData?.venues?.map((v) => v.address ? `${v.name} — ${v.address}` : v.name) || DEFAULT_MCKINNEY_VENUES;
 
   return (
-    <div style={styles.app}>
+    <div style={styles.app} className="etf-app">
       <GlobalStyles />
+
+      {/* Mobile overlay */}
+      <div
+        className={`etf-sidebar-overlay${sidebarOpen ? " open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      {/* Mobile top bar */}
+      <div className="etf-mobile-header">
+        <button className="etf-hamburger" onClick={() => setSidebarOpen(true)}>
+          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 600, fontSize: 15 }}>
+          {orgData?.name || "ETF Analysis Tool"}
+        </div>
+        <button
+          onClick={createEvent}
+          style={{ background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, padding: "6px 12px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
+        >
+          + New
+        </button>
+      </div>
+
       <Sidebar
         events={events}
         currentEventId={currentEventId}
-        onSelect={(id) => { setCurrentEventId(id); setTab("overview"); }}
-        onCreate={createEvent}
+        onSelect={(id) => { setCurrentEventId(id); setTab("overview"); setSidebarOpen(false); }}
+        onCreate={() => { createEvent(); setSidebarOpen(false); }}
         onDelete={deleteEvent}
-        onHome={() => { setCurrentEventId(null); setTab("dashboard"); }}
+        onHome={() => { setCurrentEventId(null); setTab("dashboard"); setSidebarOpen(false); }}
         saveStatus={saveStatus}
         teamMember={teamMember}
         orgData={orgData}
         onChangeName={() => setSetupStep("name")}
         onManageVenues={() => setSetupStep("org")}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-      <main style={styles.main}>
+      <main style={styles.main} className="etf-main">
         {!currentEvent ? (
           <Dashboard
             events={events}
@@ -525,7 +554,6 @@ export default function ETFPlaybook() {
             onEventCreated={(id) => {
               setCurrentEventId(id);
               setTab("overview");
-              // Refresh events list
               api.getEvents(orgId).then(setEvents).catch(() => {});
             }}
           />
@@ -784,9 +812,9 @@ function NamePrompt({ orgData, onSave }) {
 }
 
 // ————————————————————————————————————————————————————————————————
-function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues }) {
+function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose }) {
   return (
-    <aside style={styles.sidebar}>
+    <aside style={styles.sidebar} className={`etf-sidebar${isOpen ? " open" : ""}`}>
       <div style={styles.brand} onClick={onHome}>
         <div style={styles.brandMark}>ETF</div>
         <div>
@@ -966,7 +994,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
         </div>
       </header>
 
-      <div style={styles.statGrid}>
+      <div style={styles.statGrid} className="etf-stats-row">
         <StatCard label="Active Events" value={stats.active} icon={<Target size={16} />} />
         <StatCard label="Total in Pipeline" value={stats.total} icon={<Folder size={16} />} />
         <StatCard label="Projected Fund Value" value={fmtMoney(stats.projected)} icon={<DollarSign size={16} />} />
@@ -1176,7 +1204,7 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
         </div>
       </header>
 
-      <nav style={styles.tabs}>
+      <nav style={styles.tabs} className="etf-tabs">
         {TABS.map((t) => (
           <button
             key={t.k}
@@ -1189,6 +1217,7 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
                 borderColor: "#064e3b",
               } : {}),
             }}
+            className="etf-tab"
             onClick={() => setTab(t.k)}
           >
             {t.icon} {t.label}
@@ -1197,8 +1226,8 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
         ))}
       </nav>
 
-      <div style={styles.tabPanel}>
-        {tab === "overview" && <OverviewTab event={event} update={update} calc={calc} decision={decision} setTab={setTab} />}
+      <div style={styles.tabPanel} className="etf-tab-panel">
+        {tab === "overview" && <OverviewTab event={event} update={update} calc={calc} decision={decision} setTab={setTab} orgVenues={orgVenues} />}
         {tab === "decision" && <DecisionTab event={event} update={update} calc={calc} decision={decision} />}
         {tab === "calculator" && <CalculatorTab event={event} update={update} calc={calc} />}
         {tab === "timeline" && <TimelineTab event={event} update={update} />}
@@ -1494,7 +1523,7 @@ const windowStyles = {
 // ————————————————————————————————————————————————————————————————
 // Tab 1 — Overview
 // ————————————————————————————————————————————————————————————————
-function OverviewTab({ event, update, calc, decision, setTab }) {
+function OverviewTab({ event, update, calc, decision, setTab, orgVenues }) {
   const set = (field, val) => update((e) => ({ ...e, [field]: val }));
 
   const nextDeadline = useMemo(() => {
@@ -1520,7 +1549,7 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
           <Field label="Site Selection Organization">
             <input style={styles.input} value={event.siteSelectionOrg} onChange={(e) => set("siteSelectionOrg", e.target.value)} placeholder="The organization that selected your city" />
           </Field>
-          <div style={styles.twoFields}>
+          <div style={styles.twoFields} className="etf-two-col">
             <Field label="First Day">
               <input type="date" style={styles.input} value={event.firstDay} onChange={(e) => set("firstDay", e.target.value)} />
             </Field>
@@ -1542,7 +1571,7 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
         </Section>
 
         <Section title="Quick Estimate" subtitle="Use before you've built the full model">
-          <div style={styles.twoFields}>
+          <div style={styles.twoFields} className="etf-two-col">
             <Field label="Estimated Total Attendees">
               <input type="number" style={styles.input} value={event.attendeeEst || ""} onChange={(e) => set("attendeeEst", Number(e.target.value))} />
             </Field>
@@ -1568,7 +1597,7 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
         </Section>
 
         <Section title="Hotel & Market">
-          <div style={styles.twoFields}>
+          <div style={styles.twoFields} className="etf-two-col">
             <Field label="Projected Room Nights">
               <input type="number" style={styles.input} value={event.roomNights || ""} onChange={(e) => set("roomNights", Number(e.target.value))} />
             </Field>
@@ -3016,6 +3045,136 @@ function GlobalStyles() {
       ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
+
+      /* ── Responsive layout ── */
+
+      /* Mobile sidebar overlay */
+      .etf-sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 40;
+      }
+      .etf-sidebar-overlay.open { display: block; }
+
+      /* Sidebar drawer on mobile */
+      @media (max-width: 768px) {
+        .etf-sidebar {
+          position: fixed !important;
+          left: -280px !important;
+          top: 0 !important;
+          height: 100vh !important;
+          width: 280px !important;
+          z-index: 50;
+          transition: left .25s ease;
+          box-shadow: 4px 0 24px rgba(0,0,0,.12);
+        }
+        .etf-sidebar.open { left: 0 !important; }
+        .etf-main { margin-left: 0 !important; width: 100% !important; }
+        .etf-mobile-header {
+          display: flex !important;
+        }
+        .etf-app { flex-direction: column !important; }
+      }
+
+      /* Mobile header bar */
+      .etf-mobile-header {
+        display: none;
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: #fff;
+        border-bottom: 1px solid #e8e3db;
+        padding: 12px 16px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .etf-hamburger {
+        background: none;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        color: #1a1613;
+      }
+
+      /* Two-column grids → single column on mobile */
+      @media (max-width: 640px) {
+        .etf-two-col {
+          grid-template-columns: 1fr !important;
+        }
+        .etf-field-row {
+          grid-template-columns: 1fr !important;
+        }
+        .etf-stats-row {
+          grid-template-columns: 1fr !important;
+        }
+        .etf-how-row {
+          grid-template-columns: 1fr !important;
+        }
+        .etf-dash-header {
+          padding: 24px 16px 16px !important;
+        }
+        .etf-tab-panel {
+          padding: 16px !important;
+        }
+        .etf-event-header {
+          padding: 16px !important;
+          flex-direction: column !important;
+          gap: 12px !important;
+        }
+        .etf-event-header-stats {
+          flex-wrap: wrap !important;
+          gap: 8px !important;
+        }
+      }
+
+      /* Tabs — horizontal scroll on mobile */
+      @media (max-width: 768px) {
+        .etf-tabs {
+          overflow-x: auto !important;
+          flex-wrap: nowrap !important;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .etf-tabs::-webkit-scrollbar { display: none; }
+        .etf-tab {
+          white-space: nowrap !important;
+          flex-shrink: 0 !important;
+        }
+        .etf-intake-card {
+          flex-direction: column !important;
+        }
+        .etf-intake-card-actions {
+          flex-direction: row !important;
+          width: 100% !important;
+        }
+      }
+
+      /* Bigger touch targets on mobile */
+      @media (max-width: 768px) {
+        input, select, textarea {
+          font-size: 16px !important; /* prevents iOS zoom */
+          min-height: 44px;
+        }
+        button {
+          min-height: 44px;
+        }
+        .etf-tab {
+          padding: 10px 14px !important;
+          font-size: 12px !important;
+        }
+      }
+
+      /* Dashboard stats — tablet */
+      @media (max-width: 900px) {
+        .etf-stats-row {
+          grid-template-columns: 1fr 1fr !important;
+        }
+      }
     `}</style>
   );
 }
@@ -3150,11 +3309,12 @@ const styles = {
   },
 
   // Main
-  main: { flex: 1, minWidth: 0 },
+  main: { flex: 1, minWidth: 0, overflow: "auto" },
 
   // Dashboard
-  dashboard: { maxWidth: 960, margin: "0 auto", padding: "48px 40px" },
-  dashHeader: { marginBottom: 48 },
+  dashboard: { maxWidth: 960, margin: "0 auto", padding: "clamp(16px, 4vw, 48px) clamp(16px, 4vw, 40px)" },
+  dashHeader: { marginBottom: 32 },
+
   eyebrow: {
     fontSize: 11,
     textTransform: "uppercase",
