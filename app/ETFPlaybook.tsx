@@ -384,13 +384,16 @@ export default function ETFPlaybook() {
   useEffect(() => {
     const storedOrg = localStorage.getItem("etf_org_id");
     const storedMember = localStorage.getItem("etf_team_member");
+    const storedOrgData = localStorage.getItem("etf_org_data");
     if (!storedOrg) {
       setSetupStep("org");
     } else if (!storedMember) {
       setOrgId(storedOrg);
+      if (storedOrgData) setOrgData(JSON.parse(storedOrgData));
       setSetupStep("name");
     } else {
       setOrgId(storedOrg);
+      if (storedOrgData) setOrgData(JSON.parse(storedOrgData));
       setTeamMember(storedMember);
     }
   }, []);
@@ -458,9 +461,16 @@ export default function ETFPlaybook() {
     try { await api.deleteEvent(id); } catch (_) {}
   };
 
-  const handleOrgComplete = async (newOrg) => {
-    await api.saveOrg(newOrg);
+  const handleOrgComplete = (newOrg) => {
+    // Save to DB in background — don't block the user
+    fetch("/api/orgs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newOrg),
+    }).catch(() => {});
     localStorage.setItem("etf_org_id", newOrg.id);
+    // Store org data locally so we don't need the API to proceed
+    localStorage.setItem("etf_org_data", JSON.stringify(newOrg));
     setOrgId(newOrg.id);
     setOrgData(newOrg);
     setSetupStep("name");
@@ -565,17 +575,27 @@ function OrgSetup({ onComplete }) {
     setBulkMode(false);
   };
 
-  const handleComplete = async () => {
+  const handleComplete = async (skipVenues = false) => {
     setSaving(true);
-    const cleanVenues = bulkMode
+    const cleanVenues = skipVenues ? [] : bulkMode
       ? bulkText.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
           const d = line.indexOf(" — ");
           return d > -1 ? { name: line.substring(0, d), address: line.substring(d + 3) } : { name: line, address: "" };
         })
       : venues.filter((v) => v.name.trim());
 
-    await onComplete({ id: orgId, name: orgName, city, state, notifyEmail, venues: cleanVenues });
+    const orgPayload = { id: orgId, name: orgName, city, state, notifyEmail, venues: cleanVenues };
+
+    // Try to save to DB — but don't block the user if it fails or times out
+    fetch("/api/orgs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orgPayload),
+    }).catch(() => {}); // fire and forget
+
+    // Proceed immediately regardless of API response
     setSaving(false);
+    onComplete(orgPayload);
   };
 
   const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, boxSizing: "border-box" };
@@ -705,15 +725,19 @@ function OrgSetup({ onComplete }) {
                 ← Back
               </button>
               <button
-                onClick={handleComplete}
+                onClick={() => handleComplete(false)}
                 disabled={saving}
                 style={{ flex: 1, padding: 12, background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
               >
                 {saving ? "Setting up…" : "Complete Setup →"}
               </button>
-            </div>
-            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 10, textAlign: "center" }}>
-              You can skip venues and add them later — or skip entirely if not needed.
+              <button
+                onClick={() => handleComplete(true)}
+                disabled={saving}
+                style={{ padding: "10px 16px", background: "transparent", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, color: "#6b6660", cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                Skip for now
+              </button>
             </div>
           </div>
         )}
