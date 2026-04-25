@@ -615,11 +615,45 @@ function LoginScreen({ onComplete }) {
   const [name, setName] = useState("");
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
-  const SHARED_PASSCODE = "etf2025"; // ← change this to your team's passcode
 
   const handleSubmit = () => {
     if (!name.trim()) { setError("Please enter your name."); return; }
-    if (passcode !== SHARED_PASSCODE) { setError("Incorrect passcode. Check with your team admin."); return; }
+    if (!passcode.trim()) { setError("Please enter your access code."); return; }
+
+    // Check passcode against stored org passcodes
+    // Look through all stored org passcodes in localStorage
+    const storedOrgData = localStorage.getItem("etf_org_data");
+    if (storedOrgData) {
+      // Returning user on same device — check against their org's passcode
+      try {
+        const org = JSON.parse(storedOrgData);
+        const storedPasscode = localStorage.getItem(`etf_passcode_${org.id}`);
+        if (storedPasscode && passcode !== storedPasscode) {
+          setError("Incorrect access code. Check with your team admin.");
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // New user or passcode not stored locally — check all known org passcodes
+    let matched = false;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("etf_passcode_")) {
+        if (localStorage.getItem(key) === passcode) {
+          matched = true;
+          break;
+        }
+      }
+    }
+
+    // If no org is set up on this device yet, any code is accepted (first-time setup)
+    const hasOrg = !!localStorage.getItem("etf_org_id");
+    if (hasOrg && !matched && !storedOrgData) {
+      setError("Incorrect access code. Check with your team admin.");
+      return;
+    }
+
     onComplete(name.trim());
   };
 
@@ -660,11 +694,14 @@ function LoginScreen({ onComplete }) {
 // Org Setup — first-run flow for a new DMO
 // ————————————————————————————————————————————————————————————————
 function OrgSetup({ onComplete }) {
-  const [step, setStep] = useState(1); // 1=org info, 2=venues
+  const [step, setStep] = useState(1);
   const [orgName, setOrgName] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("TX");
   const [notifyEmail, setNotifyEmail] = useState("");
+  const [passcode, setPasscode] = useState("");
+  const [passcodeConfirm, setPasscodeConfirm] = useState("");
+  const [passcodeError, setPasscodeError] = useState("");
   const [venues, setVenues] = useState([{ name: "", address: "" }]);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkText, setBulkText] = useState("");
@@ -688,6 +725,14 @@ function OrgSetup({ onComplete }) {
     setBulkMode(false);
   };
 
+  const handleNext = () => {
+    if (!passcode.trim()) { setPasscodeError("Please create an access code."); return; }
+    if (passcode !== passcodeConfirm) { setPasscodeError("Access codes don't match."); return; }
+    if (passcode.length < 4) { setPasscodeError("Access code must be at least 4 characters."); return; }
+    setPasscodeError("");
+    setStep(2);
+  };
+
   const handleComplete = async (skipVenues = false) => {
     setSaving(true);
     const cleanVenues = skipVenues ? [] : bulkMode
@@ -697,16 +742,17 @@ function OrgSetup({ onComplete }) {
         })
       : venues.filter((v) => v.name.trim());
 
-    const orgPayload = { id: orgId, name: orgName, city, state, notifyEmail, venues: cleanVenues };
+    const orgPayload = { id: orgId, name: orgName, city, state, notifyEmail, passcode, venues: cleanVenues };
 
-    // Try to save to DB — but don't block the user if it fails or times out
+    // Save passcode locally so login can check it
+    localStorage.setItem(`etf_passcode_${orgId}`, passcode);
+
     fetch("/api/orgs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(orgPayload),
-    }).catch(() => {}); // fire and forget
+    }).catch(() => {});
 
-    // Proceed immediately regardless of API response
     setSaving(false);
     onComplete(orgPayload);
   };
@@ -750,22 +796,24 @@ function OrgSetup({ onComplete }) {
                 <input value={state} onChange={(e) => setState(e.target.value)} placeholder="TX" style={inputStyle} />
               </div>
             </div>
-            <div style={{ marginBottom: 28 }}>
+            <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>Notification Email</label>
-              <input
-                type="email"
-                value={notifyEmail}
-                onChange={(e) => setNotifyEmail(e.target.value)}
-                placeholder="e.g. events@visitmckinney.com"
-                style={inputStyle}
-              />
-              <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5, lineHeight: 1.5 }}>
-                Where to send alerts when an organizer submits your intake form. Can be a shared team inbox.
-              </div>
+              <input type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="e.g. events@yourorg.com" style={inputStyle} />
+              <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>Where to send alerts when an organizer submits your intake form.</div>
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>Create Access Code</label>
+              <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} placeholder="Min. 4 characters" style={inputStyle} />
+              <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>Your team will use this to sign in. Share it with your teammates.</div>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={labelStyle}>Confirm Access Code</label>
+              <input type="password" value={passcodeConfirm} onChange={(e) => setPasscodeConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNext()} placeholder="Re-enter access code" style={inputStyle} />
+              {passcodeError && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 5 }}>{passcodeError}</div>}
             </div>
             <button
-              onClick={() => setStep(2)}
-              disabled={!orgName.trim() || !city.trim()}
+              onClick={handleNext}
+              disabled={!orgName.trim() || !city.trim() || !passcode.trim()}
               style={{ width: "100%", padding: 12, background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
             >
               Next: Add Venues →
