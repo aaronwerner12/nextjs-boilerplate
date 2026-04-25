@@ -377,60 +377,38 @@ export default function ETFPlaybook() {
 
   // Org + member identity — loaded from localStorage (SSR-safe)
   const [orgId, setOrgId] = useState("");
-  const [orgData, setOrgData] = useState(null); // { id, name, city, state, venues[] }
+  const [orgData, setOrgData] = useState(null);
   const [teamMember, setTeamMember] = useState("");
-  const [setupStep, setSetupStep] = useState(null); // null | "org" | "name"
+  const [setupStep, setSetupStep] = useState(null); // null | "login" | "org" | "name"
 
-  // ── Bootstrap: check auth then load identity ─────────────────
+  // ── Bootstrap: check auth ─────────────────────────────────────
   useEffect(() => {
-    // Check for magic link callback in URL (?auth=...)
-    const urlParams = new URLSearchParams(window.location.search);
-    const authParam = urlParams.get("auth");
-    if (authParam) {
-      try {
-        const authData = Object.fromEntries(new URLSearchParams(authParam));
-        if (authData.email) {
-          localStorage.setItem("etf_user_email", authData.email);
-          localStorage.setItem("etf_user_id", authData.userId || "");
-          if (authData.orgId) localStorage.setItem("etf_org_id", authData.orgId);
-          // Clean URL
-          window.history.replaceState({}, "", "/");
-        }
-      } catch (_) {}
-    }
-
-    // Check auth
-    const storedEmail = localStorage.getItem("etf_user_email");
-    if (!storedEmail) {
-      window.location.href = "/auth";
-      return;
-    }
+    if (typeof window === "undefined") return;
 
     const storedOrg = localStorage.getItem("etf_org_id");
     const storedMember = localStorage.getItem("etf_team_member");
     const storedOrgData = localStorage.getItem("etf_org_data");
+    const storedAuth = localStorage.getItem("etf_authed");
 
-    // Auto-set team member name from email if not set
-    if (!storedMember) {
-      const username = storedEmail.split("@")[0];
-      // If username has dots/underscores treat each part as a name segment
-      // Otherwise just capitalize the whole thing
-      const autoName = username.includes(".") || username.includes("_")
-        ? username.replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase())
-        : username.charAt(0).toUpperCase() + username.slice(1);
-      localStorage.setItem("etf_team_member", autoName);
-      setTeamMember(autoName);
-    } else {
-      setTeamMember(storedMember);
+    if (!storedAuth) {
+      setSetupStep("login");
+      return;
     }
 
     if (!storedOrg) {
       setSetupStep("org");
+      return;
+    }
+
+    setOrgId(storedOrg);
+    if (storedOrgData) {
+      try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
+    }
+
+    if (!storedMember) {
+      setSetupStep("name");
     } else {
-      setOrgId(storedOrg);
-      if (storedOrgData) {
-        try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
-      }
+      setTeamMember(storedMember);
     }
   }, []);
 
@@ -497,19 +475,32 @@ export default function ETFPlaybook() {
     try { await api.deleteEvent(id); } catch (_) {}
   };
 
+  const handleLoginComplete = (name) => {
+    localStorage.setItem("etf_authed", "1");
+    localStorage.setItem("etf_team_member", name);
+    setTeamMember(name);
+    const storedOrg = localStorage.getItem("etf_org_id");
+    const storedOrgData = localStorage.getItem("etf_org_data");
+    if (storedOrg && storedOrgData) {
+      setOrgId(storedOrg);
+      try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
+      setSetupStep(null);
+    } else {
+      setSetupStep("org");
+    }
+  };
+
   const handleOrgComplete = (newOrg) => {
-    // Save to DB in background — don't block the user
     fetch("/api/orgs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newOrg),
     }).catch(() => {});
     localStorage.setItem("etf_org_id", newOrg.id);
-    // Store org data locally so we don't need the API to proceed
     localStorage.setItem("etf_org_data", JSON.stringify(newOrg));
     setOrgId(newOrg.id);
     setOrgData(newOrg);
-    setSetupStep("name");
+    setSetupStep(null);
   };
 
   const handleNameComplete = (name) => {
@@ -520,7 +511,9 @@ export default function ETFPlaybook() {
   };
 
   // ── Setup flows ───────────────────────────────────────────────
+  if (setupStep === "login") return <LoginScreen onComplete={handleLoginComplete} />;
   if (setupStep === "org") return <OrgSetup onComplete={handleOrgComplete} />;
+  if (setupStep === "name") return <NamePrompt orgData={orgData} onSave={handleNameComplete} />;
 
   if (loading) {
     return (
@@ -600,6 +593,54 @@ export default function ETFPlaybook() {
           />
         )}
       </main>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+// Login Screen — name + passcode entry
+// ————————————————————————————————————————————————————————————————
+function LoginScreen({ onComplete }) {
+  const [name, setName] = useState("");
+  const [passcode, setPasscode] = useState("");
+  const [error, setError] = useState("");
+  const SHARED_PASSCODE = "etf2025"; // ← change this to your team's passcode
+
+  const handleSubmit = () => {
+    if (!name.trim()) { setError("Please enter your name."); return; }
+    if (passcode !== SHARED_PASSCODE) { setError("Incorrect passcode. Check with your team admin."); return; }
+    onComplete(name.trim());
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0f0e0c", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ width: 52, height: 52, background: "#c8b97a", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#0f0e0c" }}>ETF</div>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#f5f0e8" }}>Texas Events Trust Fund</div>
+          <div style={{ fontSize: 12, color: "#6b6660", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Analysis Tool</div>
+        </div>
+        <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "36px 32px" }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 8 }}>Sign in</div>
+          <p style={{ fontSize: 13.5, color: "#9e9890", lineHeight: 1.6, margin: "0 0 24px" }}>Enter your name and your team's access code.</p>
+          {error && (
+            <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 4, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>
+          )}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", display: "block", marginBottom: 6 }}>Your Name</label>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Aaron" style={{ width: "100%", padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", display: "block", marginBottom: 6 }}>Access Code</label>
+            <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="Team access code" style={{ width: "100%", padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+          <button onClick={handleSubmit} style={{ width: "100%", padding: "13px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            Enter Tool →
+          </button>
+          <p style={{ margin: "16px 0 0", fontSize: 12, color: "#4a4740", lineHeight: 1.6, textAlign: "center" }}>Don't have an access code? Contact your team admin.</p>
+        </div>
+        <p style={{ textAlign: "center", fontSize: 11.5, color: "#4a4740", marginTop: 20, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT. Planning purposes only.</p>
+      </div>
     </div>
   );
 }
@@ -922,9 +963,9 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
           <span style={{ color: "#e8e3db" }}>·</span>
           <button
             onClick={() => {
-              localStorage.removeItem("etf_user_email");
-              localStorage.removeItem("etf_user_id");
-              window.location.href = "/auth";
+              localStorage.removeItem("etf_authed");
+              localStorage.removeItem("etf_team_member");
+              window.location.reload();
             }}
             style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
           >
