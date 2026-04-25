@@ -373,6 +373,7 @@ export default function ETFPlaybook() {
   const [tab, setTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Org + member identity — loaded from localStorage (SSR-safe)
   const [orgId, setOrgId] = useState("");
@@ -494,8 +495,6 @@ export default function ETFPlaybook() {
       </div>
     );
   }
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Venues from org database, falling back to McKinney defaults
   const venues = orgData?.venues?.map((v) => v.address ? `${v.name} — ${v.address}` : v.name) || DEFAULT_MCKINNEY_VENUES;
