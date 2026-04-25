@@ -381,21 +381,56 @@ export default function ETFPlaybook() {
   const [teamMember, setTeamMember] = useState("");
   const [setupStep, setSetupStep] = useState(null); // null | "org" | "name"
 
-  // ── Bootstrap: load identity from localStorage ────────────────
+  // ── Bootstrap: check auth then load identity ─────────────────
   useEffect(() => {
+    // Check for magic link callback in URL (?auth=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const authParam = urlParams.get("auth");
+    if (authParam) {
+      try {
+        const authData = Object.fromEntries(new URLSearchParams(authParam));
+        if (authData.email) {
+          localStorage.setItem("etf_user_email", authData.email);
+          localStorage.setItem("etf_user_id", authData.userId || "");
+          if (authData.orgId) localStorage.setItem("etf_org_id", authData.orgId);
+          // Clean URL
+          window.history.replaceState({}, "", "/");
+        }
+      } catch (_) {}
+    }
+
+    // Check auth
+    const storedEmail = localStorage.getItem("etf_user_email");
+    if (!storedEmail) {
+      window.location.href = "/auth";
+      return;
+    }
+
     const storedOrg = localStorage.getItem("etf_org_id");
     const storedMember = localStorage.getItem("etf_team_member");
     const storedOrgData = localStorage.getItem("etf_org_data");
+
+    // Auto-set team member name from email if not set
+    if (!storedMember) {
+      const username = storedEmail.split("@")[0];
+      // If username has dots/underscores treat each part as a name segment
+      // Otherwise just capitalize the whole thing
+      const autoName = username.includes(".") || username.includes("_")
+        ? username.replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+        : username.charAt(0).toUpperCase() + username.slice(1);
+      localStorage.setItem("etf_team_member", autoName);
+      setTeamMember(autoName);
+    } else {
+      setTeamMember(storedMember);
+    }
+
     if (!storedOrg) {
       setSetupStep("org");
-    } else if (!storedMember) {
-      setOrgId(storedOrg);
-      if (storedOrgData) setOrgData(JSON.parse(storedOrgData));
-      setSetupStep("name");
     } else {
       setOrgId(storedOrg);
-      if (storedOrgData) setOrgData(JSON.parse(storedOrgData));
-      setTeamMember(storedMember);
+      if (storedOrgData) {
+        try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
+      }
     }
   }, []);
 
@@ -486,7 +521,6 @@ export default function ETFPlaybook() {
 
   // ── Setup flows ───────────────────────────────────────────────
   if (setupStep === "org") return <OrgSetup onComplete={handleOrgComplete} />;
-  if (setupStep === "name") return <NamePrompt orgData={orgData} onSave={handleNameComplete} />;
 
   if (loading) {
     return (
@@ -874,14 +908,27 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
           {!saveStatus && <span style={{ color: "#059669" }}>● Shared team database</span>}
         </div>
         <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>
-          Signed in as <strong style={{ color: "#6b6660" }}>{teamMember}</strong>{" "}
-          <button onClick={onChangeName} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-            change
-          </button>
+          {teamMember && <span style={{ color: "#6b6660", fontWeight: 500 }}>{teamMember}</span>}
+          {typeof window !== "undefined" && localStorage.getItem("etf_user_email") && (
+            <span style={{ color: "#9ca3af", fontSize: 11, display: "block", marginTop: 2 }}>
+              {localStorage.getItem("etf_user_email")}
+            </span>
+          )}
         </div>
-        <div style={{ fontSize: 11, color: "#9ca3af" }}>
+        <div style={{ display: "flex", gap: 10, fontSize: 11 }}>
           <button onClick={onManageVenues} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-            Manage org & venues
+            Manage venues
+          </button>
+          <span style={{ color: "#e8e3db" }}>·</span>
+          <button
+            onClick={() => {
+              localStorage.removeItem("etf_user_email");
+              localStorage.removeItem("etf_user_id");
+              window.location.href = "/auth";
+            }}
+            style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+          >
+            Sign out
           </button>
         </div>
       </div>
@@ -1164,7 +1211,7 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
     { k: "timeline", label: "Timeline", icon: <Calendar size={14} /> },
     { k: "documents", label: "Documents", icon: <ClipboardList size={14} /> },
     { k: "costs", label: "Allowable Costs", icon: <DollarSign size={14} /> },
-    { k: "apply", label: "Apply to EDT", icon: <ArrowRight size={14} />, highlight: decision.recommendation !== "DO NOT PURSUE" && decision.recommendation !== "" },
+    { k: "apply", label: "Apply to ETF", icon: <ArrowRight size={14} />, highlight: decision.recommendation !== "DO NOT PURSUE" && decision.recommendation !== "" },
     { k: "reference", label: "Reference", icon: <BookOpen size={14} /> },
   ];
 
