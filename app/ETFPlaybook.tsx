@@ -11,206 +11,51 @@ import {
 } from "lucide-react";
 
 // ————————————————————————————————————————————————————————————————
-// Texas ETF Pursuit Tool — monday.com Edition
-// Shared team tool: events sync to/from a monday.com board so the
-// whole team sees the same pipeline.
+// Texas ETF Pursuit Tool — Multi-Org Team Edition
+// Each DMO has their own scoped events and venue list.
 // NOT an official state form. NOT affiliated with EDT.
 // ————————————————————————————————————————————————————————————————
 
 // ————————————————————————————————————————————————————————————————
-// Monday.com API layer
-// All calls go through the v2 GraphQL endpoint.
-// Token and board ID are stored in localStorage (browser-only).
+// API helpers
 // ————————————————————————————————————————————————————————————————
-const MONDAY_API = "https://api.monday.com/v2";
-
-const mondayQuery = async (token, query, variables = {}) => {
-  const res = await fetch(MONDAY_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": token,
-      "API-Version": "2024-01",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
-  if (json.errors) throw new Error(json.errors[0].message);
-  return json.data;
+const api = {
+  async getOrg(orgId) {
+    const res = await fetch(`/api/orgs?id=${orgId}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("Org not found");
+    return res.json();
+  },
+  async saveOrg(org) {
+    const res = await fetch("/api/orgs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(org),
+    });
+    if (!res.ok) throw new Error("Failed to save org");
+    return res.json();
+  },
+  async getEvents(orgId) {
+    const res = await fetch(`/api/events?org_id=${orgId}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to load events");
+    return res.json();
+  },
+  async saveEvent(event, orgId) {
+    const res = await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...event, orgId }),
+    });
+    if (!res.ok) throw new Error("Failed to save event");
+  },
+  async deleteEvent(id) {
+    const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete event");
+  },
 };
 
-// Column IDs we'll use — created once, stored in localStorage
-const COL = {
-  status:       "status",
-  firstDay:     "date4",
-  lastDay:      "date",
-  siteOrg:      "text",
-  projectedFund:"numbers",
-  localMatch:   "numbers1",
-  roomNights:   "numbers2",
-  outOfMarket:  "numbers3",
-  recommendation: "text1",
-  eligPass:     "checkbox",
-  hotelBlock:   "checkbox1",
-  appDeadline:  "date0",
-  docsComplete: "numbers4",
-  notes:        "long_text",
-  mondayId:     "__monday_item_id__", // not a real column — stored in event obj
-};
+const ELIG_KEYS = ["competitive", "annual", "solesite", "notelsewhere"];
 
-// Convert a local event object → Monday column values (only safe text/number fields)
-// We write to columns by their auto-generated IDs after creation.
-// To avoid errors from missing columns, we catch per-column and continue.
-const eventToMondaySimple = (event, calc, decision) => {
-  const appDeadline = event.firstDay
-    ? addDays(event.firstDay, -120)?.toISOString().split("T")[0]
-    : null;
-  const docsComplete = event.docs
-    ? Object.values(event.docs).filter((d) => d.done).length
-    : 0;
-  // Return a plain object of label→value pairs we'll set via name-based lookup
-  return {
-    "Projected Fund":   Math.round(decision?.estimate || 0),
-    "Local Match":      Math.round(calc?.requiredLocalMatch || 0),
-    "Room Nights":      Math.round(event.roomNights || calc?.totalRoomNights || 0),
-    "Out-of-Market %":  event.outOfMarketPct || 0,
-    "Recommendation":   decision?.recommendation || "",
-    "Docs Complete":    docsComplete,
-    "Notes":            event.notes || "",
-    "Status":           STATUS_LABELS[event.status] || "Analysis",
-  };
-};
 
-// Write simple column values by fetching column IDs from the board first
-const updateBoardItemSafe = async (token, boardId, itemId, labelValueMap) => {
-  // Get board columns to find IDs by title
-  let cols = [];
-  try {
-    const data = await mondayQuery(token, `{ boards(ids:[${boardId}]){ columns { id title type } } }`);
-    cols = data?.boards?.[0]?.columns || [];
-  } catch (_) { return; }
-
-  const colValues = {};
-  Object.entries(labelValueMap).forEach(([title, value]) => {
-    const col = cols.find((c) => c.title === title);
-    if (!col) return;
-    if (col.type === "numeric" || col.type === "numbers") {
-      colValues[col.id] = String(value);
-    } else if (col.type === "color" || col.type === "status") {
-      colValues[col.id] = JSON.stringify({ label: String(value) });
-    } else if (col.type === "long_text") {
-      colValues[col.id] = JSON.stringify({ text: String(value) });
-    } else {
-      colValues[col.id] = String(value);
-    }
-  });
-
-  if (Object.keys(colValues).length === 0) return;
-  const colValStr = JSON.stringify(JSON.stringify(colValues));
-  try {
-    await mondayQuery(token, `
-      mutation {
-        change_multiple_column_values(board_id: ${boardId}, item_id: ${itemId}, column_values: ${colValStr}) { id }
-      }
-    `);
-  } catch (_) { /* ignore column errors */ }
-};
-
-// Status label map (Monday status column uses label text)
-const STATUS_LABELS = {
-  analysis:    "Analysis",
-  application: "Application",
-  approved:    "Approved",
-  "post-event":"Post-Event",
-  complete:    "Complete",
-};
-
-// Create all needed columns on the board (idempotent — safe to call multiple times)
-const ensureBoardColumns = async (token, boardId) => {
-  // We'll use Monday's "create_column" mutation — if columns already exist it'll error, we just ignore those errors
-  const cols = [
-    { title: "Status",             column_type: "color" },
-    { title: "First Day",          column_type: "date" },
-    { title: "Last Day",           column_type: "date" },
-    { title: "Site Selection Org", column_type: "text" },
-    { title: "Projected Fund",     column_type: "numeric" },
-    { title: "Local Match",        column_type: "numeric" },
-    { title: "Room Nights",        column_type: "numeric" },
-    { title: "Out-of-Market %",    column_type: "numeric" },
-    { title: "Recommendation",     column_type: "text" },
-    { title: "Eligibility Pass",   column_type: "checkbox" },
-    { title: "Hotel Block",        column_type: "checkbox" },
-    { title: "App Deadline",       column_type: "date" },
-    { title: "Docs Complete",      column_type: "numeric" },
-    { title: "Notes",              column_type: "long_text" },
-  ];
-  // Fire-and-forget — columns may already exist
-  for (const col of cols) {
-    try {
-      await mondayQuery(token, `
-        mutation {
-          create_column(board_id: ${boardId}, title: "${col.title}", column_type: ${col.column_type}) { id }
-        }
-      `);
-    } catch (_) { /* column likely already exists */ }
-  }
-};
-
-// Fetch all items from the board and map to local event summaries
-const fetchBoardItems = async (token, boardId) => {
-  const data = await mondayQuery(token, `
-    {
-      boards(ids: [${boardId}]) {
-        items_page(limit: 200) {
-          items {
-            id
-            name
-            column_values {
-              id
-              text
-              value
-            }
-          }
-        }
-      }
-    }
-  `);
-  return data?.boards?.[0]?.items_page?.items || [];
-};
-
-// Create a new item on the board, return the Monday item ID
-const createBoardItem = async (token, boardId, name) => {
-  const data = await mondayQuery(token, `
-    mutation {
-      create_item(board_id: ${boardId}, item_name: "${name.replace(/"/g, "'")}") { id }
-    }
-  `);
-  return data?.create_item?.id;
-};
-
-// Update column values for an existing item
-const updateBoardItem = async (token, boardId, itemId, columnValues) => {
-  // Remove nulls
-  const clean = {};
-  Object.entries(columnValues).forEach(([k, v]) => {
-    if (v !== null && v !== undefined && k !== COL.mondayId) clean[k] = v;
-  });
-  const colValStr = JSON.stringify(JSON.stringify(clean));
-  await mondayQuery(token, `
-    mutation {
-      change_multiple_column_values(board_id: ${boardId}, item_id: ${itemId}, column_values: ${colValStr}) { id }
-    }
-  `);
-};
-
-// Delete an item from the board
-const deleteBoardItem = async (token, boardId, itemId) => {
-  await mondayQuery(token, `
-    mutation { delete_item(item_id: ${itemId}) { id } }
-  `);
-};
-
-const fmtMoney = (n) => {
   if (n == null || isNaN(n)) return "$0";
   return "$" + Math.round(n).toLocaleString();
 };
@@ -514,192 +359,134 @@ function evaluateDecision(event, calcResult) {
   return { checks, recommendation, rationale, estimate };
 }
 
+
 // ————————————————————————————————————————————————————————————————
-// Component — Main App (Monday.com edition)
+// Component — Main App (Neon Postgres team edition)
+// ————————————————————————————————————————————————————————————————
+
+// ————————————————————————————————————————————————————————————————
+// Component — Main App (Multi-org edition)
 // ————————————————————————————————————————————————————————————————
 export default function ETFPlaybook() {
   const [events, setEvents] = useState([]);
   const [currentEventId, setCurrentEventId] = useState(null);
   const [tab, setTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
-  const [saveStatus, setSaveStatus] = useState(""); // "saving" | "saved" | "error" | "syncing" | "synced"
-  const [showSettings, setShowSettings] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("");
 
-  // Monday config — initialized empty, loaded from localStorage in useEffect (SSR-safe)
-  const [mondayToken, setMondayToken] = useState("");
-  const [mondayBoardId, setMondayBoardId] = useState("18410218031");
-  const mondayEnabled = !!(mondayToken && mondayBoardId);
+  // Org + member identity — loaded from localStorage (SSR-safe)
+  const [orgId, setOrgId] = useState("");
+  const [orgData, setOrgData] = useState(null); // { id, name, city, state, venues[] }
+  const [teamMember, setTeamMember] = useState("");
+  const [setupStep, setSetupStep] = useState(null); // null | "org" | "name"
 
-  // ── Load: first from localStorage, then sync from Monday ──────
+  // ── Bootstrap: load identity from localStorage ────────────────
   useEffect(() => {
-    // Safe to access localStorage here — this only runs in the browser
-    const storedToken = localStorage.getItem("etf_monday_token") || "";
-    const storedBoard = localStorage.getItem("etf_monday_board") || "18410218031";
-    if (storedToken) setMondayToken(storedToken);
-    if (storedBoard) setMondayBoardId(storedBoard);
+    const storedOrg = localStorage.getItem("etf_org_id");
+    const storedMember = localStorage.getItem("etf_team_member");
+    if (!storedOrg) {
+      setSetupStep("org");
+    } else if (!storedMember) {
+      setOrgId(storedOrg);
+      setSetupStep("name");
+    } else {
+      setOrgId(storedOrg);
+      setTeamMember(storedMember);
+    }
+  }, []);
 
+  // ── Load org data + events once org is known ──────────────────
+  useEffect(() => {
+    if (!orgId || setupStep) return;
     (async () => {
-      // 1. Load local cache immediately so UI is fast
       try {
-        const raw = localStorage.getItem("etf_events_cache");
-        if (raw) setEvents(JSON.parse(raw));
-      } catch (_) {}
-
-      // 2. If Monday is configured, pull latest from board
-      if (storedToken && storedBoard) {
-        try {
-          setSaveStatus("syncing");
-          // Ensure columns exist — only run ONCE per board, tracked in localStorage
-          const colsKey = `etf_cols_created_${storedBoard}`;
-          if (!localStorage.getItem(colsKey)) {
-            await ensureBoardColumns(storedToken, storedBoard);
-            localStorage.setItem(colsKey, "1");
-          }
-          const items = await fetchBoardItems(storedToken, storedBoard);
-          if (items.length > 0) {
-            // Merge Monday items with local cache — Monday is source of truth for shared fields
-            setEvents((prev) => {
-              const merged = [...prev];
-              items.forEach((item) => {
-                const existing = merged.find((e) => e.mondayItemId === item.id);
-                if (!existing) {
-                  // New item from Monday — add as minimal event
-                  merged.push({
-                    ...blankEvent(),
-                    id: "mon_" + item.id,
-                    mondayItemId: item.id,
-                    name: item.name,
-                  });
-                }
-              });
-              return merged;
-            });
-          }
-          setSaveStatus("synced");
-          setTimeout(() => setSaveStatus(""), 2000);
-        } catch (e) {
-          setSaveStatus("error");
-        }
+        const [org, evts] = await Promise.all([
+          api.getOrg(orgId),
+          api.getEvents(orgId),
+        ]);
+        setOrgData(org);
+        setEvents(evts);
+      } catch (e) {
+        console.error("Load error:", e);
       }
       setLoading(false);
     })();
-  }, [mondayToken, mondayBoardId]);
+  }, [orgId, setupStep]);
 
-  // ── Save: local cache always, Monday when configured ──────────
-  const syncToMonday = async (eventsToSync) => {
-    if (!mondayEnabled) return;
-    setSaveStatus("syncing");
-    try {
-      // Fetch current Monday items to use as dedup reference
-      let existingItems = [];
-      try {
-        existingItems = await fetchBoardItems(mondayToken, mondayBoardId);
-      } catch (_) {}
-
-      const updatedEvents = [...eventsToSync];
-
-      for (let i = 0; i < updatedEvents.length; i++) {
-        const event = updatedEvents[i];
-        if (!event.name) continue; // skip unnamed events
-
-        const calc = calculateTrustFund(event);
-        const decision = evaluateDecision(event, calc);
-
-        // Find Monday item by stored ID first, then fall back to name match
-        let mondayId = event.mondayItemId;
-        if (!mondayId) {
-          const match = existingItems.find((item) => item.name === event.name);
-          if (match) mondayId = match.id;
-        }
-
-        if (mondayId) {
-          // Update existing item
-          await updateBoardItemSafe(mondayToken, mondayBoardId, mondayId, eventToMondaySimple(event, calc, decision));
-          updatedEvents[i] = { ...event, mondayItemId: mondayId };
-        } else {
-          // Create new item — only if no match found on board
-          const newId = await createBoardItem(mondayToken, mondayBoardId, event.name);
-          if (newId) {
-            await updateBoardItemSafe(mondayToken, mondayBoardId, newId, eventToMondaySimple(event, calc, decision));
-            updatedEvents[i] = { ...event, mondayItemId: newId };
-          }
-        }
-      }
-
-      // Persist updated events (with mondayItemIds) to local cache
-      localStorage.setItem("etf_events_cache", JSON.stringify(updatedEvents));
-      setEvents(updatedEvents);
-
-      setSaveStatus("synced");
-      setTimeout(() => setSaveStatus(""), 2000);
-    } catch (e) {
-      console.error("Monday sync error:", e);
-      setSaveStatus("error");
-    }
-  };
-
+  // ── Refresh events every 30s to pick up teammates' changes ───
   useEffect(() => {
-    if (loading) return;
-    // Always save to local cache immediately
-    localStorage.setItem("etf_events_cache", JSON.stringify(events));
-    // Debounce Monday sync
-    const t = setTimeout(() => syncToMonday(events), 2000);
-    return () => clearTimeout(t);
-  }, [events, loading]);
+    if (!orgId || setupStep) return;
+    const interval = setInterval(async () => {
+      try {
+        const evts = await api.getEvents(orgId);
+        setEvents(evts);
+      } catch (_) {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [orgId, setupStep]);
 
   const currentEvent = events.find((e) => e.id === currentEventId);
 
   const updateEvent = (updater) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === currentEventId ? updater(e) : e))
-    );
+    const current = events.find((e) => e.id === currentEventId);
+    if (!current) return;
+    const updated = updater(current);
+    setEvents((prev) => prev.map((e) => (e.id === currentEventId ? updated : e)));
+    setSaveStatus("saving");
+    clearTimeout(window._etfSaveTimer);
+    window._etfSaveTimer = setTimeout(async () => {
+      try {
+        await api.saveEvent({ ...updated, createdBy: teamMember }, orgId);
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(""), 2000);
+      } catch (_) { setSaveStatus("error"); }
+    }, 800);
   };
 
-  const createEvent = () => {
-    const e = blankEvent();
+  const createEvent = async () => {
+    const e = { ...blankEvent(), createdBy: teamMember, orgId };
     setEvents((prev) => [e, ...prev]);
     setCurrentEventId(e.id);
     setTab("overview");
+    try { await api.saveEvent(e, orgId); } catch (_) {}
   };
 
   const deleteEvent = async (id) => {
-    if (!window.confirm("Delete this event and all its data?")) return;
-    const event = events.find((e) => e.id === id);
-    if (event?.mondayItemId && mondayEnabled) {
-      try { await deleteBoardItem(mondayToken, mondayBoardId, event.mondayItemId); } catch (_) {}
-    }
+    if (!window.confirm("Delete this event for the entire team?")) return;
     setEvents((prev) => prev.filter((e) => e.id !== id));
     if (currentEventId === id) setCurrentEventId(null);
+    try { await api.deleteEvent(id); } catch (_) {}
   };
 
-  const saveSettings = (token, boardId) => {
-    localStorage.setItem("etf_monday_token", token);
-    localStorage.setItem("etf_monday_board", boardId);
-    setMondayToken(token);
-    setMondayBoardId(boardId);
-    setShowSettings(false);
+  const handleOrgComplete = async (newOrg) => {
+    await api.saveOrg(newOrg);
+    localStorage.setItem("etf_org_id", newOrg.id);
+    setOrgId(newOrg.id);
+    setOrgData(newOrg);
+    setSetupStep("name");
   };
+
+  const handleNameComplete = (name) => {
+    localStorage.setItem("etf_team_member", name);
+    setTeamMember(name);
+    setSetupStep(null);
+    setLoading(true);
+  };
+
+  // ── Setup flows ───────────────────────────────────────────────
+  if (setupStep === "org") return <OrgSetup onComplete={handleOrgComplete} />;
+  if (setupStep === "name") return <NamePrompt orgData={orgData} onSave={handleNameComplete} />;
 
   if (loading) {
     return (
       <div style={styles.loadingScreen}>
-        <div style={styles.loadingText}>
-          {mondayEnabled ? "Syncing with monday.com…" : "Loading ETF Pursuit Tool…"}
-        </div>
+        <div style={styles.loadingText}>Loading {orgData?.name || "team"} events…</div>
       </div>
     );
   }
 
-  if (showSettings) {
-    return (
-      <SettingsScreen
-        initialToken={mondayToken}
-        initialBoardId={mondayBoardId}
-        onSave={saveSettings}
-        onCancel={() => setShowSettings(false)}
-      />
-    );
-  }
+  // Venues from org database, falling back to McKinney defaults
+  const venues = orgData?.venues?.map((v) => v.address ? `${v.name} — ${v.address}` : v.name) || DEFAULT_MCKINNEY_VENUES;
 
   return (
     <div style={styles.app}>
@@ -712,8 +499,10 @@ export default function ETFPlaybook() {
         onDelete={deleteEvent}
         onHome={() => { setCurrentEventId(null); setTab("dashboard"); }}
         saveStatus={saveStatus}
-        mondayEnabled={mondayEnabled}
-        onSettings={() => setShowSettings(true)}
+        teamMember={teamMember}
+        orgData={orgData}
+        onChangeName={() => setSetupStep("name")}
+        onManageVenues={() => setSetupStep("org")}
       />
       <main style={styles.main}>
         {!currentEvent ? (
@@ -721,8 +510,14 @@ export default function ETFPlaybook() {
             events={events}
             onOpen={(id) => { setCurrentEventId(id); setTab("overview"); }}
             onCreate={createEvent}
-            mondayEnabled={mondayEnabled}
-            onSettings={() => setShowSettings(true)}
+            teamMember={teamMember}
+            orgData={orgData}
+            onEventCreated={(id) => {
+              setCurrentEventId(id);
+              setTab("overview");
+              // Refresh events list
+              api.getEvents(orgId).then(setEvents).catch(() => {});
+            }}
           />
         ) : (
           <EventView
@@ -730,6 +525,7 @@ export default function ETFPlaybook() {
             update={updateEvent}
             tab={tab}
             setTab={setTab}
+            orgVenues={venues}
           />
         )}
       </main>
@@ -738,124 +534,240 @@ export default function ETFPlaybook() {
 }
 
 // ————————————————————————————————————————————————————————————————
-// Settings Screen — Monday.com configuration
+// Org Setup — first-run flow for a new DMO
 // ————————————————————————————————————————————————————————————————
-function SettingsScreen({ initialToken, initialBoardId, onSave, onCancel }) {
-  const [token, setToken] = useState(initialToken);
-  const [boardId, setBoardId] = useState(initialBoardId);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState(null);
+function OrgSetup({ onComplete }) {
+  const [step, setStep] = useState(1); // 1=org info, 2=venues
+  const [orgName, setOrgName] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("TX");
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [venues, setVenues] = useState([{ name: "", address: "" }]);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const testConnection = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const data = await mondayQuery(token, `{ me { name email } boards(ids: [${boardId}]) { name } }`);
-      setTestResult({
-        ok: true,
-        msg: `Connected as ${data.me.name} · Board: "${data.boards?.[0]?.name || boardId}"`,
-      });
-    } catch (e) {
-      setTestResult({ ok: false, msg: e.message });
-    }
-    setTesting(false);
+  const orgId = orgName ? orgName.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 40) + "_" + Date.now().toString(36) : "";
+
+  const addVenue = () => setVenues((v) => [...v, { name: "", address: "" }]);
+  const removeVenue = (i) => setVenues((v) => v.filter((_, idx) => idx !== i));
+  const updateVenue = (i, field, val) => setVenues((v) => v.map((ve, idx) => idx === i ? { ...ve, [field]: val } : ve));
+
+  const parseBulk = () => {
+    const parsed = bulkText.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+      const dashIdx = line.indexOf(" — ");
+      if (dashIdx > -1) return { name: line.substring(0, dashIdx).trim(), address: line.substring(dashIdx + 3).trim() };
+      const commaIdx = line.indexOf(",");
+      if (commaIdx > -1) return { name: line.substring(0, commaIdx).trim(), address: line.substring(commaIdx + 1).trim() };
+      return { name: line, address: "" };
+    });
+    setVenues(parsed.length > 0 ? parsed : [{ name: "", address: "" }]);
+    setBulkMode(false);
   };
+
+  const handleComplete = async () => {
+    setSaving(true);
+    const cleanVenues = bulkMode
+      ? bulkText.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
+          const d = line.indexOf(" — ");
+          return d > -1 ? { name: line.substring(0, d), address: line.substring(d + 3) } : { name: line, address: "" };
+        })
+      : venues.filter((v) => v.name.trim());
+
+    await onComplete({ id: orgId, name: orgName, city, state, notifyEmail, venues: cleanVenues });
+    setSaving(false);
+  };
+
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, boxSizing: "border-box" };
+  const labelStyle = { fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 5 };
 
   return (
     <div style={{ minHeight: "100vh", background: "#faf8f4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 40, maxWidth: 540, width: "100%" }}>
-        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 600, marginBottom: 6 }}>
-          monday.com Settings
+      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 48, maxWidth: 560, width: "100%" }}>
+        
+        {/* Header */}
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>
+          Texas Events Trust Fund Analysis Tool
         </div>
-        <p style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 28, lineHeight: 1.6 }}>
-          Connect to your monday.com board so your whole team shares the same ETF pipeline. Your token is stored only in this browser.
-        </p>
-
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 6 }}>
-            API Token
-          </label>
-          <input
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="Paste your monday.com API token"
-            style={{ width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13.5, fontFamily: "monospace", boxSizing: "border-box" }}
-          />
-          <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>
-            monday.com → Profile picture → Developers → My Access Tokens
-          </div>
+        <div style={{ fontSize: 13, color: "#9ca3af", marginBottom: 28 }}>
+          Step {step} of 2 — {step === 1 ? "Organization Details" : "Your Venues"}
         </div>
 
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 6 }}>
-            Board ID
-          </label>
-          <input
-            value={boardId}
-            onChange={(e) => setBoardId(e.target.value)}
-            placeholder="e.g. 18410218031"
-            style={{ width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13.5, fontFamily: "monospace", boxSizing: "border-box" }}
-          />
-          <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>
-            Found in the board URL: monday.com/boards/<strong>XXXXXXXXXX</strong>
-          </div>
+        {/* Progress bar */}
+        <div style={{ height: 3, background: "#f3f4f6", borderRadius: 2, marginBottom: 32 }}>
+          <div style={{ height: 3, background: "#1a1613", borderRadius: 2, width: step === 1 ? "50%" : "100%", transition: "width .3s" }} />
         </div>
 
-        {testResult && (
-          <div style={{
-            padding: "10px 14px",
-            borderRadius: 4,
-            marginBottom: 20,
-            fontSize: 13,
-            background: testResult.ok ? "#f0fdf4" : "#fef2f2",
-            color: testResult.ok ? "#065f46" : "#991b1b",
-            border: `1px solid ${testResult.ok ? "#bbf7d0" : "#fecaca"}`,
-          }}>
-            {testResult.ok ? "✓ " : "✗ "}{testResult.msg}
+        {step === 1 && (
+          <div>
+            <p style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 28, lineHeight: 1.6 }}>
+              Set up your organization once. Your team shares one venue list and event pipeline.
+            </p>
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>Organization Name</label>
+              <input autoFocus value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Visit McKinney" style={inputStyle} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px", gap: 10, marginBottom: 18 }}>
+              <div>
+                <label style={labelStyle}>City</label>
+                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. McKinney" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>State</label>
+                <input value={state} onChange={(e) => setState(e.target.value)} placeholder="TX" style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 28 }}>
+              <label style={labelStyle}>Notification Email</label>
+              <input
+                type="email"
+                value={notifyEmail}
+                onChange={(e) => setNotifyEmail(e.target.value)}
+                placeholder="e.g. events@visitmckinney.com"
+                style={inputStyle}
+              />
+              <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5, lineHeight: 1.5 }}>
+                Where to send alerts when an organizer submits your intake form. Can be a shared team inbox.
+              </div>
+            </div>
+            <button
+              onClick={() => setStep(2)}
+              disabled={!orgName.trim() || !city.trim()}
+              style={{ width: "100%", padding: 12, background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >
+              Next: Add Venues →
+            </button>
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={testConnection}
-            disabled={!token || !boardId || testing}
-            style={{ padding: "10px 18px", background: "#fff", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13.5, fontWeight: 500, cursor: "pointer" }}
-          >
-            {testing ? "Testing…" : "Test Connection"}
-          </button>
-          <button
-            onClick={() => onSave(token, boardId)}
-            disabled={!token || !boardId}
-            style={{ padding: "10px 18px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}
-          >
-            Save & Connect
-          </button>
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              style={{ padding: "10px 14px", background: "transparent", border: "none", fontSize: 13.5, color: "#6b6660", cursor: "pointer" }}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+        {step === 2 && (
+          <div>
+            <p style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 20, lineHeight: 1.6 }}>
+              Add your city's sports and event venues. These will appear in the venue selector for every event analysis. You can edit them later.
+            </p>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <label style={labelStyle}>Venues</label>
+              <button
+                onClick={() => setBulkMode(!bulkMode)}
+                style={{ fontSize: 12, color: "#6b6660", background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, padding: "3px 10px", cursor: "pointer" }}
+              >
+                {bulkMode ? "Switch to form" : "Paste a list"}
+              </button>
+            </div>
+
+            {bulkMode ? (
+              <div style={{ marginBottom: 16 }}>
+                <textarea
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                  placeholder={"One venue per line. Optionally include address after a dash:\nAl Ruschhaupt Soccer Complex — 2701 Northbrook Drive\nErwin Park — 4300 CR 1006"}
+                  rows={8}
+                  style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5, resize: "vertical" }}
+                />
+                <button
+                  onClick={parseBulk}
+                  style={{ fontSize: 12.5, color: "#1a1613", background: "transparent", border: "1px solid #1a1613", borderRadius: 3, padding: "5px 12px", cursor: "pointer", marginTop: 8 }}
+                >
+                  Preview venues →
+                </button>
+              </div>
+            ) : (
+              <div style={{ maxHeight: 280, overflowY: "auto", marginBottom: 12 }}>
+                {venues.map((v, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 28px", gap: 6, marginBottom: 8 }}>
+                    <input
+                      value={v.name}
+                      onChange={(e) => updateVenue(i, "name", e.target.value)}
+                      placeholder="Venue name"
+                      style={{ ...inputStyle, fontSize: 13 }}
+                    />
+                    <input
+                      value={v.address}
+                      onChange={(e) => updateVenue(i, "address", e.target.value)}
+                      placeholder="Address (optional)"
+                      style={{ ...inputStyle, fontSize: 13 }}
+                    />
+                    <button onClick={() => removeVenue(i)} style={{ background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, cursor: "pointer", color: "#9ca3af" }}>✕</button>
+                  </div>
+                ))}
+                <button
+                  onClick={addVenue}
+                  style={{ fontSize: 13, color: "#6b6660", background: "transparent", border: "1px dashed #e8e3db", borderRadius: 3, padding: "6px 14px", cursor: "pointer", width: "100%" }}
+                >
+                  + Add venue
+                </button>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button onClick={() => setStep(1)} style={{ padding: "10px 16px", background: "transparent", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, cursor: "pointer" }}>
+                ← Back
+              </button>
+              <button
+                onClick={handleComplete}
+                disabled={saving}
+                style={{ flex: 1, padding: 12, background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                {saving ? "Setting up…" : "Complete Setup →"}
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 10, textAlign: "center" }}>
+              You can skip venues and add them later — or skip entirely if not needed.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ————————————————————————————————————————————————————————————————
-// Sidebar
+// Name Prompt — team member identification (after org is set up)
 // ————————————————————————————————————————————————————————————————
-function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, mondayEnabled, onSettings }) {
+function NamePrompt({ orgData, onSave }) {
+  const [name, setName] = useState("");
+  return (
+    <div style={{ minHeight: "100vh", background: "#faf8f4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 48, maxWidth: 460, width: "100%", textAlign: "center" }}>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>
+          {orgData?.name || "ETF Pursuit Tool"}
+        </div>
+        <div style={{ fontSize: 13.5, color: "#9ca3af", marginBottom: 28 }}>
+          {orgData?.city ? `${orgData.city}, ${orgData.state || "TX"}` : "ETF Pursuit Tool"}
+        </div>
+        <div style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 28, lineHeight: 1.6 }}>
+          Enter your name so your teammates know who added each event.
+        </div>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && name.trim() && onSave(name.trim())}
+          placeholder="Your name (e.g. Sarah, Aaron)"
+          style={{ width: "100%", padding: "12px 14px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 15, marginBottom: 16, boxSizing: "border-box", textAlign: "center" }}
+        />
+        <button
+          onClick={() => name.trim() && onSave(name.trim())}
+          disabled={!name.trim()}
+          style={{ width: "100%", padding: "12px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+        >
+          Enter Tool →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues }) {
   return (
     <aside style={styles.sidebar}>
       <div style={styles.brand} onClick={onHome}>
         <div style={styles.brandMark}>ETF</div>
         <div>
-          <div style={styles.brandTitle}>ETF Pursuit Tool</div>
-          <div style={styles.brandSub}>Texas Events Trust Fund</div>
+          <div style={styles.brandTitle}>{orgData?.name || "TX ETF Analysis Tool"}</div>
+          <div style={styles.brandSub}>{orgData?.city ? `${orgData.city}, ${orgData.state || "TX"}` : "Texas Events Trust Fund"}</div>
         </div>
       </div>
 
@@ -864,7 +776,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
       </button>
 
       <div style={styles.sidebarLabel}>
-        <span>Your Events</span>
+        <span>Team Pipeline</span>
         <span style={styles.count}>{events.length}</span>
       </div>
 
@@ -887,6 +799,11 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
             <div style={styles.eventItemMeta}>
               {e.firstDay ? fmtDate(e.firstDay) : "No date"} · <StatusPill status={e.status} />
             </div>
+            {e.createdBy && (
+              <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 2 }}>
+                Added by {e.createdBy}
+              </div>
+            )}
             <button
               style={styles.deleteBtn}
               onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
@@ -899,19 +816,23 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
       </div>
 
       <div style={styles.sidebarFooter}>
-        <div style={{ marginBottom: 8 }}>
-          {saveStatus === "syncing" && <span style={{ color: "#d97706" }}>⟳ Syncing to monday…</span>}
-          {saveStatus === "synced"  && <span style={{ color: "#059669" }}>✓ Synced to monday</span>}
-          {saveStatus === "error"   && <span style={{ color: "#dc2626" }}>✗ Sync error</span>}
-          {!saveStatus && mondayEnabled && <span style={{ color: "#059669" }}>● monday.com connected</span>}
-          {!saveStatus && !mondayEnabled && <span style={{ color: "#d97706" }}>○ monday not connected</span>}
+        <div style={{ marginBottom: 6, fontSize: 12, color: "#6b6660" }}>
+          {saveStatus === "saving" && <span style={{ color: "#d97706" }}>⟳ Saving…</span>}
+          {saveStatus === "saved"  && <span style={{ color: "#059669" }}>✓ Saved</span>}
+          {saveStatus === "error"  && <span style={{ color: "#dc2626" }}>✗ Save failed</span>}
+          {!saveStatus && <span style={{ color: "#059669" }}>● Shared team database</span>}
         </div>
-        <button
-          onClick={onSettings}
-          style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-        >
-          monday.com settings
-        </button>
+        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>
+          Signed in as <strong style={{ color: "#6b6660" }}>{teamMember}</strong>{" "}
+          <button onClick={onChangeName} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+            change
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: "#9ca3af" }}>
+          <button onClick={onManageVenues} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+            Manage org & venues
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -932,7 +853,11 @@ function StatusPill({ status }) {
 // ————————————————————————————————————————————————————————————————
 // Dashboard (no event selected)
 // ————————————————————————————————————————————————————————————————
-function Dashboard({ events, onOpen, onCreate, mondayEnabled, onSettings }) {
+function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreated }) {
+  const [intakeItems, setIntakeItems] = useState([]);
+  const [intakeLoading, setIntakeLoading] = useState(true);
+  const [promoting, setPromoting] = useState(null);
+
   const stats = useMemo(() => {
     let projected = 0;
     let active = 0;
@@ -944,6 +869,46 @@ function Dashboard({ events, onOpen, onCreate, mondayEnabled, onSettings }) {
     });
     return { projected, active, total: events.length };
   }, [events]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/intake?status=pending");
+        const data = await res.json();
+        setIntakeItems(Array.isArray(data) ? data : []);
+      } catch (_) { setIntakeItems([]); }
+      setIntakeLoading(false);
+    })();
+  }, []);
+
+  const handlePromote = async (item) => {
+    setPromoting(item.id);
+    try {
+      const res = await fetch("/api/intake", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, action: "promote", reviewedBy: teamMember, orgId: orgData?.id }),
+      });
+      const data = await res.json();
+      setIntakeItems((prev) => prev.filter((i) => i.id !== item.id));
+      if (data.eventId && onEventCreated) onEventCreated(data.eventId);
+    } catch (_) {}
+    setPromoting(null);
+  };
+
+  const handleDismiss = async (item) => {
+    if (!window.confirm(`Dismiss "${item.eventName}"? This will remove it from the queue.`)) return;
+    try {
+      await fetch("/api/intake", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, action: "dismiss", reviewedBy: teamMember }),
+      });
+      setIntakeItems((prev) => prev.filter((i) => i.id !== item.id));
+    } catch (_) {}
+  };
+
+  const intakeUrl = typeof window !== "undefined" ? `${window.location.origin}/intake` : "/intake";
 
   return (
     <div style={styles.dashboard}>
@@ -971,18 +936,9 @@ function Dashboard({ events, onOpen, onCreate, mondayEnabled, onSettings }) {
           }}>
             <strong>⚠ Planning tool only.</strong> This tool is NOT affiliated with the Texas Office of the Governor or the Economic Development and Tourism division (EDT). It does not submit applications or constitute official program participation. All official submissions must be made directly to EDT at <strong>eventsfund@gov.texas.gov</strong> using the official state templates.
           </div>
-
-          {mondayEnabled ? (
-            <div style={{ marginTop: 10, padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderLeft: "3px solid #059669", borderRadius: 3, fontSize: 12.5, color: "#065f46" }}>
-              <strong>● monday.com connected</strong> — events sync automatically across your team.{" "}
-              <button onClick={onSettings} style={{ background: "none", border: "none", color: "#065f46", textDecoration: "underline", cursor: "pointer", fontSize: 12.5, padding: 0 }}>Manage settings</button>
-            </div>
-          ) : (
-            <div style={{ marginTop: 10, padding: "10px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderLeft: "3px solid #d97706", borderRadius: 3, fontSize: 12.5, color: "#92400e" }}>
-              <strong>○ monday.com not connected</strong> — events are saved in this browser only.{" "}
-              <button onClick={onSettings} style={{ background: "none", border: "none", color: "#92400e", textDecoration: "underline", cursor: "pointer", fontSize: 12.5, padding: 0 }}>Connect now →</button>
-            </div>
-          )}
+          <div style={{ marginTop: 10, padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderLeft: "3px solid #059669", borderRadius: 3, fontSize: 12.5, color: "#065f46" }}>
+            <strong>● Shared team database</strong> — all events are visible to your whole team. Viewing as <strong>{teamMember}</strong>.
+          </div>
         </div>
       </header>
 
@@ -1045,6 +1001,83 @@ function Dashboard({ events, onOpen, onCreate, mondayEnabled, onSettings }) {
         </section>
       )}
 
+      {/* Intake queue */}
+      <section style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div>
+            <h2 style={{ ...styles.h2, margin: 0 }}>
+              Organizer Submissions
+              {intakeItems.length > 0 && (
+                <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, background: "#dc2626", color: "#fff", borderRadius: 10, padding: "2px 8px" }}>
+                  {intakeItems.length} pending
+                </span>
+              )}
+            </h2>
+            <div style={{ fontSize: 12.5, color: "#9ca3af", marginTop: 4 }}>
+              Events submitted by organizers at{" "}
+              <a href={intakeUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#6b6660", textDecoration: "underline" }}>
+                {intakeUrl}
+              </a>
+            </div>
+          </div>
+          <button
+            onClick={() => navigator.clipboard?.writeText(intakeUrl)}
+            style={{ fontSize: 12, color: "#6b6660", background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, padding: "5px 12px", cursor: "pointer" }}
+          >
+            Copy intake link
+          </button>
+        </div>
+
+        {intakeLoading ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Loading…</div>
+        ) : intakeItems.length === 0 ? (
+          <div style={{ padding: "20px 24px", background: "#faf8f4", border: "1px dashed #e8e3db", borderRadius: 4, textAlign: "center", fontSize: 13.5, color: "#9ca3af" }}>
+            No pending submissions. Share the intake link with event organizers to get started.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {intakeItems.map((item) => {
+              const eligPassed = item.elig
+                ? Object.values(item.elig).filter((v) => v === true).length
+                : 0;
+              const eligTotal = ELIG_KEYS.length;
+              return (
+                <div key={item.id} style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 20 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1613", marginBottom: 4 }}>{item.eventName || "Untitled Event"}</div>
+                    <div style={{ fontSize: 12.5, color: "#6b6660", marginBottom: 8 }}>
+                      {item.orgName} · {item.contactName} · <a href={`mailto:${item.contactEmail}`} style={{ color: "#6b6660" }}>{item.contactEmail}</a>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12 }}>
+                      {item.firstDay && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>📅 {item.firstDay}{item.lastDay ? ` → ${item.lastDay}` : ""}</span>}
+                      {item.totalAttendance && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>👥 {item.totalAttendance} attendees</span>}
+                      {item.roomNightsNeeded && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>🏨 {item.roomNightsNeeded} room nights</span>}
+                      {item.elig && <span style={{ padding: "2px 8px", background: eligPassed >= 3 ? "#d1fae5" : "#fef3c7", borderRadius: 10, color: eligPassed >= 3 ? "#065f46" : "#92400e" }}>Eligibility: {eligPassed}/{eligTotal}</span>}
+                    </div>
+                    {item.notes && <div style={{ fontSize: 12.5, color: "#6b6660", marginTop: 8, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{item.notes}"</div>}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                    <button
+                      onClick={() => handlePromote(item)}
+                      disabled={promoting === item.id}
+                      style={{ padding: "8px 16px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      {promoting === item.id ? "Adding…" : "→ Add to Pipeline"}
+                    </button>
+                    <button
+                      onClick={() => handleDismiss(item)}
+                      style={{ padding: "8px 16px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <div style={styles.ctaRow}>
         <button style={styles.ctaPrimary} onClick={onCreate}>
           <Plus size={16} /> Start a new event analysis
@@ -1069,7 +1102,7 @@ function StatCard({ label, value, icon }) {
 // ————————————————————————————————————————————————————————————————
 // Event View — tabs
 // ————————————————————————————————————————————————————————————————
-function EventView({ event, update, tab, setTab }) {
+function EventView({ event, update, tab, setTab, orgVenues }) {
   const calc = useMemo(() => calculateTrustFund(event), [event]);
   const decision = useMemo(() => evaluateDecision(event, calc), [event, calc]);
 
@@ -1080,6 +1113,7 @@ function EventView({ event, update, tab, setTab }) {
     { k: "timeline", label: "Timeline", icon: <Calendar size={14} /> },
     { k: "documents", label: "Documents", icon: <ClipboardList size={14} /> },
     { k: "costs", label: "Allowable Costs", icon: <DollarSign size={14} /> },
+    { k: "apply", label: "Apply to EDT", icon: <ArrowRight size={14} />, highlight: decision.recommendation !== "DO NOT PURSUE" && decision.recommendation !== "" },
     { k: "reference", label: "Reference", icon: <BookOpen size={14} /> },
   ];
 
@@ -1122,10 +1156,19 @@ function EventView({ event, update, tab, setTab }) {
         {TABS.map((t) => (
           <button
             key={t.k}
-            style={{ ...styles.tab, ...(tab === t.k ? styles.tabActive : {}) }}
+            style={{
+              ...styles.tab,
+              ...(tab === t.k ? styles.tabActive : {}),
+              ...(t.highlight && tab !== t.k ? {
+                background: "#064e3b",
+                color: "#d1fae5",
+                borderColor: "#064e3b",
+              } : {}),
+            }}
             onClick={() => setTab(t.k)}
           >
             {t.icon} {t.label}
+            {t.highlight && tab !== t.k && <span style={{ marginLeft: 4, fontSize: 10, background: "#10b981", color: "#fff", borderRadius: 10, padding: "1px 5px" }}>GO</span>}
           </button>
         ))}
       </nav>
@@ -1137,6 +1180,7 @@ function EventView({ event, update, tab, setTab }) {
         {tab === "timeline" && <TimelineTab event={event} update={update} />}
         {tab === "documents" && <DocumentsTab event={event} update={update} />}
         {tab === "costs" && <CostsTab />}
+        {tab === "apply" && <ApplyTab event={event} calc={calc} decision={decision} />}
         {tab === "reference" && <ReferenceTab />}
       </div>
     </div>
@@ -1465,6 +1509,7 @@ function OverviewTab({ event, update, calc, decision, setTab }) {
               selected={event.venues || []}
               legacyValue={event.venue}
               onChange={(venues) => update((ev) => ({ ...ev, venues, venue: venues.join(", ") }))}
+              orgVenues={orgVenues}
             />
           </Field>
           <Field label="Notes">
@@ -2228,6 +2273,261 @@ function CostsTab() {
 }
 
 // ————————————————————————————————————————————————————————————————
+// Tab — Apply to EDT
+// Shows when event passes decision framework. Links to all official
+// EDT documents and generates a pre-filled email draft.
+// ————————————————————————————————————————————————————————————————
+function ApplyTab({ event, calc, decision }) {
+  const isEligible = decision.recommendation && decision.recommendation !== "DO NOT PURSUE";
+  const appDeadline = event.firstDay ? addDays(event.firstDay, -120) : null;
+  const daysUntilDeadline = appDeadline ? Math.ceil((appDeadline - new Date()) / (1000 * 60 * 60 * 24)) : null;
+
+  const emailSubject = encodeURIComponent(
+    `ETF Application — ${event.name || "Untitled Event"}${event.firstDay ? ` — ${fmtDate(event.firstDay)}` : ""}`
+  );
+  const emailBody = encodeURIComponent(
+`Dear EDT Events Trust Fund Team,
+
+We are writing to submit an application for Events Trust Fund consideration for the following event:
+
+Event Name: ${event.name || "[Event Name]"}
+Event Dates: ${event.firstDay ? fmtDate(event.firstDay) : "[First Day]"} – ${event.lastDay ? fmtDate(event.lastDay) : "[Last Day]"}
+Venue(s): ${event.venues?.join(", ") || "[Venue]"}
+Site Selection Organization: ${event.siteSelectionOrg || "[Site Selection Org]"}
+Projected ETF Value: ${fmtMoney(decision.estimate)}
+Estimated Room Nights: ${fmtNum(calc.totalRoomNights || event.roomNights || 0)}
+
+Please find our complete application packet attached, including:
+• Events Trust Fund Application (completed)
+• Estimated Attendance Chart
+• Economic Impact Study / Supporting Data
+• Site Selection Letter (on organization letterhead)
+• Affidavit of Endorsing Entity (signed and notarized)
+• Affidavit for Economic Impact Documentation (signed and notarized)
+• ACH Direct Deposit Authorization Form
+
+Please confirm receipt and let us know if any additional information is required.
+
+Thank you,
+[Your Name]
+[Your Title]
+[Your Organization]
+[Phone]`
+  );
+
+  const EDT_DOCS = [
+    {
+      title: "ETF Program Page",
+      desc: "Official overview, eligibility details, and all current program documents",
+      url: "https://gov.texas.gov/business/page/event-trust-funds-program",
+      tag: "Start Here",
+      tagColor: "#064e3b",
+    },
+    {
+      title: "Events Trust Fund Guidelines (Sept 2025)",
+      desc: "The definitive procedural document. Read before completing any form.",
+      url: "https://gov.texas.gov/uploads/files/business/Event_Trust_Fund_Guidelines.pdf",
+      tag: "Required Reading",
+      tagColor: "#1e40af",
+    },
+    {
+      title: "ETF Application Form",
+      desc: "Official application — updated October 15, 2025. Must be submitted ≥120 days before first event day.",
+      url: "https://gov.texas.gov/uploads/files/business/Events_Application.docx",
+      tag: "Submit to EDT",
+      tagColor: "#92400e",
+    },
+    {
+      title: "Estimated Attendance Chart",
+      desc: "Required attachment to the application — updated September 2025.",
+      url: "https://gov.texas.gov/uploads/files/business/Estimated_Attendance_Chart_for_Application.xlsx",
+      tag: "Submit to EDT",
+      tagColor: "#92400e",
+    },
+    {
+      title: "Affidavit of Endorsing Entity",
+      desc: "Must be signed and notarized by the municipality, county, or LOC representative.",
+      url: "https://gov.texas.gov/uploads/files/business/Affidavit_of_Endorsing_Entity.docx",
+      tag: "Notarized",
+      tagColor: "#6b21a8",
+    },
+    {
+      title: "Affidavit for Economic Impact Documentation",
+      desc: "Must be signed and notarized by whoever prepares the economic impact study.",
+      url: "https://gov.texas.gov/uploads/files/business/Affidavit_for_Economic_Impact_Documentation.docx",
+      tag: "Notarized",
+      tagColor: "#6b21a8",
+    },
+    {
+      title: "ACH Direct Deposit Authorization",
+      desc: "Required for disbursement. Submit with your application packet.",
+      url: "https://gov.texas.gov/uploads/files/business/ACH_Direct_Deposit_Instructions.pdf",
+      tag: "Banking",
+      tagColor: "#374151",
+    },
+    {
+      title: "Attendance Certification Form",
+      desc: "Due 45 days after last event day. Certifies actual attendance vs. estimates.",
+      url: "https://gov.texas.gov/uploads/files/business/Events_Attendance_Certification.docx",
+      tag: "Post-Event",
+      tagColor: "#065f46",
+    },
+  ];
+
+  const CHECKLIST = [
+    { item: "Site selection org has agreed to provide a signed Selection Letter on their letterhead", critical: true },
+    { item: "Selection letter names your city/county and lists out-of-state alternatives considered", critical: true },
+    { item: "Event occurs only once per year and your city is the sole (or sole regional) site", critical: true },
+    { item: "Event is not held elsewhere in Texas or adjoining states the same calendar year", critical: true },
+    { item: "Application submitted at least 120 days before first event day", critical: true },
+    { item: "Completed ETF Application form (all sections filled, no blanks)", critical: false },
+    { item: "Estimated Attendance Chart completed and attached", critical: false },
+    { item: "Economic Impact Study or supporting attendance/spending data attached", critical: false },
+    { item: "Affidavit of Endorsing Entity — signed AND notarized", critical: false },
+    { item: "Affidavit for Economic Impact Documentation — signed AND notarized", critical: false },
+    { item: "ACH Direct Deposit Authorization form completed", critical: false },
+    { item: "Municipality/county request letter signed by authorized official", critical: false },
+    { item: "No contingency clauses, blanket terms, or 'miscellaneous' line items in budget", critical: false },
+  ];
+
+  const [checked, setChecked] = useState({});
+  const completedCount = Object.values(checked).filter(Boolean).length;
+
+  return (
+    <div style={{ maxWidth: 860 }}>
+
+      {/* Recommendation banner */}
+      {!isEligible ? (
+        <div style={{ padding: "16px 20px", background: "#fef2f2", border: "1px solid #fecaca", borderLeft: "4px solid #dc2626", borderRadius: 4, marginBottom: 24 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#991b1b", marginBottom: 4 }}>⛔ DO NOT PURSUE</div>
+          <div style={{ fontSize: 13.5, color: "#7f1d1d", lineHeight: 1.6 }}>
+            This event does not meet the eligibility or financial threshold requirements. Return to the Decision Framework tab to review which criteria failed before proceeding.
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "16px 20px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderLeft: "4px solid #059669", borderRadius: 4, marginBottom: 24 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#065f46", marginBottom: 4 }}>
+            ✓ {decision.recommendation} — Ready to apply
+          </div>
+          <div style={{ fontSize: 13.5, color: "#064e3b", lineHeight: 1.6 }}>
+            Projected ETF value: <strong>{fmtMoney(decision.estimate)}</strong> &nbsp;·&nbsp;
+            Application deadline: <strong>{appDeadline ? fmtDate(appDeadline.toISOString().split("T")[0]) : "Set event dates first"}</strong>
+            {daysUntilDeadline !== null && (
+              <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 10, fontSize: 12, fontWeight: 600, background: daysUntilDeadline < 14 ? "#dc2626" : daysUntilDeadline < 30 ? "#d97706" : "#059669", color: "#fff" }}>
+                {daysUntilDeadline > 0 ? `${daysUntilDeadline} days left` : "DEADLINE PASSED"}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pre-submission checklist */}
+      <Section title="Pre-Submission Checklist" subtitle={`${completedCount} of ${CHECKLIST.length} confirmed`}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {CHECKLIST.map((item, i) => (
+            <label key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: "8px 10px", background: checked[i] ? "#f0fdf4" : "#faf8f4", border: `1px solid ${checked[i] ? "#bbf7d0" : "#e8e3db"}`, borderRadius: 4 }}>
+              <input
+                type="checkbox"
+                checked={!!checked[i]}
+                onChange={() => setChecked((prev) => ({ ...prev, [i]: !prev[i] }))}
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 13.5, color: checked[i] ? "#065f46" : "#1a1613", lineHeight: 1.5 }}>
+                {item.critical && <span style={{ fontSize: 10.5, fontWeight: 700, color: "#dc2626", marginRight: 6, textTransform: "uppercase" }}>Statutory</span>}
+                {item.item}
+              </span>
+            </label>
+          ))}
+        </div>
+      </Section>
+
+      {/* Official documents */}
+      <Section title="Official EDT Documents" subtitle="All links go directly to gov.texas.gov — these are the real forms">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {EDT_DOCS.map((doc, i) => (
+            <a
+              key={i}
+              href={doc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "12px 16px", background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 4, textDecoration: "none", color: "inherit" }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: "#1a1613", marginBottom: 3 }}>{doc.title}</div>
+                <div style={{ fontSize: 12.5, color: "#6b6660", lineHeight: 1.5 }}>{doc.desc}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: doc.tagColor + "22", color: doc.tagColor }}>{doc.tag}</span>
+                <ArrowRight size={14} color="#9ca3af" />
+              </div>
+            </a>
+          ))}
+        </div>
+      </Section>
+
+      {/* Email EDT */}
+      <Section title="Email EDT" subtitle="Opens your email client with event details pre-filled — review and attach documents before sending">
+        <div style={{ padding: "16px 20px", background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 4, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: "#6b6660", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>To</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>eventsfund@gov.texas.gov</div>
+          <div style={{ fontSize: 12, color: "#6b6660", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>Subject</div>
+          <div style={{ fontSize: 13.5, marginBottom: 16, color: "#1a1613" }}>
+            ETF Application — {event.name || "Untitled Event"}{event.firstDay ? ` — ${fmtDate(event.firstDay)}` : ""}
+          </div>
+          <div style={{ fontSize: 12, color: "#6b6660", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>Body preview</div>
+          <div style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-line", background: "#fff", padding: 12, border: "1px solid #e8e3db", borderRadius: 3, maxHeight: 200, overflow: "auto" }}>
+{`Dear EDT Events Trust Fund Team,
+
+We are submitting an application for Events Trust Fund consideration:
+
+Event: ${event.name || "[Event Name]"}
+Dates: ${event.firstDay ? fmtDate(event.firstDay) : "[First Day]"} – ${event.lastDay ? fmtDate(event.lastDay) : "[Last Day]"}
+Projected ETF Value: ${fmtMoney(decision.estimate)}
+Estimated Room Nights: ${fmtNum(calc.totalRoomNights || event.roomNights || 0)}
+
+Complete application packet attached.`}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <a
+            href={`mailto:eventsfund@gov.texas.gov?subject=${emailSubject}&body=${emailBody}`}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "#1a1613", color: "#fff", borderRadius: 4, textDecoration: "none", fontSize: 14, fontWeight: 600 }}
+          >
+            <ArrowRight size={14} /> Open in Email Client
+          </a>
+          <div style={{ fontSize: 12, color: "#9ca3af", display: "flex", alignItems: "center", lineHeight: 1.4 }}>
+            ⚠ Always attach your full application packet before sending. This tool does not transmit files to EDT.
+          </div>
+        </div>
+      </Section>
+
+      {/* What EDT will reject */}
+      <Section title="Common EDT Rejection Reasons" subtitle="Review before submitting — these will get your application kicked back">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[
+            "Contingency clauses in the Event Support Contract (e.g. 'if funds are available')",
+            "Blanket terms like 'etc.', 'miscellaneous', or 'other expenses' in the budget",
+            "Any language in the ESC that shifts EDT's obligations or references EDT's decision-making authority",
+            "Application submitted fewer than 120 days before the first event day",
+            "Selection Letter does not specifically name your city/county",
+            "Selection Letter does not describe the competitive process or list out-of-state alternatives",
+            "Unallowable costs included in the budget (alcohol, prizes, cash awards, giveaways, parties/banquets)",
+            "Affidavits not notarized",
+            "Attendance Certification not submitted within 45 days of last event day",
+          ].map((reason, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 4, fontSize: 13 }}>
+              <span style={{ color: "#dc2626", flexShrink: 0 }}>✗</span>
+              <span style={{ color: "#7f1d1d", lineHeight: 1.5 }}>{reason}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
 // Tab 7 — Reference
 // ————————————————————————————————————————————————————————————————
 function ReferenceTab() {
@@ -2416,20 +2716,26 @@ function Field({ label, children }) {
 }
 
 // ————————————————————————————————————————————————————————————————
-// VenuePicker — multi-select with persistent custom venue list
+// VenuePicker — multi-select, uses org venues from database
 // ————————————————————————————————————————————————————————————————
-function VenuePicker({ selected, legacyValue, onChange }) {
+function VenuePicker({ selected, legacyValue, onChange, orgVenues }) {
+  // orgVenues from database — falls back to McKinney defaults if not set
+  const baseVenues = orgVenues && orgVenues.length > 0 ? orgVenues : DEFAULT_MCKINNEY_VENUES;
+
   const [customVenues, setCustomVenues] = useState([]);
   const [newVenue, setNewVenue] = useState("");
   const [loaded, setLoaded] = useState(false);
 
-  // Load custom venues from storage (shared across all events for this user)
+  // Load any additional custom venues added inline (beyond org's base list)
   useEffect(() => {
     try {
       const raw = localStorage.getItem("etf_custom_venues");
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setCustomVenues(parsed);
+        if (Array.isArray(parsed)) {
+          // Only keep customs that aren't already in the org's base list
+          setCustomVenues(parsed.filter((v) => !baseVenues.includes(v)));
+        }
       }
     } catch (e) { /* none yet */ }
     setLoaded(true);
@@ -2447,8 +2753,7 @@ function VenuePicker({ selected, legacyValue, onChange }) {
     if (legacyValue && (!selected || selected.length === 0)) {
       const parts = legacyValue.split(",").map((s) => s.trim()).filter(Boolean);
       if (parts.length) {
-        // Any that aren't in defaults or custom get promoted to custom
-        const allKnown = [...DEFAULT_MCKINNEY_VENUES, ...customVenues];
+        const allKnown = [...baseVenues, ...customVenues];
         const newCustom = parts.filter((p) => !allKnown.includes(p));
         if (newCustom.length) setCustomVenues((prev) => [...prev, ...newCustom]);
         onChange(parts);
@@ -2457,7 +2762,7 @@ function VenuePicker({ selected, legacyValue, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
-  const allVenues = [...DEFAULT_MCKINNEY_VENUES, ...customVenues];
+  const allVenues = [...baseVenues, ...customVenues];
   const selectedSet = new Set(selected || []);
 
   const toggle = (v) => {
@@ -2513,7 +2818,7 @@ function VenuePicker({ selected, legacyValue, onChange }) {
 
       <div style={venueStyles.list}>
         {allVenues.map((v) => {
-          const isCustom = !DEFAULT_MCKINNEY_VENUES.includes(v);
+          const isCustom = !baseVenues.includes(v);
           const checked = selectedSet.has(v);
           return (
             <label
