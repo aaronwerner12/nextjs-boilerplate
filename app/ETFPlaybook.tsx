@@ -1481,7 +1481,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
           <button
             onClick={() => {
               localStorage.removeItem("etf_authed");
-              localStorage.removeItem("etf_team_member");
+              // Keep etf_team_member so returning user sees "Welcome back"
               localStorage.removeItem("etf_member_id");
               window.location.reload();
             }}
