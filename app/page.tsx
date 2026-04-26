@@ -5,19 +5,20 @@ import ETFPlaybook from "./ETFPlaybook";
 import LandingPage from "./LandingPage";
 
 export default function Page() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [state, setState] = useState<"loading" | "landing" | "app">("loading");
 
   useEffect(() => {
     const isAuthed = !!localStorage.getItem("etf_authed");
-    setAuthed(isAuthed);
+    const wantsSignIn = window.location.search.includes("signin=1");
+
+    if (wantsSignIn || isAuthed) {
+      setState("app");
+    } else {
+      setState("landing");
+    }
   }, []);
 
-  // Show nothing while checking auth to avoid flash
-  if (authed === null) return null;
-
-  // Show landing page to logged-out visitors
-  if (!authed) return <LandingPage />;
-
-  // Show the tool to authenticated users
+  if (state === "loading") return null;
+  if (state === "landing") return <LandingPage />;
   return <ETFPlaybook />;
 }
