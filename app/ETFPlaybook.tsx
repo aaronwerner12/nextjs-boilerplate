@@ -590,7 +590,7 @@ export default function ETFPlaybook() {
   }
 
   // Venues from org database, falling back to McKinney defaults
-  const venues = orgData?.venues?.map((v) => v.address ? `${v.name} — ${v.address}` : v.name) || DEFAULT_MCKINNEY_VENUES;
+  const venues = orgData?.venues?.map((v) => v.address ? `${v.name} — ${v.address}` : v.name) || [];
 
   return (
     <div style={styles.app} className="etf-app">
@@ -3464,7 +3464,7 @@ function Field({ label, children }) {
 // ————————————————————————————————————————————————————————————————
 function VenuePicker({ selected, legacyValue, onChange, orgVenues }) {
   // orgVenues from database — falls back to McKinney defaults if not set
-  const baseVenues = orgVenues && orgVenues.length > 0 ? orgVenues : DEFAULT_MCKINNEY_VENUES;
+  const baseVenues = orgVenues && orgVenues.length > 0 ? orgVenues : [];
 
   const [customVenues, setCustomVenues] = useState([]);
   const [newVenue, setNewVenue] = useState("");
