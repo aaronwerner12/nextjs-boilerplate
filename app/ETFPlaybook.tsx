@@ -928,6 +928,7 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
   const [city, setCity] = useState(orgData?.city || "");
   const [state, setState] = useState(orgData?.state || "TX");
   const [notifyEmail, setNotifyEmail] = useState(orgData?.notifyEmail || "");
+  const [logoUrl, setLogoUrl] = useState(orgData?.logoUrl || "");
   const [venues, setVenues] = useState(orgData?.venues || []);
   const [newVenue, setNewVenue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -954,7 +955,7 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const updated = { ...orgData, name, city, state, notifyEmail, venues };
+    const updated = { ...orgData, name, city, state, notifyEmail, logoUrl, venues };
     try {
       await fetch("/api/orgs", {
         method: "POST",
@@ -975,6 +976,21 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600 }}>Organization Settings</div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9ca3af" }}>✕</button>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={labelStyle}>Organization Logo URL <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none", fontSize: 11 }}>(optional)</span></label>
+          <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://yourorg.com/logo.png" style={inputStyle} />
+          <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>
+            Paste a direct link to your logo image. It will appear in the sidebar.
+            {logoUrl && <span> — <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#6b6660" }}>Preview ↗</a></span>}
+          </div>
+          {logoUrl && (
+            <div style={{ marginTop: 10, padding: 10, background: "#1a1613", borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <img src={logoUrl} alt="Logo preview" style={{ height: 32, width: 32, objectFit: "contain", background: "#fff", borderRadius: 3, padding: 2 }} onError={(e) => e.target.style.display = 'none'} />
+              <span style={{ fontSize: 12, color: "#6b6660" }}>Preview</span>
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 16 }}>
@@ -1388,7 +1404,11 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
   return (
     <aside style={styles.sidebar} className={`etf-sidebar${isOpen ? " open" : ""}`}>
       <div style={styles.brand} onClick={onHome}>
-        <div style={styles.brandMark}>ETF</div>
+        {orgData?.logoUrl ? (
+          <img src={orgData.logoUrl} alt={orgData.name} style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 4, background: "#fff", padding: 2 }} onError={(e) => { e.target.style.display = 'none'; }} />
+        ) : (
+          <div style={styles.brandMark}>ETF</div>
+        )}
         <div>
           <div style={styles.brandTitle}>{orgData?.name || "TX ETF Analysis Tool"}</div>
           <div style={styles.brandSub}>{orgData?.city ? `${orgData.city}, ${orgData.state || "TX"}` : "Texas Events Trust Fund"}</div>
