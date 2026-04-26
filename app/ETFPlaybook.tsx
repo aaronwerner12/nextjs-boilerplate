@@ -760,7 +760,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
         </div>
         <div style={{ display: "flex", gap: 10, fontSize: 11 }}>
           <button onClick={onManageVenues} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-            Manage venues
+            Manage organization
           </button>
           <span style={{ color: "#e8e3db" }}>·</span>
           <button
