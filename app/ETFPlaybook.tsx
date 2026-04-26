@@ -3764,6 +3764,8 @@ const styles = {
     position: "sticky",
     top: 0,
     height: "100vh",
+    overflow: "hidden",
+    flexShrink: 0,
   },
   brand: {
     padding: "24px 20px 20px",
@@ -3851,8 +3853,10 @@ const styles = {
     color: MUTED,
     borderTop: `1px solid ${LINE}`,
     display: "flex",
-    alignItems: "center",
-    gap: 6,
+    flexDirection: "column",
+    gap: 4,
+    flexShrink: 0,
+    background: "#fff",
   },
 
   // Main
