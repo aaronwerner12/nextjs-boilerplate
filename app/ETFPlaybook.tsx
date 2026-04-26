@@ -377,6 +377,7 @@ export default function ETFPlaybook() {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   // Org + member identity — loaded from localStorage (SSR-safe)
   const [orgId, setOrgId] = useState("");
@@ -457,6 +458,12 @@ export default function ETFPlaybook() {
     setEvents((prev) => [e, ...prev]);
     setCurrentEventId(e.id);
     setTab("overview");
+    // Show walkthrough on first event ever
+    const hasSeenWalkthrough = localStorage.getItem("etf_seen_walkthrough");
+    if (!hasSeenWalkthrough) {
+      setShowWalkthrough(true);
+      localStorage.setItem("etf_seen_walkthrough", "1");
+    }
     try { await api.saveEvent(e, orgId); } catch (_) {}
   };
 
@@ -525,6 +532,10 @@ export default function ETFPlaybook() {
           + New
         </button>
       </div>
+
+      {showWalkthrough && (
+        <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} setTab={setTab} />
+      )}
 
       <Sidebar
         events={events}
@@ -702,6 +713,148 @@ function LoginScreen({ onComplete }) {
           </button>
         </div>
         <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
+      </div>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+// Walkthrough Overlay — guided first event creation
+// ————————————————————————————————————————————————————————————————
+const WALKTHROUGH_STEPS = [
+  {
+    step: "01",
+    tab: "overview",
+    title: "Start with the basics",
+    body: "Enter the event name, dates, site selection organization, and your venue. This is the foundation of your analysis.",
+    tip: "The site selection org is whoever chose your city — could be a national sports governing body, a trade association, or the event organizer themselves.",
+    color: "#c8b97a",
+  },
+  {
+    step: "02",
+    tab: "decision",
+    title: "Run the eligibility check",
+    body: "Answer 5 yes/no questions from Texas Government Code § 480.0051. If any answer is No, the event is ineligible — don't spend time on the analysis.",
+    tip: "The most common disqualifier: the site selection process wasn't competitive against out-of-state alternatives. Confirm this before going further.",
+    color: "#4ade80",
+  },
+  {
+    step: "03",
+    tab: "calculator",
+    title: "Model the economic impact",
+    body: "Enter day-by-day attendance by category (athletes, coaches, family, spectators). The calculator estimates state and local tax generation and your required local match.",
+    tip: "Use the Quick Estimate first if you're still evaluating — it gives you a ballpark in seconds. Build the full model when you're ready to apply.",
+    color: "#60a5fa",
+  },
+  {
+    step: "04",
+    tab: "timeline",
+    title: "Check your deadlines",
+    body: "The Timeline tab auto-calculates every critical deadline from your event dates — application (120 days before), attendance cert (45 days after), local share (90 days after), disbursement (180 days after).",
+    tip: "Missing the Local Share deadline makes the event ineligible for disbursement. Set calendar reminders immediately after your application is approved.",
+    color: "#f87171",
+  },
+  {
+    step: "05",
+    tab: "apply",
+    title: "Apply when you're ready",
+    body: "The Apply to ETF tab has links to every official EDT document and generates a pre-filled email to eventsfund@gov.texas.gov. Review the pre-submission checklist before sending.",
+    tip: "Never send an application without a signed Selection Letter in hand. EDT will reject incomplete packets.",
+    color: "#a78bfa",
+  },
+];
+
+function WalkthroughOverlay({ onClose, setTab }) {
+  const [step, setStep] = useState(0);
+  const current = WALKTHROUGH_STEPS[step];
+  const isLast = step === WALKTHROUGH_STEPS.length - 1;
+
+  const handleNext = () => {
+    if (isLast) {
+      setTab(current.tab);
+      onClose();
+    } else {
+      setTab(current.tab);
+      setStep(step + 1);
+    }
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      background: "rgba(10,9,8,0.85)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 24,
+      backdropFilter: "blur(4px)",
+    }}>
+      <div style={{
+        background: "#1a1814",
+        border: `1px solid ${current.color}44`,
+        borderTop: `3px solid ${current.color}`,
+        borderRadius: 8,
+        padding: "40px 36px",
+        maxWidth: 520,
+        width: "100%",
+        position: "relative",
+      }}>
+        {/* Step indicator */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+          {WALKTHROUGH_STEPS.map((_, i) => (
+            <div key={i} style={{
+              height: 3, flex: 1, borderRadius: 2,
+              background: i <= step ? current.color : "#2a2720",
+              transition: "background .3s",
+            }} />
+          ))}
+        </div>
+
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: current.color, marginBottom: 8, letterSpacing: ".1em" }}>
+          STEP {current.step} OF 05
+        </div>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 600, color: "#f5f0e8", marginBottom: 14, lineHeight: 1.3 }}>
+          {current.title}
+        </div>
+        <p style={{ fontSize: 14.5, color: "#9e9890", lineHeight: 1.7, margin: "0 0 20px" }}>
+          {current.body}
+        </p>
+        <div style={{
+          background: "#0f0e0c",
+          border: "1px solid #2a2720",
+          borderLeft: `3px solid ${current.color}`,
+          borderRadius: 4,
+          padding: "12px 16px",
+          fontSize: 13,
+          color: "#6b6660",
+          lineHeight: 1.6,
+          marginBottom: 28,
+        }}>
+          <span style={{ color: current.color, fontWeight: 600 }}>Tip: </span>{current.tip}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "space-between", alignItems: "center" }}>
+          <button
+            onClick={onClose}
+            style={{ fontSize: 12.5, color: "#4a4740", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            Skip walkthrough
+          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            {step > 0 && (
+              <button
+                onClick={() => setStep(step - 1)}
+                style={{ padding: "10px 18px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#9e9890", fontSize: 13.5, cursor: "pointer" }}
+              >
+                ← Back
+              </button>
+            )}
+            <button
+              onClick={handleNext}
+              style={{ padding: "10px 24px", background: current.color, color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              {isLast ? "Start analyzing →" : "Next →"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
