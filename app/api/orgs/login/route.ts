@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       city: org.city,
       state: org.state,
       notifyEmail: org.notify_email,
+      logoUrl: org.logo_url || "",
       venues,
     });
   } catch (error) {
