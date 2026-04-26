@@ -1082,6 +1082,44 @@ function TeamPanel({ orgId, memberRecord, onClose }) {
   const [changingPasscode, setChangingPasscode] = useState(false);
   const [passcodeMsg, setPasscodeMsg] = useState("");
   const [actionMsg, setActionMsg] = useState("");
+  const [copyMsg, setCopyMsg] = useState("");
+
+  const orgData = (() => { try { return JSON.parse(localStorage.getItem("etf_org_data") || "{}"); } catch (_) { return {}; } })();
+  const storedPasscode = localStorage.getItem(`etf_passcode_${orgId}`) || "your-access-code";
+  const appUrl = typeof window !== "undefined" ? window.location.origin : "https://etfplaybook.vercel.app";
+
+  const inviteEmail = `Subject: Join our ETF Analysis Tool — ${orgData.name || "Our Team"}
+
+Hi,
+
+I'd like to invite you to join our team on the Texas Events Trust Fund Analysis Tool. We're using it to evaluate and track our ETF event pipeline.
+
+Sign in here: ${appUrl}
+
+When prompted, enter:
+• Your name and title
+• Access code: ${storedPasscode}
+
+The tool is browser-based — no install needed. Once you're in you'll see our shared event pipeline.
+
+Let me know if you have any questions.
+
+${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
+
+  const copyInvite = () => {
+    navigator.clipboard?.writeText(inviteEmail).then(() => {
+      setCopyMsg("✓ Copied to clipboard — paste into any email");
+      setTimeout(() => setCopyMsg(""), 3000);
+    }).catch(() => {
+      setCopyMsg("Copy failed — select text manually");
+    });
+  };
+
+  const emailInvite = () => {
+    const subject = encodeURIComponent(`Join our ETF Analysis Tool — ${orgData.name || "Our Team"}`);
+    const body = encodeURIComponent(inviteEmail.replace(/^Subject:.*\n\n/, ""));
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
 
   useEffect(() => {
     api.getTeam(orgId).then(setMembers).catch(() => {}).finally(() => setLoading(false));
@@ -1182,6 +1220,26 @@ function TeamPanel({ orgId, memberRecord, onClose }) {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Invite section */}
+        <div style={{ borderTop: "1px solid #2a2720", paddingTop: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", marginBottom: 12 }}>Invite Team Members</div>
+          <p style={{ fontSize: 12.5, color: "#6b6660", lineHeight: 1.6, marginBottom: 12 }}>
+            Share this pre-written email with anyone you want to add. It includes the tool link and access code.
+          </p>
+          {copyMsg && <div style={{ fontSize: 12.5, color: "#4ade80", marginBottom: 8 }}>{copyMsg}</div>}
+          <div style={{ background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, padding: "12px 14px", fontSize: 12, color: "#6b6660", fontFamily: "monospace", lineHeight: 1.7, marginBottom: 10, whiteSpace: "pre-wrap", maxHeight: 180, overflowY: "auto" }}>
+            {inviteEmail}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={copyInvite} style={{ flex: 1, padding: "9px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+              Copy Email
+            </button>
+            <button onClick={emailInvite} style={{ flex: 1, padding: "9px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#9e9890", fontSize: 12.5, cursor: "pointer" }}>
+              Open in Mail
+            </button>
+          </div>
         </div>
 
         {/* Change passcode */}
