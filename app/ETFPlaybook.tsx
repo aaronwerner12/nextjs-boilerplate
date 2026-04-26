@@ -387,32 +387,21 @@ export default function ETFPlaybook() {
   // ── Bootstrap: check auth ─────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    const storedOrg = localStorage.getItem("etf_org_id");
-    const storedMember = localStorage.getItem("etf_team_member");
-    const storedOrgData = localStorage.getItem("etf_org_data");
     const storedAuth = localStorage.getItem("etf_authed");
+    const storedMember = localStorage.getItem("etf_team_member");
+    const storedOrg = localStorage.getItem("etf_org_id");
+    const storedOrgData = localStorage.getItem("etf_org_data");
 
-    if (!storedAuth) {
+    if (!storedAuth || !storedMember) {
       setSetupStep("login");
       return;
     }
 
-    if (!storedOrg) {
-      setSetupStep("org");
-      return;
-    }
-
-    setOrgId(storedOrg);
-    if (storedOrgData) {
+    if (storedOrg && storedOrgData) {
+      setOrgId(storedOrg);
       try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
     }
-
-    if (!storedMember) {
-      setSetupStep("name");
-    } else {
-      setTeamMember(storedMember);
-    }
+    setTeamMember(storedMember);
   }, []);
 
   // ── Load org data + events once org is known ──────────────────
@@ -478,45 +467,25 @@ export default function ETFPlaybook() {
     try { await api.deleteEvent(id); } catch (_) {}
   };
 
-  const handleLoginComplete = (name) => {
+  const handleLoginComplete = (name, newOrg) => {
     localStorage.setItem("etf_authed", "1");
     localStorage.setItem("etf_team_member", name);
     setTeamMember(name);
-    const storedOrg = localStorage.getItem("etf_org_id");
-    const storedOrgData = localStorage.getItem("etf_org_data");
-    if (storedOrg && storedOrgData) {
-      setOrgId(storedOrg);
-      try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
-      setSetupStep(null);
+    if (newOrg) {
+      setOrgId(newOrg.id);
+      setOrgData(newOrg);
     } else {
-      setSetupStep("org");
+      const storedOrg = localStorage.getItem("etf_org_id");
+      const storedOrgData = localStorage.getItem("etf_org_data");
+      if (storedOrg) setOrgId(storedOrg);
+      if (storedOrgData) try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
     }
-  };
-
-  const handleOrgComplete = (newOrg) => {
-    fetch("/api/orgs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newOrg),
-    }).catch(() => {});
-    localStorage.setItem("etf_org_id", newOrg.id);
-    localStorage.setItem("etf_org_data", JSON.stringify(newOrg));
-    setOrgId(newOrg.id);
-    setOrgData(newOrg);
-    setSetupStep(null);
-  };
-
-  const handleNameComplete = (name) => {
-    localStorage.setItem("etf_team_member", name);
-    setTeamMember(name);
     setSetupStep(null);
     setLoading(true);
   };
 
   // ── Setup flows ───────────────────────────────────────────────
   if (setupStep === "login") return <LoginScreen onComplete={handleLoginComplete} />;
-  if (setupStep === "org") return <OrgSetup onComplete={handleOrgComplete} />;
-  if (setupStep === "name") return <NamePrompt orgData={orgData} onSave={handleNameComplete} />;
 
   if (loading) {
     return (
@@ -611,340 +580,114 @@ export default function ETFPlaybook() {
 // ————————————————————————————————————————————————————————————————
 // Login Screen — name + passcode entry
 // ————————————————————————————————————————————————————————————————
+// ————————————————————————————————————————————————————————————————
+// Single sign-in screen — name, org (if new), access code
+// ————————————————————————————————————————————————————————————————
 function LoginScreen({ onComplete }) {
   const [name, setName] = useState("");
+  const [orgName, setOrgName] = useState("");
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const isNewOrg = typeof window !== "undefined" && !localStorage.getItem("etf_org_id");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) { setError("Please enter your name."); return; }
-    if (!passcode.trim()) { setError("Please enter your access code."); return; }
+    if (isNewOrg && !orgName.trim()) { setError("Please enter your organization name."); return; }
+    if (!passcode.trim()) { setError("Please enter an access code."); return; }
+    setLoading(true);
+    setError("");
 
-    // Check passcode against stored org passcodes
-    // Look through all stored org passcodes in localStorage
-    const storedOrgData = localStorage.getItem("etf_org_data");
-    if (storedOrgData) {
-      // Returning user on same device — check against their org's passcode
+    if (isNewOrg) {
+      const id = orgName.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 40) + "_" + Date.now().toString(36);
+      const newOrg = { id, name: orgName, city: "", state: "TX", passcode, venues: [] };
+      localStorage.setItem(`etf_passcode_${id}`, passcode);
+      localStorage.setItem("etf_org_id", id);
+      localStorage.setItem("etf_org_data", JSON.stringify(newOrg));
+      fetch("/api/orgs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newOrg) }).catch(() => {});
+      setLoading(false);
+      onComplete(name.trim(), newOrg);
+    } else {
       try {
-        const org = JSON.parse(storedOrgData);
-        const storedPasscode = localStorage.getItem(`etf_passcode_${org.id}`);
-        if (storedPasscode && passcode !== storedPasscode) {
+        const res = await fetch("/api/orgs/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ passcode }),
+        });
+        if (res.ok) {
+          const org = await res.json();
+          localStorage.setItem("etf_org_id", org.id);
+          localStorage.setItem("etf_org_data", JSON.stringify(org));
+          localStorage.setItem(`etf_passcode_${org.id}`, passcode);
+          setLoading(false);
+          onComplete(name.trim(), org);
+          return;
+        }
+        if (res.status === 401) {
           setError("Incorrect access code. Check with your team admin.");
+          setLoading(false);
           return;
         }
       } catch (_) {}
-    }
-
-    // New user or passcode not stored locally — check all known org passcodes
-    let matched = false;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("etf_passcode_")) {
-        if (localStorage.getItem(key) === passcode) {
-          matched = true;
-          break;
-        }
+      // Fallback to localStorage
+      const orgId = localStorage.getItem("etf_org_id");
+      const storedPasscode = orgId ? localStorage.getItem(`etf_passcode_${orgId}`) : null;
+      if (storedPasscode && passcode !== storedPasscode) {
+        setError("Incorrect access code. Check with your team admin.");
+        setLoading(false);
+        return;
       }
+      setLoading(false);
+      onComplete(name.trim(), null);
     }
+  };
 
-    // If no org is set up on this device yet, any code is accepted (first-time setup)
-    const hasOrg = !!localStorage.getItem("etf_org_id");
-    if (hasOrg && !matched && !storedOrgData) {
-      setError("Incorrect access code. Check with your team admin.");
-      return;
-    }
-
-    onComplete(name.trim());
+  const s = {
+    input: { width: "100%", padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" },
+    label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", display: "block", marginBottom: 6 },
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f0e0c", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{ width: 52, height: 52, background: "#c8b97a", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#0f0e0c" }}>ETF</div>
           <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#f5f0e8" }}>Texas Events Trust Fund</div>
           <div style={{ fontSize: 12, color: "#6b6660", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Analysis Tool</div>
         </div>
-        <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "36px 32px" }}>
-          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 8 }}>Sign in</div>
-          <p style={{ fontSize: 13.5, color: "#9e9890", lineHeight: 1.6, margin: "0 0 24px" }}>Enter your name and your team's access code.</p>
-          {error && (
-            <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 4, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>
-          )}
+        <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "32px 28px" }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 6 }}>
+            {isNewOrg ? "Set up your team" : "Sign in"}
+          </div>
+          <p style={{ fontSize: 13, color: "#6b6660", margin: "0 0 22px", lineHeight: 1.6 }}>
+            {isNewOrg ? "Create your organization and access code. Share the code with your team." : "Enter your name and your team's access code."}
+          </p>
+          {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 4, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
           <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", display: "block", marginBottom: 6 }}>Your Name</label>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Aaron" style={{ width: "100%", padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+            <label style={s.label}>Your Name</label>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Aaron" style={s.input} />
           </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", display: "block", marginBottom: 6 }}>Access Code</label>
-            <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="Team access code" style={{ width: "100%", padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+          {isNewOrg && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={s.label}>Organization</label>
+              <input value={orgName} onChange={(e) => setOrgName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Visit McKinney" style={s.input} />
+            </div>
+          )}
+          <div style={{ marginBottom: 22 }}>
+            <label style={s.label}>{isNewOrg ? "Create Access Code" : "Access Code"}</label>
+            <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder={isNewOrg ? "Choose a code for your team" : "Team access code"} style={s.input} />
+            {isNewOrg && <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Share this with your teammates so they can sign in.</div>}
           </div>
-          <button onClick={handleSubmit} style={{ width: "100%", padding: "13px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            Enter Tool →
+          <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", padding: "13px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
+            {loading ? "Signing in…" : isNewOrg ? "Create & Enter Tool →" : "Enter Tool →"}
           </button>
-          <p style={{ margin: "16px 0 0", fontSize: 12, color: "#4a4740", lineHeight: 1.6, textAlign: "center" }}>Don't have an access code? Contact your team admin.</p>
         </div>
-        <p style={{ textAlign: "center", fontSize: 11.5, color: "#4a4740", marginTop: 20, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT. Planning purposes only.</p>
+        <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
       </div>
     </div>
   );
 }
 
-// ————————————————————————————————————————————————————————————————
-// Org Setup — first-run flow for a new DMO
-// ————————————————————————————————————————————————————————————————
-function OrgSetup({ onComplete }) {
-  const [step, setStep] = useState(1);
-  const [orgName, setOrgName] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("TX");
-  const [notifyEmail, setNotifyEmail] = useState("");
-  const [passcode, setPasscode] = useState("");
-  const [passcodeConfirm, setPasscodeConfirm] = useState("");
-  const [passcodeError, setPasscodeError] = useState("");
-  const [venues, setVenues] = useState([{ name: "", address: "" }]);
-  const [bulkMode, setBulkMode] = useState(false);
-  const [bulkText, setBulkText] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const orgId = orgName ? orgName.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 40) + "_" + Date.now().toString(36) : "";
-
-  const addVenue = () => setVenues((v) => [...v, { name: "", address: "" }]);
-  const removeVenue = (i) => setVenues((v) => v.filter((_, idx) => idx !== i));
-  const updateVenue = (i, field, val) => setVenues((v) => v.map((ve, idx) => idx === i ? { ...ve, [field]: val } : ve));
-
-  const parseBulk = () => {
-    const parsed = bulkText.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
-      const dashIdx = line.indexOf(" — ");
-      if (dashIdx > -1) return { name: line.substring(0, dashIdx).trim(), address: line.substring(dashIdx + 3).trim() };
-      const commaIdx = line.indexOf(",");
-      if (commaIdx > -1) return { name: line.substring(0, commaIdx).trim(), address: line.substring(commaIdx + 1).trim() };
-      return { name: line, address: "" };
-    });
-    setVenues(parsed.length > 0 ? parsed : [{ name: "", address: "" }]);
-    setBulkMode(false);
-  };
-
-  const handleNext = () => {
-    if (!passcode.trim()) { setPasscodeError("Please create an access code."); return; }
-    if (passcode !== passcodeConfirm) { setPasscodeError("Access codes don't match."); return; }
-    if (passcode.length < 4) { setPasscodeError("Access code must be at least 4 characters."); return; }
-    setPasscodeError("");
-    setStep(2);
-  };
-
-  const handleComplete = async (skipVenues = false) => {
-    setSaving(true);
-    const cleanVenues = skipVenues ? [] : bulkMode
-      ? bulkText.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
-          const d = line.indexOf(" — ");
-          return d > -1 ? { name: line.substring(0, d), address: line.substring(d + 3) } : { name: line, address: "" };
-        })
-      : venues.filter((v) => v.name.trim());
-
-    const orgPayload = { id: orgId, name: orgName, city, state, notifyEmail, passcode, venues: cleanVenues };
-
-    // Save passcode locally so login can check it
-    localStorage.setItem(`etf_passcode_${orgId}`, passcode);
-
-    fetch("/api/orgs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orgPayload),
-    }).catch(() => {});
-
-    setSaving(false);
-    onComplete(orgPayload);
-  };
-
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, boxSizing: "border-box" };
-  const labelStyle = { fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 5 };
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#faf8f4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 48, maxWidth: 560, width: "100%" }}>
-        
-        {/* Header */}
-        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>
-          Texas Events Trust Fund Analysis Tool
-        </div>
-        <div style={{ fontSize: 13, color: "#9ca3af", marginBottom: 28 }}>
-          Step {step} of 2 — {step === 1 ? "Organization Details" : "Your Venues"}
-        </div>
-
-        {/* Progress bar */}
-        <div style={{ height: 3, background: "#f3f4f6", borderRadius: 2, marginBottom: 32 }}>
-          <div style={{ height: 3, background: "#1a1613", borderRadius: 2, width: step === 1 ? "50%" : "100%", transition: "width .3s" }} />
-        </div>
-
-        {step === 1 && (
-          <div>
-            <p style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 28, lineHeight: 1.6 }}>
-              Set up your organization once. Your team shares one venue list and event pipeline.
-            </p>
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Organization Name</label>
-              <input autoFocus value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Visit McKinney" style={inputStyle} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px", gap: 10, marginBottom: 18 }}>
-              <div>
-                <label style={labelStyle}>City</label>
-                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. McKinney" style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>State</label>
-                <input value={state} onChange={(e) => setState(e.target.value)} placeholder="TX" style={inputStyle} />
-              </div>
-            </div>
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Notification Email</label>
-              <input type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="e.g. events@yourorg.com" style={inputStyle} />
-              <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>Where to send alerts when an organizer submits your intake form.</div>
-            </div>
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Create Access Code</label>
-              <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} placeholder="Min. 4 characters" style={inputStyle} />
-              <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>Your team will use this to sign in. Share it with your teammates.</div>
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={labelStyle}>Confirm Access Code</label>
-              <input type="password" value={passcodeConfirm} onChange={(e) => setPasscodeConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNext()} placeholder="Re-enter access code" style={inputStyle} />
-              {passcodeError && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 5 }}>{passcodeError}</div>}
-            </div>
-            <button
-              onClick={handleNext}
-              disabled={!orgName.trim() || !city.trim() || !passcode.trim()}
-              style={{ width: "100%", padding: 12, background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-            >
-              Next: Add Venues →
-            </button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div>
-            <p style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 20, lineHeight: 1.6 }}>
-              Add your city's sports and event venues. These will appear in the venue selector for every event analysis. You can edit them later.
-            </p>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <label style={labelStyle}>Venues</label>
-              <button
-                onClick={() => setBulkMode(!bulkMode)}
-                style={{ fontSize: 12, color: "#6b6660", background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, padding: "3px 10px", cursor: "pointer" }}
-              >
-                {bulkMode ? "Switch to form" : "Paste a list"}
-              </button>
-            </div>
-
-            {bulkMode ? (
-              <div style={{ marginBottom: 16 }}>
-                <textarea
-                  value={bulkText}
-                  onChange={(e) => setBulkText(e.target.value)}
-                  placeholder={"One venue per line. Optionally include address after a dash:\nAl Ruschhaupt Soccer Complex — 2701 Northbrook Drive\nErwin Park — 4300 CR 1006"}
-                  rows={8}
-                  style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5, resize: "vertical" }}
-                />
-                <button
-                  onClick={parseBulk}
-                  style={{ fontSize: 12.5, color: "#1a1613", background: "transparent", border: "1px solid #1a1613", borderRadius: 3, padding: "5px 12px", cursor: "pointer", marginTop: 8 }}
-                >
-                  Preview venues →
-                </button>
-              </div>
-            ) : (
-              <div style={{ maxHeight: 280, overflowY: "auto", marginBottom: 12 }}>
-                {venues.map((v, i) => (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 28px", gap: 6, marginBottom: 8 }}>
-                    <input
-                      value={v.name}
-                      onChange={(e) => updateVenue(i, "name", e.target.value)}
-                      placeholder="Venue name"
-                      style={{ ...inputStyle, fontSize: 13 }}
-                    />
-                    <input
-                      value={v.address}
-                      onChange={(e) => updateVenue(i, "address", e.target.value)}
-                      placeholder="Address (optional)"
-                      style={{ ...inputStyle, fontSize: 13 }}
-                    />
-                    <button onClick={() => removeVenue(i)} style={{ background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, cursor: "pointer", color: "#9ca3af" }}>✕</button>
-                  </div>
-                ))}
-                <button
-                  onClick={addVenue}
-                  style={{ fontSize: 13, color: "#6b6660", background: "transparent", border: "1px dashed #e8e3db", borderRadius: 3, padding: "6px 14px", cursor: "pointer", width: "100%" }}
-                >
-                  + Add venue
-                </button>
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-              <button onClick={() => setStep(1)} style={{ padding: "10px 16px", background: "transparent", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, cursor: "pointer" }}>
-                ← Back
-              </button>
-              <button
-                onClick={() => handleComplete(false)}
-                disabled={saving}
-                style={{ flex: 1, padding: 12, background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-              >
-                {saving ? "Setting up…" : "Complete Setup →"}
-              </button>
-              <button
-                onClick={() => handleComplete(true)}
-                disabled={saving}
-                style={{ padding: "10px 16px", background: "transparent", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, color: "#6b6660", cursor: "pointer", whiteSpace: "nowrap" }}
-              >
-                Skip for now
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ————————————————————————————————————————————————————————————————
-// Name Prompt — team member identification (after org is set up)
-// ————————————————————————————————————————————————————————————————
-function NamePrompt({ orgData, onSave }) {
-  const [name, setName] = useState("");
-  return (
-    <div style={{ minHeight: "100vh", background: "#faf8f4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 48, maxWidth: 460, width: "100%", textAlign: "center" }}>
-        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>
-          {orgData?.name || "ETF Pursuit Tool"}
-        </div>
-        <div style={{ fontSize: 13.5, color: "#9ca3af", marginBottom: 28 }}>
-          {orgData?.city ? `${orgData.city}, ${orgData.state || "TX"}` : "ETF Pursuit Tool"}
-        </div>
-        <div style={{ fontSize: 13.5, color: "#6b6660", marginBottom: 28, lineHeight: 1.6 }}>
-          Enter your name so your teammates know who added each event.
-        </div>
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && name.trim() && onSave(name.trim())}
-          placeholder="Your name (e.g. Sarah, Aaron)"
-          style={{ width: "100%", padding: "12px 14px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 15, marginBottom: 16, boxSizing: "border-box", textAlign: "center" }}
-        />
-        <button
-          onClick={() => name.trim() && onSave(name.trim())}
-          disabled={!name.trim()}
-          style={{ width: "100%", padding: "12px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 15, fontWeight: 600, cursor: "pointer" }}
-        >
-          Enter Tool →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ————————————————————————————————————————————————————————————————
 function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose }) {
   return (
     <aside style={styles.sidebar} className={`etf-sidebar${isOpen ? " open" : ""}`}>
@@ -2561,14 +2304,14 @@ Thank you,
       title: "ETF Application Form",
       desc: "Official application — updated October 15, 2025. Must be submitted ≥120 days before first event day.",
       url: "https://gov.texas.gov/uploads/files/business/Events_Application.docx",
-      tag: "Submit to EDT",
+      tag: "Submit to ETF",
       tagColor: "#92400e",
     },
     {
       title: "Estimated Attendance Chart",
       desc: "Required attachment to the application — updated September 2025.",
       url: "https://gov.texas.gov/uploads/files/business/Estimated_Attendance_Chart_for_Application.xlsx",
-      tag: "Submit to EDT",
+      tag: "Submit to ETF",
       tagColor: "#92400e",
     },
     {
@@ -2669,7 +2412,7 @@ Thank you,
       </Section>
 
       {/* Official documents */}
-      <Section title="Official EDT Documents" subtitle="All links go directly to gov.texas.gov — these are the real forms">
+      <Section title="Official ETF Documents" subtitle="All links go directly to gov.texas.gov — these are the real forms">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {EDT_DOCS.map((doc, i) => (
             <a
