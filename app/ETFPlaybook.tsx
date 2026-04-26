@@ -535,7 +535,11 @@ export default function ETFPlaybook() {
 
   const deleteEvent = async (id) => {
     if (!window.confirm("Delete this event for the entire team?")) return;
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+    setEvents((prev) => {
+      const updated = prev.filter((e) => e.id !== id);
+      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      return updated;
+    });
     if (currentEventId === id) setCurrentEventId(null);
     try { await api.deleteEvent(id); } catch (_) {}
   };
