@@ -689,17 +689,44 @@ function LoginScreen({ onComplete }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [needsOrgName, setNeedsOrgName] = useState(false);
   const isNewOrg = typeof window !== "undefined" && !localStorage.getItem("etf_org_id");
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError("Please enter your name."); return; }
-    if (isNewOrg && !orgName.trim()) { setError("Please enter your organization name."); return; }
     if (!passcode.trim()) { setError("Please enter an access code."); return; }
     if (!agreed) { setError("Please agree to the Terms of Service and Privacy Policy."); return; }
     setLoading(true);
     setError("");
 
-    if (isNewOrg) {
+    // Always try API first — look up org by passcode across any device
+    try {
+      const res = await fetch("/api/orgs/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode }),
+      });
+      if (res.ok) {
+        const org = await res.json();
+        localStorage.setItem("etf_org_id", org.id);
+        localStorage.setItem("etf_org_data", JSON.stringify(org));
+        localStorage.setItem(`etf_passcode_${org.id}`, passcode);
+        setLoading(false);
+        onComplete(name.trim(), title.trim(), org);
+        return;
+      }
+      if (res.status === 401) {
+        if (!orgName.trim()) {
+          setNeedsOrgName(true);
+          setError("Access code not found. If creating a new org, enter your organization name above.");
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Create new org if org name provided
+    if (orgName.trim()) {
       const id = orgName.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 40) + "_" + Date.now().toString(36);
       const newOrg = { id, name: orgName, city: "", state: "TX", passcode, venues: [] };
       localStorage.setItem(`etf_passcode_${id}`, passcode);
@@ -708,39 +735,19 @@ function LoginScreen({ onComplete }) {
       fetch("/api/orgs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newOrg) }).catch(() => {});
       setLoading(false);
       onComplete(name.trim(), title.trim(), newOrg);
-    } else {
-      try {
-        const res = await fetch("/api/orgs/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ passcode }),
-        });
-        if (res.ok) {
-          const org = await res.json();
-          localStorage.setItem("etf_org_id", org.id);
-          localStorage.setItem("etf_org_data", JSON.stringify(org));
-          localStorage.setItem(`etf_passcode_${org.id}`, passcode);
-          setLoading(false);
-          onComplete(name.trim(), title.trim(), org);
-          return;
-        }
-        if (res.status === 401) {
-          setError("Incorrect access code. Check with your team admin.");
-          setLoading(false);
-          return;
-        }
-      } catch (_) {}
-      // Fallback to localStorage
-      const orgId = localStorage.getItem("etf_org_id");
-      const storedPasscode = orgId ? localStorage.getItem(`etf_passcode_${orgId}`) : null;
-      if (storedPasscode && passcode !== storedPasscode) {
-        setError("Incorrect access code. Check with your team admin.");
-        setLoading(false);
-        return;
-      }
-      setLoading(false);
-      onComplete(name.trim(), title.trim(), null);
+      return;
     }
+
+    // Fallback: localStorage check
+    const storedOrgId = localStorage.getItem("etf_org_id");
+    const storedPasscode = storedOrgId ? localStorage.getItem(`etf_passcode_${storedOrgId}`) : null;
+    if (storedPasscode && passcode !== storedPasscode) {
+      setError("Incorrect access code. Check with your team admin.");
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    onComplete(name.trim(), title.trim(), null);
   };
 
   const s = {
@@ -757,53 +764,45 @@ function LoginScreen({ onComplete }) {
           <div style={{ fontSize: 12, color: "#6b6660", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Analysis Tool</div>
         </div>
         <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "32px 28px" }}>
-          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 6 }}>
-            {isNewOrg ? "Set up your team" : "Sign in"}
-          </div>
-          <p style={{ fontSize: 13, color: "#6b6660", margin: "0 0 22px", lineHeight: 1.6 }}>
-            {isNewOrg ? "Create your organization and access code. Share the code with your team." : "Enter your name and your team's access code."}
-          </p>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 6 }}>Sign in</div>
+          <p style={{ fontSize: 13, color: "#6b6660", margin: "0 0 22px", lineHeight: 1.6 }}>Enter your name and your team's access code.</p>
           {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 4, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
           <div style={{ marginBottom: 14 }}>
             <label style={s.label}>Your Name</label>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Aaron" style={s.input} />
           </div>
-
           <div style={{ marginBottom: 14 }}>
             <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Director of Sports Tourism" style={s.input} />
           </div>
-          {isNewOrg && (
+          {needsOrgName && (
             <div style={{ marginBottom: 14 }}>
-              <label style={s.label}>Organization</label>
-              <input value={orgName} onChange={(e) => setOrgName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Visit McKinney" style={s.input} />
+              <label style={s.label}>Organization Name</label>
+              <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Visit McKinney" style={s.input} />
+              <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Only needed when creating a new organization.</div>
             </div>
           )}
           <div style={{ marginBottom: 22 }}>
-            <label style={s.label}>{isNewOrg ? "Create Access Code" : "Access Code"}</label>
-            <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder={isNewOrg ? "Choose a code for your team" : "Team access code"} style={s.input} />
-            {isNewOrg && <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Share this with your teammates so they can sign in.</div>}
+            <label style={s.label}>Access Code</label>
+            <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="Team access code" style={s.input} />
           </div>
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                style={{ marginTop: 3, flexShrink: 0 }}
-              />
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} style={{ marginTop: 3, flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: "#6b6660", lineHeight: 1.6 }}>
                 I understand this is an independent planning tool, not affiliated with the State of Texas or EDT. I agree to the{" "}
-                <a href="/terms" target="_blank" style={{ color: "#c8b97a" }}>Terms of Service</a>
-                {" "}and{" "}
+                <a href="/terms" target="_blank" style={{ color: "#c8b97a" }}>Terms of Service</a>{" "}and{" "}
                 <a href="/privacy" target="_blank" style={{ color: "#c8b97a" }}>Privacy Policy</a>.
               </span>
             </label>
           </div>
-
           <button onClick={handleSubmit} disabled={loading || !agreed} style={{ width: "100%", padding: "13px", background: agreed ? "#c8b97a" : "#2a2720", color: agreed ? "#0f0e0c" : "#6b6660", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: loading || !agreed ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
-            {loading ? "Signing in…" : isNewOrg ? "Create & Enter Tool →" : "Enter Tool →"}
+            {loading ? "Signing in…" : "Enter Tool →"}
           </button>
+          <p style={{ margin: "12px 0 0", fontSize: 11.5, color: "#4a4740", lineHeight: 1.5, textAlign: "center" }}>
+            New organization?{" "}
+            <button onClick={() => setNeedsOrgName(true)} style={{ background: "none", border: "none", color: "#6b6660", cursor: "pointer", fontSize: 11.5, textDecoration: "underline", padding: 0 }}>Create one</button>
+          </p>
         </div>
         <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
       </div>
@@ -811,9 +810,6 @@ function LoginScreen({ onComplete }) {
   );
 }
 
-// ————————————————————————————————————————————————————————————————
-// Org Settings Modal
-// ————————————————————————————————————————————————————————————————
 function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
   const [name, setName] = useState(orgData?.name || "");
   const [city, setCity] = useState(orgData?.city || "");
