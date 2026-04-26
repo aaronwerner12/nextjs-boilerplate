@@ -405,6 +405,7 @@ export default function ETFPlaybook() {
   const [memberRecord, setMemberRecord] = useState(null);
   const [showTeamPanel, setShowTeamPanel] = useState(false);
   const [showOrgSettings, setShowOrgSettings] = useState(false);
+  const [showAdminWelcome, setShowAdminWelcome] = useState(false);
 
   // Org + member identity — loaded from localStorage (SSR-safe)
   const [orgId, setOrgId] = useState("");
@@ -437,7 +438,13 @@ export default function ETFPlaybook() {
     if (storedMemberId && storedOrg) {
       api.getTeam(storedOrg).then((members) => {
         const me = members.find((m) => m.id === storedMemberId);
-        if (me) setMemberRecord(me);
+        if (me) {
+          setMemberRecord(me);
+          if (me.is_admin && !localStorage.getItem("etf_seen_admin_welcome")) {
+            setShowAdminWelcome(true);
+            localStorage.setItem("etf_seen_admin_welcome", "1");
+          }
+        }
       }).catch(() => {});
     }
   }, []);
@@ -557,7 +564,14 @@ export default function ETFPlaybook() {
     localStorage.setItem("etf_member_id", memberId);
     if (resolvedOrgId) {
       const record = await api.upsertMember({ id: memberId, orgId: resolvedOrgId, name, title: title || "" });
-      if (record) setMemberRecord(record);
+      if (record) {
+        setMemberRecord(record);
+        // Show admin welcome on first time only
+        if (record.is_admin && !localStorage.getItem("etf_seen_admin_welcome")) {
+          setShowAdminWelcome(true);
+          localStorage.setItem("etf_seen_admin_welcome", "1");
+        }
+      }
     }
 
     setSetupStep(null);
@@ -605,6 +619,10 @@ export default function ETFPlaybook() {
           + New
         </button>
       </div>
+
+      {showAdminWelcome && (
+        <AdminWelcomeModal onClose={() => setShowAdminWelcome(false)} onOpenTeam={() => { setShowAdminWelcome(false); setShowTeamPanel(true); }} />
+      )}
 
       {showOrgSettings && (
         <OrgSettingsModal orgData={orgData} orgId={orgId} onClose={() => setShowOrgSettings(false)} onSave={(updated) => {
@@ -869,6 +887,63 @@ function LoginScreen({ onComplete }) {
         <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>
           Not affiliated with the Texas Office of the Governor or EDT.
         </p>
+      </div>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+// Admin Welcome Modal — shown once on first admin login
+// ————————————————————————————————————————————————————————————————
+function AdminWelcomeModal({ onClose, onOpenTeam }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: "#1a1814", border: "1px solid #c8b97a33", borderTop: "3px solid #c8b97a", borderRadius: 8, padding: "36px 32px", maxWidth: 480, width: "100%" }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, background: "#c8b97a", color: "#0f0e0c", borderRadius: 3, padding: "2px 8px", textTransform: "uppercase", letterSpacing: ".06em" }}>Admin</span>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#f5f0e8" }}>You're an admin</div>
+        </div>
+
+        <p style={{ fontSize: 14, color: "#9e9890", lineHeight: 1.7, margin: "0 0 24px" }}>
+          As an admin for this organization you have full control over your team's access to this tool.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 28 }}>
+          {[
+            { icon: "✉", title: "Invite teammates", desc: "Generate a pre-written invite email with your org's access code." },
+            { icon: "⊘", title: "Remove access", desc: "Deactivate any team member so they can no longer sign in." },
+            { icon: "⚙", title: "Change access code", desc: "Rotate the code to lock out anyone who should no longer have access." },
+            { icon: "★", title: "Promote others", desc: "Make any teammate an admin so they can manage the team too." },
+          ].map((item) => (
+            <div key={item.title} style={{ display: "flex", gap: 12, padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4 }}>
+              <div style={{ fontSize: 18, flexShrink: 0, width: 24, textAlign: "center" }}>{item.icon}</div>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: "#f5f0e8", marginBottom: 2 }}>{item.title}</div>
+                <div style={{ fontSize: 12.5, color: "#6b6660", lineHeight: 1.5 }}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontSize: 12, color: "#4a4740", lineHeight: 1.6, marginBottom: 20 }}>
+          Access these controls anytime via the <strong style={{ color: "#c8b97a" }}>Manage Team & Access</strong> button in the sidebar footer.
+        </p>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onOpenTeam}
+            style={{ flex: 1, padding: "11px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            Open Team Management →
+          </button>
+          <button
+            onClick={onClose}
+            style={{ padding: "11px 18px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#6b6660", fontSize: 13.5, cursor: "pointer" }}
+          >
+            Got it
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1397,26 +1472,37 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
           {saveStatus === "error"  && <span style={{ color: "#dc2626" }}>✗ Save failed</span>}
           {!saveStatus && <span style={{ color: "#059669" }}>● Shared team database</span>}
         </div>
-        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>
-          {teamMember && <span style={{ color: "#6b6660", fontWeight: 500 }}>{teamMember}</span>}
-          {typeof window !== "undefined" && localStorage.getItem("etf_team_title") && (
-            <span style={{ color: "#4a4740", fontSize: 11, display: "block", marginTop: 1 }}>
-              {localStorage.getItem("etf_team_title")}
+
+        {/* Name + admin badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+          {teamMember && <span style={{ color: "#1a1613", fontWeight: 600, fontSize: 13 }}>{teamMember}</span>}
+          {memberRecord?.is_admin && (
+            <span style={{ fontSize: 10, fontWeight: 700, background: "#c8b97a", color: "#0f0e0c", borderRadius: 3, padding: "1px 6px", textTransform: "uppercase", letterSpacing: ".06em" }}>
+              Admin
             </span>
           )}
         </div>
+        {typeof window !== "undefined" && localStorage.getItem("etf_team_title") && (
+          <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
+            {localStorage.getItem("etf_team_title")}
+          </div>
+        )}
+
+        {/* Admin team management button — prominent */}
+        {memberRecord?.is_admin && (
+          <button
+            onClick={onOpenTeam}
+            style={{ width: "100%", padding: "8px 12px", background: "#1a1613", color: "#c8b97a", border: "1px solid #c8b97a33", borderRadius: 4, fontSize: 12.5, fontWeight: 600, cursor: "pointer", marginBottom: 8, textAlign: "left", display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <span>⚙</span> Manage Team & Access
+          </button>
+        )}
+
+        {/* Links row */}
         <div style={{ display: "flex", gap: 10, fontSize: 11, flexWrap: "wrap" }}>
           <button onClick={onManageVenues} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-            Manage organization
+            Org settings
           </button>
-          {memberRecord?.is_admin && (
-            <>
-              <span style={{ color: "#2a2720" }}>·</span>
-              <button onClick={onOpenTeam} style={{ fontSize: 11, color: "#c8b97a", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-                Team
-              </button>
-            </>
-          )}
           <span style={{ color: "#2a2720" }}>·</span>
           <button
             onClick={() => {
@@ -1428,6 +1514,8 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
             style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
           >
             Sign out
+          </button>
+        </div>
           </button>
         </div>
       </div>
