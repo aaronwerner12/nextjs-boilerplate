@@ -1407,7 +1407,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/intake?status=pending");
+        const res = await fetch(`/api/intake?status=pending&org_id=${orgData?.id || ""}}`);
         const data = await res.json();
         setIntakeItems(Array.isArray(data) ? data : []);
       } catch (_) { setIntakeItems([]); }
@@ -1468,7 +1468,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
     } catch (_) {}
   };
 
-  const intakeUrl = typeof window !== "undefined" ? `${window.location.origin}/intake` : "/intake";
+  const intakeUrl = typeof window !== "undefined" ? `${window.location.origin}/intake?org=${orgId}` : "/intake";
 
   return (
     <div style={styles.dashboard}>
@@ -1507,6 +1507,121 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
         <StatCard label="Total in Pipeline" value={stats.total} icon={<Folder size={16} />} />
         <StatCard label="Projected Fund Value" value={fmtMoney(stats.projected)} icon={<DollarSign size={16} />} />
       </div>
+
+      {/* Intake — moved to top, most important action */}
+      <section style={{ marginBottom: 40 }}>
+        {/* Share card */}
+        <div style={{ background: "#1a1613", borderRadius: 8, padding: "24px 28px", marginBottom: 20, display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
+          {/* QR Code */}
+          <div style={{ flexShrink: 0 }}>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(intakeUrl)}&bgcolor=1a1613&color=c8b97a&margin=8`}
+              alt="QR code for intake form"
+              width={120}
+              height={120}
+              style={{ borderRadius: 6, display: "block" }}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "#c8b97a", marginBottom: 6 }}>
+              Event Organizer Intake Form
+            </div>
+            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 8 }}>
+              Share with event organizers
+            </div>
+            <div style={{ fontSize: 13.5, color: "#9e9890", lineHeight: 1.6, marginBottom: 16 }}>
+              Organizers scan the QR code or visit the link to submit their event details. Submissions land directly in your pipeline for review — no manual data entry needed.
+            </div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(intakeUrl); }}
+                style={{ padding: "9px 18px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                Copy Link
+              </button>
+              <button
+                onClick={() => {
+                  const subject = encodeURIComponent("Submit Your Event — ETF Analysis");
+                  const body = encodeURIComponent(`Hi,\n\nWe'd love to evaluate your event for Texas Events Trust Fund eligibility. Please complete our quick intake form:\n\n${intakeUrl}\n\nIt takes about 5 minutes and helps us determine if your event qualifies for funding support.\n\nLet us know if you have any questions!`);
+                  window.open(`mailto:?subject=${subject}&body=${body}`);
+                }}
+                style={{ padding: "9px 18px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, fontSize: 13.5, color: "#9e9890", cursor: "pointer" }}
+              >
+                Email to Organizer
+              </button>
+              <a
+                href={intakeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ padding: "9px 18px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, fontSize: 13.5, color: "#9e9890", textDecoration: "none", display: "inline-block" }}
+              >
+                Preview Form ↗
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Pending submissions */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <h2 style={{ ...styles.h2, margin: 0 }}>
+            Pending Submissions
+            {intakeItems.length > 0 && (
+              <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, background: "#dc2626", color: "#fff", borderRadius: 10, padding: "2px 8px" }}>
+                {intakeItems.length} new
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {intakeLoading ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Loading…</div>
+        ) : intakeItems.length === 0 ? (
+          <div style={{ padding: "20px 24px", background: "#faf8f4", border: "1px dashed #e8e3db", borderRadius: 4, textAlign: "center", fontSize: 13.5, color: "#9ca3af" }}>
+            No pending submissions. Share the intake link with event organizers to get started.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {intakeItems.map((item) => {
+              const eligPassed = item.elig
+                ? Object.values(item.elig).filter((v) => v === true).length
+                : 0;
+              const eligTotal = ELIG_KEYS.length;
+              return (
+                <div key={item.id} style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 20 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1613", marginBottom: 4 }}>{item.eventName || "Untitled Event"}</div>
+                    <div style={{ fontSize: 12.5, color: "#6b6660", marginBottom: 8 }}>
+                      {item.orgName} · {item.contactName} · <a href={`mailto:${item.contactEmail}`} style={{ color: "#6b6660" }}>{item.contactEmail}</a>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12 }}>
+                      {item.firstDay && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>📅 {item.firstDay}{item.lastDay ? ` → ${item.lastDay}` : ""}</span>}
+                      {item.totalAttendance && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>👥 {item.totalAttendance} attendees</span>}
+                      {item.roomNightsNeeded && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>🏨 {item.roomNightsNeeded} room nights</span>}
+                      {item.elig && <span style={{ padding: "2px 8px", background: eligPassed >= 3 ? "#d1fae5" : "#fef3c7", borderRadius: 10, color: eligPassed >= 3 ? "#065f46" : "#92400e" }}>Eligibility: {eligPassed}/{eligTotal}</span>}
+                    </div>
+                    {item.notes && <div style={{ fontSize: 12.5, color: "#6b6660", marginTop: 8, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{item.notes}"</div>}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                    <button
+                      onClick={() => handlePromote(item)}
+                      disabled={promoting === item.id}
+                      style={{ padding: "8px 16px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      {promoting === item.id ? "Adding…" : "→ Add to Pipeline"}
+                    </button>
+                    <button
+                      onClick={() => handleDismiss(item)}
+                      style={{ padding: "8px 16px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <section style={styles.quickStart}>
         <h2 style={styles.h2}>How this works</h2>
@@ -1560,83 +1675,6 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
           </div>
         </section>
       )}
-
-      {/* Intake queue */}
-      <section style={{ marginBottom: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <div>
-            <h2 style={{ ...styles.h2, margin: 0 }}>
-              Organizer Submissions
-              {intakeItems.length > 0 && (
-                <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, background: "#dc2626", color: "#fff", borderRadius: 10, padding: "2px 8px" }}>
-                  {intakeItems.length} pending
-                </span>
-              )}
-            </h2>
-            <div style={{ fontSize: 12.5, color: "#9ca3af", marginTop: 4 }}>
-              Events submitted by organizers at{" "}
-              <a href={intakeUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#6b6660", textDecoration: "underline" }}>
-                {intakeUrl}
-              </a>
-            </div>
-          </div>
-          <button
-            onClick={() => navigator.clipboard?.writeText(intakeUrl)}
-            style={{ fontSize: 12, color: "#6b6660", background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, padding: "5px 12px", cursor: "pointer" }}
-          >
-            Copy intake link
-          </button>
-        </div>
-
-        {intakeLoading ? (
-          <div style={{ padding: 24, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Loading…</div>
-        ) : intakeItems.length === 0 ? (
-          <div style={{ padding: "20px 24px", background: "#faf8f4", border: "1px dashed #e8e3db", borderRadius: 4, textAlign: "center", fontSize: 13.5, color: "#9ca3af" }}>
-            No pending submissions. Share the intake link with event organizers to get started.
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {intakeItems.map((item) => {
-              const eligPassed = item.elig
-                ? Object.values(item.elig).filter((v) => v === true).length
-                : 0;
-              const eligTotal = ELIG_KEYS.length;
-              return (
-                <div key={item.id} style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 20 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1613", marginBottom: 4 }}>{item.eventName || "Untitled Event"}</div>
-                    <div style={{ fontSize: 12.5, color: "#6b6660", marginBottom: 8 }}>
-                      {item.orgName} · {item.contactName} · <a href={`mailto:${item.contactEmail}`} style={{ color: "#6b6660" }}>{item.contactEmail}</a>
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12 }}>
-                      {item.firstDay && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>📅 {item.firstDay}{item.lastDay ? ` → ${item.lastDay}` : ""}</span>}
-                      {item.totalAttendance && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>👥 {item.totalAttendance} attendees</span>}
-                      {item.roomNightsNeeded && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>🏨 {item.roomNightsNeeded} room nights</span>}
-                      {item.elig && <span style={{ padding: "2px 8px", background: eligPassed >= 3 ? "#d1fae5" : "#fef3c7", borderRadius: 10, color: eligPassed >= 3 ? "#065f46" : "#92400e" }}>Eligibility: {eligPassed}/{eligTotal}</span>}
-                    </div>
-                    {item.notes && <div style={{ fontSize: 12.5, color: "#6b6660", marginTop: 8, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{item.notes}"</div>}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-                    <button
-                      onClick={() => handlePromote(item)}
-                      disabled={promoting === item.id}
-                      style={{ padding: "8px 16px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
-                    >
-                      {promoting === item.id ? "Adding…" : "→ Add to Pipeline"}
-                    </button>
-                    <button
-                      onClick={() => handleDismiss(item)}
-                      style={{ padding: "8px 16px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
 
       <div style={styles.ctaRow}>
         <button style={styles.ctaPrimary} onClick={onCreate}>
