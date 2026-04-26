@@ -682,24 +682,30 @@ export default function ETFPlaybook() {
 // Single sign-in screen — name, org (if new), access code
 // ————————————————————————————————————————————————————————————————
 function LoginScreen({ onComplete }) {
-  const [name, setName] = useState("");
-  const [title, setTitle] = useState("");
+  const [mode, setMode] = useState("join"); // "join" | "create"
+  const [name, setName] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("etf_team_member") || "";
+    return "";
+  });
+  const [title, setTitle] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("etf_team_title") || "";
+    return "";
+  });
   const [orgName, setOrgName] = useState("");
   const [passcode, setPasscode] = useState("");
+  const [newPasscode, setNewPasscode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
-  const [needsOrgName, setNeedsOrgName] = useState(false);
-  const isNewOrg = typeof window !== "undefined" && !localStorage.getItem("etf_org_id");
+  const hasStoredName = typeof window !== "undefined" && !!localStorage.getItem("etf_team_member");
 
-  const handleSubmit = async () => {
+  const handleJoin = async () => {
     if (!name.trim()) { setError("Please enter your name."); return; }
-    if (!passcode.trim()) { setError("Please enter an access code."); return; }
+    if (!passcode.trim()) { setError("Please enter your access code."); return; }
     if (!agreed) { setError("Please agree to the Terms of Service and Privacy Policy."); return; }
     setLoading(true);
     setError("");
 
-    // Always try API first — look up org by passcode across any device
     try {
       const res = await fetch("/api/orgs/login", {
         method: "POST",
@@ -711,100 +717,158 @@ function LoginScreen({ onComplete }) {
         localStorage.setItem("etf_org_id", org.id);
         localStorage.setItem("etf_org_data", JSON.stringify(org));
         localStorage.setItem(`etf_passcode_${org.id}`, passcode);
+        localStorage.setItem("etf_team_member", name.trim());
+        if (title.trim()) localStorage.setItem("etf_team_title", title.trim());
         setLoading(false);
         onComplete(name.trim(), title.trim(), org);
         return;
       }
       if (res.status === 401) {
-        if (!orgName.trim()) {
-          setNeedsOrgName(true);
-          setError("Access code not found. If creating a new org, enter your organization name above.");
-          setLoading(false);
-          return;
-        }
+        setError("Access code not found. Check with your team admin or create a new organization.");
+        setLoading(false);
+        return;
       }
     } catch (_) {}
 
-    // Create new org if org name provided
-    if (orgName.trim()) {
-      const id = orgName.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 40) + "_" + Date.now().toString(36);
-      const newOrg = { id, name: orgName, city: "", state: "TX", passcode, venues: [] };
-      localStorage.setItem(`etf_passcode_${id}`, passcode);
-      localStorage.setItem("etf_org_id", id);
-      localStorage.setItem("etf_org_data", JSON.stringify(newOrg));
-      fetch("/api/orgs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newOrg) }).catch(() => {});
-      setLoading(false);
-      onComplete(name.trim(), title.trim(), newOrg);
-      return;
-    }
-
-    // Fallback: localStorage check
+    // Fallback localStorage check
     const storedOrgId = localStorage.getItem("etf_org_id");
     const storedPasscode = storedOrgId ? localStorage.getItem(`etf_passcode_${storedOrgId}`) : null;
-    if (storedPasscode && passcode !== storedPasscode) {
-      setError("Incorrect access code. Check with your team admin.");
+    if (storedPasscode && passcode === storedPasscode) {
+      localStorage.setItem("etf_team_member", name.trim());
+      if (title.trim()) localStorage.setItem("etf_team_title", title.trim());
       setLoading(false);
+      onComplete(name.trim(), title.trim(), null);
       return;
     }
+    setError("Access code not found. Check with your team admin.");
     setLoading(false);
-    onComplete(name.trim(), title.trim(), null);
+  };
+
+  const handleCreate = async () => {
+    if (!name.trim()) { setError("Please enter your name."); return; }
+    if (!orgName.trim()) { setError("Please enter your organization name."); return; }
+    if (!newPasscode.trim() || newPasscode.length < 4) { setError("Access code must be at least 4 characters."); return; }
+    if (!agreed) { setError("Please agree to the Terms of Service and Privacy Policy."); return; }
+    setLoading(true);
+    setError("");
+
+    const id = orgName.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 40) + "_" + Date.now().toString(36);
+    const newOrg = { id, name: orgName, city: "", state: "TX", passcode: newPasscode, venues: [] };
+    localStorage.setItem(`etf_passcode_${id}`, newPasscode);
+    localStorage.setItem("etf_org_id", id);
+    localStorage.setItem("etf_org_data", JSON.stringify(newOrg));
+    localStorage.setItem("etf_team_member", name.trim());
+    if (title.trim()) localStorage.setItem("etf_team_title", title.trim());
+    fetch("/api/orgs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newOrg) }).catch(() => {});
+    setLoading(false);
+    onComplete(name.trim(), title.trim(), newOrg);
   };
 
   const s = {
     input: { width: "100%", padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" },
     label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", display: "block", marginBottom: 6 },
+    field: { marginBottom: 16 },
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f0e0c", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 52, height: 52, background: "#c8b97a", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#0f0e0c" }}>ETF</div>
+
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ width: 52, height: 52, background: "#c8b97a", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#0f0e0c" }}>ETF</div>
           <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#f5f0e8" }}>Texas Events Trust Fund</div>
           <div style={{ fontSize: 12, color: "#6b6660", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Analysis Tool</div>
         </div>
-        <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "32px 28px" }}>
-          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 6 }}>Sign in</div>
-          <p style={{ fontSize: 13, color: "#6b6660", margin: "0 0 22px", lineHeight: 1.6 }}>Enter your name and your team's access code.</p>
+
+        {/* Mode tabs */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          <button
+            onClick={() => { setMode("join"); setError(""); }}
+            style={{ flex: 1, padding: "11px", borderRadius: 4, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", background: mode === "join" ? "#c8b97a" : "#1a1814", color: mode === "join" ? "#0f0e0c" : "#6b6660", transition: "all .15s" }}
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => { setMode("create"); setError(""); }}
+            style={{ flex: 1, padding: "11px", borderRadius: 4, border: "1px solid #2a2720", fontSize: 14, fontWeight: 600, cursor: "pointer", background: mode === "create" ? "#c8b97a" : "transparent", color: mode === "create" ? "#0f0e0c" : "#9e9890", transition: "all .15s" }}
+          >
+            New Organization
+          </button>
+        </div>
+
+        <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "28px 24px" }}>
+
           {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 4, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
-          <div style={{ marginBottom: 14 }}>
-            <label style={s.label}>Your Name</label>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Aaron" style={s.input} />
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Director of Sports Tourism" style={s.input} />
-          </div>
-          {needsOrgName && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={s.label}>Organization Name</label>
-              <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Visit McKinney" style={s.input} />
-              <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Only needed when creating a new organization.</div>
-            </div>
+
+          {mode === "join" ? (
+            <>
+              <div style={s.field}>
+                <label style={s.label}>Your Name</label>
+                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="e.g. Aaron Werner" style={s.input} />
+              </div>
+              {(!hasStoredName || title === "") && (
+                <div style={s.field}>
+                  <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                  <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Executive Director" style={s.input} />
+                </div>
+              )}
+              <div style={s.field}>
+                <label style={s.label}>Access Code</label>
+                <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="Your team's access code" style={s.input} />
+                <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Get this from your team admin.</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: "#6b6660", lineHeight: 1.6, marginBottom: 20, marginTop: 0 }}>
+                Create a new organization for your DMO. You'll be the admin and can invite teammates after setup.
+              </p>
+              <div style={s.field}>
+                <label style={s.label}>Your Name</label>
+                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Aaron Werner" style={s.input} />
+              </div>
+              <div style={s.field}>
+                <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Executive Director" style={s.input} />
+              </div>
+              <div style={s.field}>
+                <label style={s.label}>Organization Name</label>
+                <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Visit McKinney" style={s.input} />
+              </div>
+              <div style={s.field}>
+                <label style={s.label}>Create Access Code</label>
+                <input type="password" value={newPasscode} onChange={(e) => setNewPasscode(e.target.value)} placeholder="Min. 4 characters" style={s.input} />
+                <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Share this with teammates so they can sign in.</div>
+              </div>
+            </>
           )}
-          <div style={{ marginBottom: 22 }}>
-            <label style={s.label}>Access Code</label>
-            <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="Team access code" style={s.input} />
-          </div>
+
+          {/* Terms */}
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} style={{ marginTop: 3, flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: "#6b6660", lineHeight: 1.6 }}>
-                I understand this is an independent planning tool, not affiliated with the State of Texas or EDT. I agree to the{" "}
+                I agree to the{" "}
                 <a href="/terms" target="_blank" style={{ color: "#c8b97a" }}>Terms of Service</a>{" "}and{" "}
                 <a href="/privacy" target="_blank" style={{ color: "#c8b97a" }}>Privacy Policy</a>.
+                This tool is not affiliated with the State of Texas or EDT.
               </span>
             </label>
           </div>
-          <button onClick={handleSubmit} disabled={loading || !agreed} style={{ width: "100%", padding: "13px", background: agreed ? "#c8b97a" : "#2a2720", color: agreed ? "#0f0e0c" : "#6b6660", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: loading || !agreed ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
-            {loading ? "Signing in…" : "Enter Tool →"}
+
+          <button
+            onClick={mode === "join" ? handleJoin : handleCreate}
+            disabled={loading || !agreed}
+            style={{ width: "100%", padding: "13px", background: agreed ? "#c8b97a" : "#2a2720", color: agreed ? "#0f0e0c" : "#6b6660", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: loading || !agreed ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}
+          >
+            {loading ? "Please wait…" : mode === "join" ? "Sign In →" : "Create Organization →"}
           </button>
-          <p style={{ margin: "12px 0 0", fontSize: 11.5, color: "#4a4740", lineHeight: 1.5, textAlign: "center" }}>
-            New organization?{" "}
-            <button onClick={() => setNeedsOrgName(true)} style={{ background: "none", border: "none", color: "#6b6660", cursor: "pointer", fontSize: 11.5, textDecoration: "underline", padding: 0 }}>Create one</button>
-          </p>
         </div>
-        <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
+
+        <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>
+          Not affiliated with the Texas Office of the Governor or EDT.
+        </p>
       </div>
     </div>
   );
