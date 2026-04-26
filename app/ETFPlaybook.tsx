@@ -1084,8 +1084,11 @@ function TeamPanel({ orgId, memberRecord, onClose }) {
   const [actionMsg, setActionMsg] = useState("");
   const [copyMsg, setCopyMsg] = useState("");
 
-  const orgData = (() => { try { return JSON.parse(localStorage.getItem("etf_org_data") || "{}"); } catch (_) { return {}; } })();
-  const storedPasscode = localStorage.getItem(`etf_passcode_${orgId}`) || "your-access-code";
+  const orgData = (() => { 
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("etf_org_data") || "{}"); } catch (_) { return {}; } 
+  })();
+  const storedPasscode = typeof window !== "undefined" ? (localStorage.getItem(`etf_passcode_${orgId}`) || "your-access-code") : "your-access-code";
   const appUrl = typeof window !== "undefined" ? window.location.origin : "https://etfplaybook.vercel.app";
 
   const inviteEmail = `Subject: Join our ETF Analysis Tool — ${orgData.name || "Our Team"}
@@ -1468,7 +1471,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
     } catch (_) {}
   };
 
-  const intakeUrl = typeof window !== "undefined" ? `${window.location.origin}/intake?org=${orgId}` : "/intake";
+  const intakeUrl = typeof window !== "undefined" ? `${window.location.origin}/intake?org=${orgData?.id || ""}` : "/intake";
 
   return (
     <div style={styles.dashboard}>
