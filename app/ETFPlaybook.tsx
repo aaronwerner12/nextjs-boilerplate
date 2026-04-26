@@ -1513,8 +1513,6 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
             Sign out
           </button>
         </div>
-          </button>
-        </div>
       </div>
     </aside>
   );
