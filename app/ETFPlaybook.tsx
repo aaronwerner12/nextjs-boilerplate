@@ -1427,7 +1427,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
         <span style={styles.count}>{events.length}</span>
       </div>
 
-      <div style={styles.eventList}>
+      <div style={{ ...styles.eventList, overflowY: "auto", flex: 1 }}>
         {events.length === 0 && (
           <div style={styles.emptyList}>
             No events yet. Click <em>New Event</em> to begin an analysis.
@@ -3749,17 +3749,21 @@ function GlobalStyles() {
       }
       .etf-sidebar-overlay.open { display: block; }
 
-      /* Sidebar drawer on mobile */
+      /* Mobile sidebar drawer */
       @media (max-width: 768px) {
         .etf-sidebar {
           position: fixed !important;
           left: -280px !important;
           top: 0 !important;
           height: 100vh !important;
+          height: 100dvh !important;
           width: 280px !important;
           z-index: 50;
           transition: left .25s ease;
           box-shadow: 4px 0 24px rgba(0,0,0,.12);
+          display: flex !important;
+          flex-direction: column !important;
+          overflow: hidden !important;
         }
         .etf-sidebar.open { left: 0 !important; }
         .etf-main { margin-left: 0 !important; width: 100% !important; }
