@@ -1407,7 +1407,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/intake?status=pending&org_id=${orgData?.id || ""}}`);
+        const res = await fetch(`/api/intake?status=pending&org_id=${orgData?.id || ""}`);
         const data = await res.json();
         setIntakeItems(Array.isArray(data) ? data : []);
       } catch (_) { setIntakeItems([]); }
