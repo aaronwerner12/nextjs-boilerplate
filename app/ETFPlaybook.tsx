@@ -1622,7 +1622,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
         <div>
           <div style={styles.eyebrow}>Texas Events Trust Fund · Independent DMO Planning Tool</div>
           <h1 style={styles.h1}>
-            <em>Events Trust Fund</em> evaluation and administration.
+            Built for DMOs pursuing the <em>Texas Events Trust Fund.</em>
           </h1>
           <p style={styles.lede}>
             Analyze prospective events against ETF eligibility requirements,
