@@ -402,8 +402,9 @@ export default function ETFPlaybook() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [teamMemberTitle, setTeamMemberTitle] = useState("");
-  const [memberRecord, setMemberRecord] = useState(null); // full DB record incl. is_admin
+  const [memberRecord, setMemberRecord] = useState(null);
   const [showTeamPanel, setShowTeamPanel] = useState(false);
+  const [showOrgSettings, setShowOrgSettings] = useState(false);
 
   // Org + member identity — loaded from localStorage (SSR-safe)
   const [orgId, setOrgId] = useState("");
@@ -605,6 +606,14 @@ export default function ETFPlaybook() {
         </button>
       </div>
 
+      {showOrgSettings && (
+        <OrgSettingsModal orgData={orgData} orgId={orgId} onClose={() => setShowOrgSettings(false)} onSave={(updated) => {
+          setOrgData(updated);
+          localStorage.setItem("etf_org_data", JSON.stringify(updated));
+          setShowOrgSettings(false);
+        }} />
+      )}
+
       {showWalkthrough && (
         <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} setTab={setTab} />
       )}
@@ -624,7 +633,7 @@ export default function ETFPlaybook() {
         teamMember={teamMember}
         orgData={orgData}
         onChangeName={() => setSetupStep("name")}
-        onManageVenues={() => setSetupStep("org")}
+        onManageVenues={() => setShowOrgSettings(true)}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         memberRecord={memberRecord}
@@ -797,6 +806,125 @@ function LoginScreen({ onComplete }) {
           </button>
         </div>
         <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
+      </div>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+// Org Settings Modal
+// ————————————————————————————————————————————————————————————————
+function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
+  const [name, setName] = useState(orgData?.name || "");
+  const [city, setCity] = useState(orgData?.city || "");
+  const [state, setState] = useState(orgData?.state || "TX");
+  const [notifyEmail, setNotifyEmail] = useState(orgData?.notifyEmail || "");
+  const [venues, setVenues] = useState(orgData?.venues || []);
+  const [newVenue, setNewVenue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+
+  const addVenue = () => {
+    if (!newVenue.trim()) return;
+    setVenues((v) => [...v, { name: newVenue.trim(), address: "" }]);
+    setNewVenue("");
+  };
+
+  const removeVenue = (i) => setVenues((v) => v.filter((_, idx) => idx !== i));
+
+  const parseBulk = () => {
+    const parsed = bulkText.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
+      const d = line.indexOf(" — ");
+      return d > -1 ? { name: line.substring(0, d), address: line.substring(d + 3) } : { name: line, address: "" };
+    });
+    setVenues(parsed);
+    setBulkMode(false);
+    setBulkText("");
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const updated = { ...orgData, name, city, state, notifyEmail, venues };
+    try {
+      await fetch("/api/orgs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+    } catch (_) {}
+    setSaving(false);
+    onSave(updated);
+  };
+
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" };
+  const labelStyle = { fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 5 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 36, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600 }}>Organization Settings</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9ca3af" }}>✕</button>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={labelStyle}>Organization Name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 80px", gap: 10, marginBottom: 16 }}>
+          <div>
+            <label style={labelStyle}>City</label>
+            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. McKinney" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>State</label>
+            <input value={state} onChange={(e) => setState(e.target.value)} style={inputStyle} />
+          </div>
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Notification Email</label>
+          <input type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="events@yourorg.com" style={inputStyle} />
+        </div>
+
+        {/* Venues */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <label style={labelStyle}>Venues</label>
+            <button onClick={() => setBulkMode(!bulkMode)} style={{ fontSize: 12, color: "#6b6660", background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, padding: "3px 10px", cursor: "pointer" }}>
+              {bulkMode ? "Switch to list" : "Paste a list"}
+            </button>
+          </div>
+
+          {bulkMode ? (
+            <div>
+              <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} placeholder={"One venue per line:\nAl Ruschhaupt Soccer Complex — 2701 Northbrook Drive"} rows={6} style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5, resize: "vertical" }} />
+              <button onClick={parseBulk} style={{ marginTop: 8, fontSize: 12.5, padding: "5px 12px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>Preview →</button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 8 }}>
+                {venues.map((v, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 3, marginBottom: 4 }}>
+                    <span style={{ flex: 1, fontSize: 13 }}>{v.name}{v.address ? ` — ${v.address}` : ""}</span>
+                    <button onClick={() => removeVenue(i)} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 14 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={newVenue} onChange={(e) => setNewVenue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="Add venue name" style={{ ...inputStyle, flex: 1 }} />
+                <button onClick={addVenue} style={{ padding: "10px 16px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 13 }}>Add</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "10px 18px", background: "transparent", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: "10px 20px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        </div>
       </div>
     </div>
   );
