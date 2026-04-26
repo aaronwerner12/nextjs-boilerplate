@@ -409,15 +409,31 @@ export default function ETFPlaybook() {
   useEffect(() => {
     if (!orgId || setupStep) return;
     (async () => {
-      try {
-        const [org, evts] = await Promise.all([
-          api.getOrg(orgId),
-          api.getEvents(orgId),
-        ]);
+      // Load org data and events independently — don't let one block the other
+      const storedOrgData = localStorage.getItem("etf_org_data");
+      if (storedOrgData) {
+        try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
+      }
+
+      // Try to get fresh org from DB
+      api.getOrg(orgId).then((org) => {
         setOrgData(org);
+        localStorage.setItem("etf_org_data", JSON.stringify(org));
+      }).catch(() => {}); // fallback to localStorage already set above
+
+      // Show cached events immediately while API loads
+      const cachedEvents = localStorage.getItem("etf_events_cache");
+      if (cachedEvents) {
+        try { setEvents(JSON.parse(cachedEvents)); } catch (_) {}
+      }
+
+      // Load events from DB
+      try {
+        const evts = await api.getEvents(orgId);
         setEvents(evts);
+        localStorage.setItem("etf_events_cache", JSON.stringify(evts));
       } catch (e) {
-        console.error("Load error:", e);
+        console.error("Failed to load events:", e);
       }
       setLoading(false);
     })();
@@ -447,6 +463,12 @@ export default function ETFPlaybook() {
     window._etfSaveTimer = setTimeout(async () => {
       try {
         await api.saveEvent({ ...updated, createdBy: teamMember }, orgId);
+        // Update local cache so events persist on refresh if API is slow
+        setEvents((prev) => {
+          const updated2 = prev.map((e) => e.id === updated.id ? updated : e);
+          localStorage.setItem("etf_events_cache", JSON.stringify(updated2));
+          return updated2;
+        });
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus(""), 2000);
       } catch (_) { setSaveStatus("error"); }
