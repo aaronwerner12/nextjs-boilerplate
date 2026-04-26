@@ -277,8 +277,8 @@ export default function LandingPage() {
           <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 15, fontWeight: 600, color: "#f5f0e8" }}>TX ETF Analysis Tool</span>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <a href="/auth" className="land-btn-secondary" style={{ padding: "9px 20px", fontSize: 13.5 }}>Sign In</a>
-          <a href="/auth" className="land-btn-primary" style={{ padding: "9px 20px", fontSize: 13.5 }}>Get Started →</a>
+          <a href="/?signin=1" className="land-btn-secondary" style={{ padding: "9px 20px", fontSize: 13.5 }}>Sign In</a>
+          <a href="/?signin=1" className="land-btn-primary" style={{ padding: "9px 20px", fontSize: 13.5 }}>Get Started →</a>
         </div>
       </nav>
 
@@ -294,7 +294,7 @@ export default function LandingPage() {
           The Texas Events Trust Fund Analysis Tool helps CVBs and DMOs evaluate events, calculate economic impact, manage deadlines, and prepare applications — all in one place.
         </p>
         <div className="land-cta-row">
-          <a href="/auth" className="land-btn-primary">Create Your Organization →</a>
+          <a href="/?signin=1" className="land-btn-primary">Create Your Organization →</a>
           <a href="#how-it-works" className="land-btn-secondary">See How It Works</a>
         </div>
 
@@ -382,7 +382,7 @@ export default function LandingPage() {
           Create your organization, add your team, and start analyzing events in minutes. No setup fee, no contract.
         </p>
         <div className="land-cta-row">
-          <a href="/auth" className="land-btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>Create Your Organization →</a>
+          <a href="/?signin=1" className="land-btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>Create Your Organization →</a>
         </div>
         <p style={{ marginTop: 20, fontSize: 12.5, color: "#4a4740" }}>
           Not affiliated with the Texas Office of the Governor or EDT.
@@ -398,7 +398,7 @@ export default function LandingPage() {
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
           <a href="/terms" style={{ fontSize: 12.5, color: "#4a4740", textDecoration: "none" }}>Terms</a>
           <a href="/privacy" style={{ fontSize: 12.5, color: "#4a4740", textDecoration: "none" }}>Privacy</a>
-          <a href="/auth" style={{ fontSize: 12.5, color: "#6b6660", textDecoration: "none" }}>Sign In →</a>
+          <a href="/?signin=1" style={{ fontSize: 12.5, color: "#6b6660", textDecoration: "none" }}>Sign In →</a>
         </div>
       </footer>
 
