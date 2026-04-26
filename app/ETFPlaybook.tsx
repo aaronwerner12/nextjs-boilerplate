@@ -1854,6 +1854,153 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
   const calc = useMemo(() => calculateTrustFund(event), [event]);
   const decision = useMemo(() => evaluateDecision(event, calc), [event, calc]);
 
+  const exportPDF = () => {
+    const deadlines = event.firstDay ? TIMELINE.map(item => ({
+      label: item.label,
+      date: (() => { const d = addDays(event.firstDay, item.offset); return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; })(),
+    })) : [];
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${event.name || "Event Analysis"} — ETF Analysis</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; color: #1a1613; background: #fff; padding: 48px; font-size: 13px; line-height: 1.5; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #1a1613; }
+  .header-left h1 { font-family: 'Fraunces', Georgia, serif; font-size: 28px; font-weight: 600; margin-bottom: 4px; }
+  .header-left p { font-size: 13px; color: #6b6660; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  .badge-pursue { background: #d1fae5; color: #065f46; }
+  .badge-conditional { background: #fef3c7; color: #92400e; }
+  .badge-strong { background: #dbeafe; color: #1e40af; }
+  .badge-strategic { background: #ede9fe; color: #5b21b6; }
+  .badge-no { background: #fee2e2; color: #991b1b; }
+  .section { margin-bottom: 28px; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #9ca3af; margin-bottom: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .stat-box { background: #faf8f4; border: 1px solid #e8e3db; border-radius: 4px; padding: 14px 16px; }
+  .stat-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+  .stat-value { font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 600; }
+  .stat-value.gold { color: #92400e; }
+  .elig-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12.5px; }
+  .elig-row:last-child { border-bottom: none; }
+  .pass { color: #059669; font-weight: 600; }
+  .fail { color: #dc2626; font-weight: 600; }
+  .na { color: #9ca3af; }
+  .deadline-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #f3f4f6; font-size: 12.5px; }
+  .deadline-row:last-child { border-bottom: none; }
+  .deadline-date { font-weight: 600; color: #374151; }
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e8e3db; display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; }
+  @media print { body { padding: 32px; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>${event.name || "Untitled Event"}</h1>
+      <p>${event.firstDay ? `${event.firstDay}${event.lastDay ? ' → ' + event.lastDay : ''}` : 'Dates not set'}${event.siteSelectionOrg ? ' · ' + event.siteSelectionOrg : ''}</p>
+    </div>
+    <div>
+      <div class="badge badge-${decision.recommendation === 'DO NOT PURSUE' ? 'no' : decision.recommendation === 'STRATEGIC PRIORITY' ? 'strategic' : decision.recommendation === 'STRONG TARGET' ? 'strong' : decision.recommendation === 'PURSUE WITH CONDITIONS' ? 'conditional' : 'pursue'}">${decision.recommendation || 'Under Analysis'}</div>
+      <p style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:right">Generated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>
+    </div>
+  </div>
+
+  <div class="grid-3 section">
+    <div class="stat-box">
+      <div class="stat-label">Projected ETF Value</div>
+      <div class="stat-value gold">${fmtMoney(decision.estimate)}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">State Contribution</div>
+      <div class="stat-value">${fmtMoney(calc.stateFund || 0)}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Required Local Match</div>
+      <div class="stat-value">${fmtMoney(calc.localMatch || 0)}</div>
+    </div>
+  </div>
+
+  <div class="grid-2 section">
+    <div class="stat-box">
+      <div class="stat-label">Estimated Room Nights</div>
+      <div class="stat-value">${fmtNum(event.roomNights || calc.roomNights || 0)}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Out-of-Market Attendance</div>
+      <div class="stat-value">${event.outOfMarketPct || 0}%</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Eligibility Check</div>
+    ${[
+      ['Competitive site-selection process against out-of-state alternatives', event.elig?.competitiveBid],
+      ['Signed selection letter naming this city', event.elig?.siteSelectionLetter],
+      ['Event held only once per year', event.elig?.annualOrOnce],
+      ['Sole site or sole regional site', event.elig?.soleSiteOrRegional],
+      ['Not held elsewhere in Texas or adjoining states same year', event.elig?.notHeldElsewhere],
+    ].map(([label, val]) => `
+      <div class="elig-row">
+        <span>${label}</span>
+        <span class="${val === true ? 'pass' : val === false ? 'fail' : 'na'}">${val === true ? '✓ Yes' : val === false ? '✗ No' : '— Not answered'}</span>
+      </div>
+    `).join('')}
+  </div>
+
+  ${deadlines && deadlines.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Key Deadlines</div>
+    ${deadlines.slice(0,6).map(d => `
+      <div class="deadline-row">
+        <span>${d.label || d.name}</span>
+        <span class="deadline-date">${d.date || '—'}</span>
+      </div>
+    `).join('')}
+  </div>
+  ` : ''}
+
+  ${decision.issues && decision.issues.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Issues to Resolve</div>
+    ${decision.issues.map(i => `<div style="padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12.5px;color:#dc2626">⚠ ${i}</div>`).join('')}
+  </div>
+  ` : ''}
+
+  ${event.notes ? `
+  <div class="section">
+    <div class="section-title">Notes</div>
+    <p style="font-size:13px;color:#374151;line-height:1.7">${event.notes.replace(/\n/g,'<br>')}</p>
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    <span>Texas Events Trust Fund Analysis Tool · etfplaybook.vercel.app</span>
+    <span>Not affiliated with the Texas Office of the Governor or EDT. For internal planning purposes only.</span>
+  </div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      // Popup blocked — create a download link instead
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(event.name || 'ETF-Analysis').replace(/[^a-z0-9]/gi, '-')}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 500);
+  };
+
   const TABS = [
     { k: "overview", label: "Overview", icon: <Info size={14} /> },
     { k: "decision", label: "Decision Framework", icon: <Scale size={14} /> },
@@ -1896,6 +2043,14 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
               <option value="post-event">Post-Event</option>
               <option value="complete">Complete</option>
             </select>
+          </div>
+          <div style={styles.headerStat}>
+            <button
+              onClick={exportPDF}
+              style={{ padding: "6px 14px", background: "#1a1613", color: "#f5f0e8", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+            >
+              ↓ Export PDF
+            </button>
           </div>
         </div>
       </header>
