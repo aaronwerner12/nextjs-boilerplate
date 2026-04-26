@@ -2609,10 +2609,7 @@ function CalculatorTab({ event, update, calc }) {
           </div>
         </div>
 
-        <div style={styles.benchmark}>
-          <strong>Benchmark:</strong> The 2024 Adidas Boys 3SSB event in Bryan had ~13,660 attendees,
-          ~2,581 room nights, and produced a $168,953 total fund ($145,649 state + $23,304 local).
-        </div>
+        <div style={{ height: 8 }} />
       </Section>
     </div>
   );
