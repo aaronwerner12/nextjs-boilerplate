@@ -490,7 +490,7 @@ export default function ETFPlaybook() {
   if (loading) {
     return (
       <div style={styles.loadingScreen}>
-        <div style={styles.loadingText}>Loading {orgData?.name || "team"} events…</div>
+        <div style={styles.loadingText}>Loading your pipeline…</div>
       </div>
     );
   }
@@ -589,12 +589,14 @@ function LoginScreen({ onComplete }) {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const isNewOrg = typeof window !== "undefined" && !localStorage.getItem("etf_org_id");
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError("Please enter your name."); return; }
     if (isNewOrg && !orgName.trim()) { setError("Please enter your organization name."); return; }
     if (!passcode.trim()) { setError("Please enter an access code."); return; }
+    if (!agreed) { setError("Please agree to the Terms of Service and Privacy Policy."); return; }
     setLoading(true);
     setError("");
 
@@ -678,7 +680,24 @@ function LoginScreen({ onComplete }) {
             <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder={isNewOrg ? "Choose a code for your team" : "Team access code"} style={s.input} />
             {isNewOrg && <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Share this with your teammates so they can sign in.</div>}
           </div>
-          <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", padding: "13px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                style={{ marginTop: 3, flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 12, color: "#6b6660", lineHeight: 1.6 }}>
+                I understand this is an independent planning tool, not affiliated with the State of Texas or EDT. I agree to the{" "}
+                <a href="/terms" target="_blank" style={{ color: "#c8b97a" }}>Terms of Service</a>
+                {" "}and{" "}
+                <a href="/privacy" target="_blank" style={{ color: "#c8b97a" }}>Privacy Policy</a>.
+              </span>
+            </label>
+          </div>
+
+          <button onClick={handleSubmit} disabled={loading || !agreed} style={{ width: "100%", padding: "13px", background: agreed ? "#c8b97a" : "#2a2720", color: agreed ? "#0f0e0c" : "#6b6660", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: loading || !agreed ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
             {loading ? "Signing in…" : isNewOrg ? "Create & Enter Tool →" : "Enter Tool →"}
           </button>
         </div>
