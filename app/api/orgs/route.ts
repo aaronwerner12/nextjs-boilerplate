@@ -1,6 +1,10 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
+export const dynamic = 'force-dynamic';
+
 const sql = neon(process.env.DATABASE_URL!);
 
 async function ensureTables() {
@@ -8,13 +12,15 @@ async function ensureTables() {
     CREATE TABLE IF NOT EXISTS etf_orgs (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      city TEXT NOT NULL,
+      city TEXT NOT NULL DEFAULT '',
       state TEXT NOT NULL DEFAULT 'TX',
       notify_email TEXT,
+      passcode TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS notify_email TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS passcode TEXT`.catch(() => {});
   await sql`
     CREATE TABLE IF NOT EXISTS etf_venues (
       id TEXT PRIMARY KEY,
@@ -61,17 +67,19 @@ export async function POST(req: NextRequest) {
   try {
     await ensureTables();
     const body = await req.json();
-    const { id, name, city, state = "TX", notifyEmail = "", venues = [] } = body;
+    const { id, name, city = "", state = "TX", notifyEmail = "", passcode = "", venues = [] } = body;
 
-    if (!id || !name || !city) {
+    if (!id || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     await sql`
-      INSERT INTO etf_orgs (id, name, city, state, notify_email)
-      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail})
+      INSERT INTO etf_orgs (id, name, city, state, notify_email, passcode)
+      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail}, ${passcode})
       ON CONFLICT (id) DO UPDATE
-        SET name = ${name}, city = ${city}, state = ${state}, notify_email = ${notifyEmail}
+        SET name = ${name}, city = ${city}, state = ${state},
+            notify_email = ${notifyEmail},
+            passcode = COALESCE(NULLIF(${passcode}, ''), etf_orgs.passcode)
     `;
 
     // Replace venues for this org
