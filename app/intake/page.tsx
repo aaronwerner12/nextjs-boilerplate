@@ -1,7 +1,8 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 const SERIF = "'Fraunces', 'Georgia', serif";
 const MONO = "'IBM Plex Mono', 'Courier New', monospace";
@@ -336,34 +337,44 @@ const ELIG_QUESTIONS = [
   },
 ];
 
-export default function IntakePage() {
+function IntakeForm() {
+  const searchParams = useSearchParams();
+  const orgId = searchParams.get("org") || "";
+  const [orgName, setOrgName] = useState("");
+  const [orgLogo, setOrgLogo] = useState("");
+
+  useEffect(() => {
+    if (orgId) {
+      fetch(`/api/orgs?id=${orgId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.name) setOrgName(data.name);
+          if (data.logoUrl) setOrgLogo(data.logoUrl);
+        })
+        .catch(() => {});
+    }
+  }, [orgId]);
+
   const [form, setForm] = useState({
-    // Contact
     orgName: "",
     contactName: "",
     contactEmail: "",
     contactPhone: "",
-    // Event basics
     eventName: "",
     eventType: "",
     firstDay: "",
     lastDay: "",
     venueNeeds: "",
-    // Attendance
     totalAttendance: "",
     outOfMarketPct: "",
     roomNightsNeeded: "",
     hotelBlockConfirmed: "",
-    // Site selection
     siteSelectionOrg: "",
     competitiveProcess: "",
     selectionLetterAvailable: "",
-    // Eligibility
     elig: {} as Record<string, boolean | null>,
-    // Budget
     estimatedEventBudget: "",
     primaryCosts: "",
-    // Notes
     notes: "",
   });
 
@@ -391,7 +402,7 @@ export default function IntakePage() {
       const res = await fetch("/api/intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, orgId }),
       });
       if (!res.ok) throw new Error("Submission failed");
       setSubmitted(true);
@@ -423,9 +434,14 @@ export default function IntakePage() {
     <div style={styles.page}>
       {/* Header */}
       <header style={styles.header}>
-        <div>
-          <div style={styles.logo}>Texas Events Trust Fund Analysis Tool</div>
-          <div style={styles.logoSub}>Event Organizer Intake</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {orgLogo && (
+            <img src={orgLogo} alt={orgName} style={{ height: 36, width: 36, objectFit: "contain", background: "#fff", borderRadius: 4, padding: 3 }} />
+          )}
+          <div>
+            <div style={styles.logo}>{orgName ? `Submit to ${orgName}` : "Texas Events Trust Fund Analysis Tool"}</div>
+            <div style={styles.logoSub}>Event Organizer Intake</div>
+          </div>
         </div>
         <div style={styles.badge}>Confidential</div>
       </header>
@@ -437,7 +453,7 @@ export default function IntakePage() {
           Tell us about <em style={styles.h1Em}>your event.</em>
         </h1>
         <p style={styles.lede}>
-          Complete this form so we can evaluate your event for Texas Events Trust Fund eligibility.
+          Complete this form so {orgName ? <strong style={{ color: "#f5f0e8" }}>{orgName}</strong> : "we"} can evaluate your event for Texas Events Trust Fund eligibility.
           The more detail you provide, the faster we can complete our analysis.
           All information is kept confidential.
         </p>
@@ -707,5 +723,13 @@ export default function IntakePage() {
 
       </div>
     </div>
+  );
+}
+
+export default function IntakePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0f0e0c" }} />}>
+      <IntakeForm />
+    </Suspense>
   );
 }
