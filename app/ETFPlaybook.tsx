@@ -51,6 +51,29 @@ const api = {
     const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete event");
   },
+  async getTeam(orgId) {
+    const res = await fetch(`/api/team?org_id=${orgId}`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  },
+  async upsertMember(member) {
+    const res = await fetch("/api/team", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(member),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  },
+  async teamAction(payload) {
+    const res = await fetch("/api/team", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Action failed");
+    return res.json();
+  },
 };
 
 const ELIG_KEYS = ["competitive", "annual", "solesite", "notelsewhere"];
@@ -378,6 +401,9 @@ export default function ETFPlaybook() {
   const [saveStatus, setSaveStatus] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [teamMemberTitle, setTeamMemberTitle] = useState("");
+  const [memberRecord, setMemberRecord] = useState(null); // full DB record incl. is_admin
+  const [showTeamPanel, setShowTeamPanel] = useState(false);
 
   // Org + member identity — loaded from localStorage (SSR-safe)
   const [orgId, setOrgId] = useState("");
@@ -403,6 +429,16 @@ export default function ETFPlaybook() {
       try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
     }
     setTeamMember(storedMember);
+    setTeamMemberTitle(localStorage.getItem("etf_team_title") || "");
+
+    // Load member record to check admin status
+    const storedMemberId = localStorage.getItem("etf_member_id");
+    if (storedMemberId && storedOrg) {
+      api.getTeam(storedOrg).then((members) => {
+        const me = members.find((m) => m.id === storedMemberId);
+        if (me) setMemberRecord(me);
+      }).catch(() => {});
+    }
   }, []);
 
   // ── Load org data + events once org is known ──────────────────
@@ -496,19 +532,33 @@ export default function ETFPlaybook() {
     try { await api.deleteEvent(id); } catch (_) {}
   };
 
-  const handleLoginComplete = (name, newOrg) => {
+  const handleLoginComplete = async (name, title, newOrg) => {
     localStorage.setItem("etf_authed", "1");
     localStorage.setItem("etf_team_member", name);
+    localStorage.setItem("etf_team_title", title || "");
     setTeamMember(name);
+    setTeamMemberTitle(title || "");
+
+    let resolvedOrgId = orgId;
     if (newOrg) {
       setOrgId(newOrg.id);
       setOrgData(newOrg);
+      resolvedOrgId = newOrg.id;
     } else {
       const storedOrg = localStorage.getItem("etf_org_id");
       const storedOrgData = localStorage.getItem("etf_org_data");
-      if (storedOrg) setOrgId(storedOrg);
+      if (storedOrg) { setOrgId(storedOrg); resolvedOrgId = storedOrg; }
       if (storedOrgData) try { setOrgData(JSON.parse(storedOrgData)); } catch (_) {}
     }
+
+    // Register/update member in database
+    const memberId = "mbr_" + (name.toLowerCase().replace(/[^a-z0-9]/g, "_")) + "_" + (resolvedOrgId || "").substring(0, 8);
+    localStorage.setItem("etf_member_id", memberId);
+    if (resolvedOrgId) {
+      const record = await api.upsertMember({ id: memberId, orgId: resolvedOrgId, name, title: title || "" });
+      if (record) setMemberRecord(record);
+    }
+
     setSetupStep(null);
     setLoading(true);
   };
@@ -559,6 +609,10 @@ export default function ETFPlaybook() {
         <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} setTab={setTab} />
       )}
 
+      {showTeamPanel && memberRecord?.is_admin && (
+        <TeamPanel orgId={orgId} memberRecord={memberRecord} onClose={() => setShowTeamPanel(false)} />
+      )}
+
       <Sidebar
         events={events}
         currentEventId={currentEventId}
@@ -573,6 +627,8 @@ export default function ETFPlaybook() {
         onManageVenues={() => setSetupStep("org")}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        memberRecord={memberRecord}
+        onOpenTeam={() => setShowTeamPanel(true)}
       />
       <main style={styles.main} className="etf-main">
         {!currentEvent ? (
@@ -618,6 +674,7 @@ export default function ETFPlaybook() {
 // ————————————————————————————————————————————————————————————————
 function LoginScreen({ onComplete }) {
   const [name, setName] = useState("");
+  const [title, setTitle] = useState("");
   const [orgName, setOrgName] = useState("");
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
@@ -641,7 +698,7 @@ function LoginScreen({ onComplete }) {
       localStorage.setItem("etf_org_data", JSON.stringify(newOrg));
       fetch("/api/orgs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newOrg) }).catch(() => {});
       setLoading(false);
-      onComplete(name.trim(), newOrg);
+      onComplete(name.trim(), title.trim(), newOrg);
     } else {
       try {
         const res = await fetch("/api/orgs/login", {
@@ -655,7 +712,7 @@ function LoginScreen({ onComplete }) {
           localStorage.setItem("etf_org_data", JSON.stringify(org));
           localStorage.setItem(`etf_passcode_${org.id}`, passcode);
           setLoading(false);
-          onComplete(name.trim(), org);
+          onComplete(name.trim(), title.trim(), org);
           return;
         }
         if (res.status === 401) {
@@ -673,7 +730,7 @@ function LoginScreen({ onComplete }) {
         return;
       }
       setLoading(false);
-      onComplete(name.trim(), null);
+      onComplete(name.trim(), title.trim(), null);
     }
   };
 
@@ -701,6 +758,11 @@ function LoginScreen({ onComplete }) {
           <div style={{ marginBottom: 14 }}>
             <label style={s.label}>Your Name</label>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSubmit()} placeholder="e.g. Aaron" style={s.input} />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Director of Sports Tourism" style={s.input} />
           </div>
           {isNewOrg && (
             <div style={{ marginBottom: 14 }}>
@@ -882,7 +944,149 @@ function WalkthroughOverlay({ onClose, setTab }) {
   );
 }
 
-function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose }) {
+// ————————————————————————————————————————————————————————————————
+// Team Panel — admin team management in sidebar
+// ————————————————————————————————————————————————————————————————
+function TeamPanel({ orgId, memberRecord, onClose }) {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newPasscode, setNewPasscode] = useState("");
+  const [changingPasscode, setChangingPasscode] = useState(false);
+  const [passcodeMsg, setPasscodeMsg] = useState("");
+  const [actionMsg, setActionMsg] = useState("");
+
+  useEffect(() => {
+    api.getTeam(orgId).then(setMembers).catch(() => {}).finally(() => setLoading(false));
+  }, [orgId]);
+
+  const doAction = async (action, memberId) => {
+    try {
+      await api.teamAction({ action, memberId, requesterId: memberRecord?.id, orgId });
+      const updated = await api.getTeam(orgId);
+      setMembers(updated);
+      setActionMsg(action === "promote" ? "Promoted to admin." : action === "demote" ? "Removed admin." : action === "deactivate" ? "Member deactivated." : "Member reactivated.");
+      setTimeout(() => setActionMsg(""), 3000);
+    } catch (e) {
+      setActionMsg("Action failed — " + e.message);
+    }
+  };
+
+  const handlePasscodeChange = async () => {
+    if (newPasscode.length < 4) { setPasscodeMsg("Must be at least 4 characters."); return; }
+    try {
+      await api.teamAction({ action: "change_passcode", requesterId: memberRecord?.id, orgId, newPasscode });
+      localStorage.setItem(`etf_passcode_${orgId}`, newPasscode);
+      setPasscodeMsg("✓ Passcode updated. Share the new code with your team.");
+      setNewPasscode("");
+      setChangingPasscode(false);
+    } catch (_) {
+      setPasscodeMsg("Failed to update passcode.");
+    }
+    setTimeout(() => setPasscodeMsg(""), 4000);
+  };
+
+  const panelStyle = {
+    position: "fixed" as const, inset: 0, zIndex: 200,
+    background: "rgba(0,0,0,0.5)",
+    display: "flex", alignItems: "flex-start", justifyContent: "flex-start",
+  };
+  const cardStyle = {
+    background: "#1a1814", width: 320, height: "100vh",
+    borderRight: "1px solid #2a2720", overflowY: "auto" as const,
+    padding: "24px 20px",
+  };
+
+  return (
+    <div style={panelStyle} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={cardStyle}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 600, color: "#f5f0e8" }}>Team Management</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#6b6660", cursor: "pointer", fontSize: 18 }}>✕</button>
+        </div>
+
+        {actionMsg && (
+          <div style={{ padding: "8px 12px", background: "#059669", color: "#fff", borderRadius: 4, fontSize: 12.5, marginBottom: 16 }}>{actionMsg}</div>
+        )}
+
+        {/* Team members list */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", marginBottom: 12 }}>Team Members</div>
+          {loading ? (
+            <div style={{ fontSize: 13, color: "#6b6660" }}>Loading…</div>
+          ) : members.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#6b6660" }}>No members yet.</div>
+          ) : members.map((m) => (
+            <div key={m.id} style={{ padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: m.is_active ? "#f5f0e8" : "#4a4740" }}>
+                    {m.name}
+                    {m.is_admin && <span style={{ marginLeft: 6, fontSize: 10, background: "#c8b97a22", color: "#c8b97a", border: "1px solid #c8b97a33", borderRadius: 3, padding: "1px 6px" }}>Admin</span>}
+                    {!m.is_active && <span style={{ marginLeft: 6, fontSize: 10, background: "#dc262622", color: "#f87171", border: "1px solid #dc262633", borderRadius: 3, padding: "1px 6px" }}>Inactive</span>}
+                  </div>
+                  {m.title && <div style={{ fontSize: 11.5, color: "#6b6660", marginTop: 2 }}>{m.title}</div>}
+                  <div style={{ fontSize: 11, color: "#4a4740", marginTop: 3 }}>
+                    Last seen {m.last_seen ? new Date(m.last_seen).toLocaleDateString() : "never"}
+                  </div>
+                </div>
+                {m.id !== memberRecord?.id && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {m.is_active ? (
+                      <button onClick={() => doAction("deactivate", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #dc2626", borderRadius: 3, color: "#f87171", cursor: "pointer" }}>
+                        Remove
+                      </button>
+                    ) : (
+                      <button onClick={() => doAction("reactivate", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #059669", borderRadius: 3, color: "#4ade80", cursor: "pointer" }}>
+                        Restore
+                      </button>
+                    )}
+                    {!m.is_admin ? (
+                      <button onClick={() => doAction("promote", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #c8b97a", borderRadius: 3, color: "#c8b97a", cursor: "pointer" }}>
+                        Make Admin
+                      </button>
+                    ) : (
+                      <button onClick={() => doAction("demote", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #6b6660", borderRadius: 3, color: "#9ca3af", cursor: "pointer" }}>
+                        Remove Admin
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Change passcode */}
+        <div style={{ borderTop: "1px solid #2a2720", paddingTop: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", marginBottom: 12 }}>Access Code</div>
+          <p style={{ fontSize: 12.5, color: "#6b6660", lineHeight: 1.6, marginBottom: 12 }}>
+            Changing the access code locks out anyone with the old code. Share the new code with current team members.
+          </p>
+          {passcodeMsg && <div style={{ fontSize: 12.5, color: "#4ade80", marginBottom: 10 }}>{passcodeMsg}</div>}
+          {changingPasscode ? (
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={newPasscode}
+                onChange={(e) => setNewPasscode(e.target.value)}
+                placeholder="New access code"
+                type="password"
+                style={{ flex: 1, padding: "8px 10px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+              />
+              <button onClick={handlePasscodeChange} style={{ padding: "8px 12px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Save</button>
+              <button onClick={() => setChangingPasscode(false)} style={{ padding: "8px 10px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#6b6660", fontSize: 12.5, cursor: "pointer" }}>✕</button>
+            </div>
+          ) : (
+            <button onClick={() => setChangingPasscode(true)} style={{ width: "100%", padding: "10px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#9e9890", fontSize: 13, cursor: "pointer" }}>
+              Change Access Code
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam }) {
   return (
     <aside style={styles.sidebar} className={`etf-sidebar${isOpen ? " open" : ""}`}>
       <div style={styles.brand} onClick={onHome}>
@@ -946,21 +1150,30 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
         </div>
         <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>
           {teamMember && <span style={{ color: "#6b6660", fontWeight: 500 }}>{teamMember}</span>}
-          {typeof window !== "undefined" && localStorage.getItem("etf_user_email") && (
-            <span style={{ color: "#9ca3af", fontSize: 11, display: "block", marginTop: 2 }}>
-              {localStorage.getItem("etf_user_email")}
+          {typeof window !== "undefined" && localStorage.getItem("etf_team_title") && (
+            <span style={{ color: "#4a4740", fontSize: 11, display: "block", marginTop: 1 }}>
+              {localStorage.getItem("etf_team_title")}
             </span>
           )}
         </div>
-        <div style={{ display: "flex", gap: 10, fontSize: 11 }}>
+        <div style={{ display: "flex", gap: 10, fontSize: 11, flexWrap: "wrap" }}>
           <button onClick={onManageVenues} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
             Manage organization
           </button>
-          <span style={{ color: "#e8e3db" }}>·</span>
+          {memberRecord?.is_admin && (
+            <>
+              <span style={{ color: "#2a2720" }}>·</span>
+              <button onClick={onOpenTeam} style={{ fontSize: 11, color: "#c8b97a", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+                Team
+              </button>
+            </>
+          )}
+          <span style={{ color: "#2a2720" }}>·</span>
           <button
             onClick={() => {
               localStorage.removeItem("etf_authed");
               localStorage.removeItem("etf_team_member");
+              localStorage.removeItem("etf_member_id");
               window.location.reload();
             }}
             style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
