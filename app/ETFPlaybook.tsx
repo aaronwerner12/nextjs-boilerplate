@@ -705,10 +705,7 @@ function LoginScreen({ onComplete }) {
     if (typeof window !== "undefined") return localStorage.getItem("etf_team_member") || "";
     return "";
   });
-  const [title, setTitle] = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("etf_team_title") || "";
-    return "";
-  });
+  const [title, setTitle] = useState("");
   const [orgName, setOrgName] = useState("");
   const [passcode, setPasscode] = useState("");
   const [newPasscode, setNewPasscode] = useState("");
@@ -823,12 +820,12 @@ function LoginScreen({ onComplete }) {
             <>
               <div style={s.field}>
                 <label style={s.label}>Your Name</label>
-                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="e.g. Aaron Werner" style={s.input} />
+                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="e.g. Jamie Rodriguez" style={s.input} />
               </div>
               {(!hasStoredName || title === "") && (
                 <div style={s.field}>
                   <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
-                  <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Executive Director" style={s.input} />
+                  <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Director of Sports Tourism" style={s.input} />
                 </div>
               )}
               <div style={s.field}>
@@ -844,15 +841,15 @@ function LoginScreen({ onComplete }) {
               </p>
               <div style={s.field}>
                 <label style={s.label}>Your Name</label>
-                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Aaron Werner" style={s.input} />
+                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Jamie Rodriguez" style={s.input} />
               </div>
               <div style={s.field}>
                 <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
-                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Executive Director" style={s.input} />
+                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Director of Sports Tourism" style={s.input} />
               </div>
               <div style={s.field}>
                 <label style={s.label}>Organization Name</label>
-                <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Visit McKinney" style={s.input} />
+                <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Visit Lakeview" style={s.input} />
               </div>
               <div style={s.field}>
                 <label style={s.label}>Create Access Code</label>
