@@ -38,7 +38,7 @@ export default function LandingPage() {
           display: flex; flex-direction: column;
           align-items: center; justify-content: center;
           text-align: center;
-          padding: 120px 24px 80px;
+          padding: 120px 24px 48px;
           position: relative;
         }
 
@@ -52,7 +52,7 @@ export default function LandingPage() {
         .land-eyebrow {
           display: inline-flex; align-items: center; gap: 8px;
           font-size: 11px; font-weight: 600;
-          text-transform: uppercase; letter-spacing: .16em;
+          letter-spacing: .16em;
           color: #c8b97a;
           background: rgba(200,185,122,.1);
           border: 1px solid rgba(200,185,122,.2);
@@ -144,7 +144,7 @@ export default function LandingPage() {
         /* How it works */
         .land-section {
           max-width: 1080px; margin: 0 auto;
-          padding: 100px 24px;
+          padding: 64px 24px;
         }
 
         .land-section-eyebrow {
@@ -288,7 +288,7 @@ export default function LandingPage() {
           <span>●</span> Built for Texas DMOs
         </div>
         <h1 className="land-h1">
-          Stop tracking ETF<br />in <em>spreadsheets.</em>
+          The ETF process, <em>simplified.</em>
         </h1>
         <p className="land-lede">
           The Texas Events Trust Fund Analysis Tool helps CVBs and DMOs evaluate events, calculate economic impact, manage deadlines, and prepare applications — all in one place.
@@ -298,25 +298,6 @@ export default function LandingPage() {
           <a href="#how-it-works" className="land-btn-secondary">See How It Works</a>
         </div>
 
-        {/* Stats */}
-        <div className="land-stats">
-          <div className="land-stat">
-            <div className="land-stat-val">6.25:1</div>
-            <div className="land-stat-label">State to local match ratio</div>
-          </div>
-          <div className="land-stat">
-            <div className="land-stat-val">120</div>
-            <div className="land-stat-label">Days before event to apply</div>
-          </div>
-          <div className="land-stat">
-            <div className="land-stat-val">5</div>
-            <div className="land-stat-label">Eligibility gates to clear</div>
-          </div>
-          <div className="land-stat">
-            <div className="land-stat-val">$0</div>
-            <div className="land-stat-label">Cost to use this tool</div>
-          </div>
-        </div>
       </section>
 
       <div className="land-divider" />
@@ -324,7 +305,7 @@ export default function LandingPage() {
       {/* How it works */}
       <section className="land-section" id="how-it-works">
         <div className="land-section-eyebrow">How It Works</div>
-        <h2 className="land-section-title">From opportunity to award<br />in four steps.</h2>
+        <h2 className="land-section-title">Analyze, prepare, and track<br />your ETF submission.</h2>
         <p className="land-section-sub">
           The ETF process has strict eligibility requirements and multiple deadlines. This tool walks you through every step so nothing gets missed.
         </p>
@@ -350,7 +331,7 @@ export default function LandingPage() {
       {/* Features */}
       <section className="land-section">
         <div className="land-section-eyebrow">Features</div>
-        <h2 className="land-section-title">Everything your team needs<br />to pursue ETF awards.</h2>
+        <h2 className="land-section-title">Stop tracking ETF<br />in <em>spreadsheets.</em></h2>
 
         <div className="land-features">
           {[
