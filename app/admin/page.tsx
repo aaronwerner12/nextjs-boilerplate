@@ -62,6 +62,7 @@ export default function AdminPage() {
     .sort((a, b) => {
       if (sortBy === "joinedAt") return new Date(b.joinedAt) - new Date(a.joinedAt);
       if (sortBy === "events") return b.totalEvents - a.totalEvents;
+      if (sortBy === "members") return b.memberCount - a.memberCount;
       if (sortBy === "lastActive") return new Date(b.lastActive || 0) - new Date(a.lastActive || 0);
       if (sortBy === "name") return a.name.localeCompare(b.name);
       return 0;
@@ -181,6 +182,7 @@ export default function AdminPage() {
               >
                 <option value="joinedAt">Sort: Newest</option>
                 <option value="events">Sort: Most Events</option>
+                <option value="members">Sort: Most Members</option>
                 <option value="lastActive">Sort: Last Active</option>
                 <option value="name">Sort: Name</option>
               </select>
@@ -194,6 +196,7 @@ export default function AdminPage() {
                   <th style={styles.th} onClick={() => setSortBy("name")}>Organization</th>
                   <th style={styles.th}>Location</th>
                   <th style={styles.th} onClick={() => setSortBy("joinedAt")}>Joined</th>
+                  <th style={styles.th} onClick={() => setSortBy("members")}>Members</th>
                   <th style={styles.th} onClick={() => setSortBy("events")}>Total Events</th>
                   <th style={styles.th}>Analysis</th>
                   <th style={styles.th}>Application</th>
@@ -204,7 +207,7 @@ export default function AdminPage() {
               <tbody>
                 {filteredOrgs.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ ...styles.td, textAlign: "center", color: "#4a4740", padding: "32px" }}>
+                    <td colSpan={9} style={{ ...styles.td, textAlign: "center", color: "#4a4740", padding: "32px" }}>
                       {search ? "No orgs match your search." : "No organizations yet."}
                     </td>
                   </tr>
@@ -213,6 +216,9 @@ export default function AdminPage() {
                     <td style={{ ...styles.td, fontWeight: 600, color: "#f5f0e8" }}>{org.name}</td>
                     <td style={styles.td}>{org.city ? `${org.city}, ${org.state}` : "—"}</td>
                     <td style={styles.td}>{fmtDate(org.joinedAt)}</td>
+                    <td style={{ ...styles.td, fontWeight: 700, color: org.memberCount > 0 ? "#c8b97a" : "#4a4740" }}>
+                      {org.memberCount || "—"}
+                    </td>
                     <td style={{ ...styles.td, fontWeight: 700, color: org.totalEvents > 0 ? "#c8b97a" : "#4a4740" }}>
                       {org.totalEvents}
                     </td>
