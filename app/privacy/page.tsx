@@ -11,6 +11,9 @@ export default function PrivacyPage() {
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 600, marginBottom: 8 }}>Privacy Policy</div>
           <div style={{ fontSize: 13, color: "#9ca3af" }}>Texas Events Trust Fund Analysis Tool · Last updated April 2026</div>
+          <div style={{ marginTop: 16, padding: "12px 16px", background: "#f3f0ea", borderRadius: 6, fontSize: 13, color: "#6b6660", lineHeight: 1.6 }}>
+            This Tool is independently operated and is not affiliated with any DMO, CVB, municipality, or government entity, including the State of Texas or the Office of the Governor.
+          </div>
         </div>
 
         {[
@@ -44,12 +47,12 @@ Some data is also stored in your browser's localStorage to improve performance a
           },
           {
             title: "4. Who Can See Your Data",
-            body: `Your event pipeline data is visible to:
+            body: `Your event pipeline data is visible only to:
 
 • Members of your organization who sign in with your access code
 • The tool administrator (aggregate stats only — no event names or financial details)
 
-No other organizations can see your event data. We do not share your data with EDT, the State of Texas, or any third party.`
+No other organizations, DMOs, CVBs, municipalities, or government entities can see your event data. This Tool is independently operated — your data is not shared with any DMO that may have referred you to the Tool or any other third party. We do not share your data with EDT, the State of Texas, or any third party.`
           },
           {
             title: "5. Intake Form Submissions",
