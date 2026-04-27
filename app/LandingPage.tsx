@@ -385,7 +385,7 @@ export default function LandingPage() {
           <a href="/?signin=1" className="land-btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>Create Your Organization →</a>
         </div>
         <p style={{ marginTop: 20, fontSize: 12.5, color: "#4a4740" }}>
-          Not affiliated with the Texas Office of the Governor or EDT.
+          Not affiliated with the Texas Office of the Governor or its Economic Development and Tourism division.
         </p>
       </section>
 
