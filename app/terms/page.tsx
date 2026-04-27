@@ -11,14 +11,17 @@ export default function TermsPage() {
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 600, marginBottom: 8 }}>Terms of Service</div>
           <div style={{ fontSize: 13, color: "#9ca3af" }}>Texas Events Trust Fund Analysis Tool · Last updated April 2026</div>
+          <div style={{ marginTop: 16, padding: "12px 16px", background: "#f3f0ea", borderRadius: 6, fontSize: 13, color: "#6b6660", lineHeight: 1.6 }}>
+            This Tool is independently operated and is not affiliated with any DMO, CVB, municipality, or government entity, including the State of Texas or the Office of the Governor.
+          </div>
         </div>
 
         {[
           {
             title: "1. About This Tool",
-            body: `The Texas Events Trust Fund Analysis Tool ("the Tool") is an independent planning resource designed to help Destination Marketing Organizations (DMOs), Convention & Visitor Bureaus (CVBs), and local organizing committees evaluate, analyze, and prepare applications for the Texas Events Trust Fund program administered by the Office of the Governor's Economic Development and Tourism division (EDT).
+            body: `The Texas Events Trust Fund Analysis Tool ("the Tool") is an independent, privately operated planning resource. It is not affiliated with, sponsored by, or operated by any Destination Marketing Organization, Convention & Visitor Bureau, municipality, or government entity. It was built by an independent developer to help DMOs, CVBs, and local organizing committees evaluate, analyze, and prepare applications for the Texas Events Trust Fund program administered by the Office of the Governor's Economic Development and Tourism division (EDT).
 
-This Tool is NOT affiliated with, endorsed by, or operated by the State of Texas, the Office of the Governor, or EDT. It does not constitute an official application submission, guarantee of funding, or legal advice of any kind.`
+This Tool is NOT affiliated with, endorsed by, or operated by the State of Texas, the Office of the Governor, EDT, or any individual DMO or CVB. It does not constitute an official application submission, guarantee of funding, or legal advice of any kind. Any organization using this Tool does so independently and is solely responsible for their own ETF submissions.`
           },
           {
             title: "2. No Guarantee of Funding",
@@ -30,7 +33,7 @@ This Tool is NOT affiliated with, endorsed by, or operated by the State of Texas
           },
           {
             title: "4. Data Ownership",
-            body: `You and your organization retain ownership of all event data, analyses, and content you enter into the Tool. By using the Tool, you grant us a limited license to store and process your data solely for the purpose of providing the Tool's functionality. We do not claim ownership of your data and will not sell, license, or share your proprietary event data with third parties.`
+            body: `You and your organization retain full ownership of all event data, analyses, and content you enter into the Tool. This Tool is operated independently and your data is not shared with, accessible by, or owned by any other DMO, CVB, municipality, or government entity. By using the Tool, you grant us a limited license to store and process your data solely for the purpose of providing the Tool's functionality. We do not claim ownership of your data and will not sell, license, or share your proprietary event data with third parties. You may request deletion of your organization's data at any time.`
           },
           {
             title: "5. Acceptable Use",
@@ -50,7 +53,7 @@ This Tool is NOT affiliated with, endorsed by, or operated by the State of Texas
           },
           {
             title: "9. Contact",
-            body: `Questions about these Terms can be directed to the tool administrator. For questions about the ETF program itself, contact EDT directly at eventsfund@gov.texas.gov.`
+            body: `Questions about these Terms can be directed to the tool administrator via the contact information provided at etfplaybook.vercel.app. This Tool is independently operated and is not a point of contact for the ETF program itself. For questions about the ETF program, contact EDT directly at eventsfund@gov.texas.gov.`
           },
         ].map((section, i) => (
           <div key={i} style={{ marginBottom: 32 }}>
