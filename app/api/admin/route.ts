@@ -42,6 +42,13 @@ export async function GET(req: NextRequest) {
       GROUP BY org_id
     `.catch(() => []);
 
+    // Member counts per org
+    const memberCounts = await sql`
+      SELECT org_id, COUNT(*) as member_count
+      FROM etf_team
+      GROUP BY org_id
+    `.catch(() => []);
+
     // Intake submissions
     const intakeStats = await sql`
       SELECT
@@ -60,6 +67,7 @@ export async function GET(req: NextRequest) {
     // Merge org data with event counts
     const orgsWithStats = orgs.map((org) => {
       const stats = eventCounts.find((e) => e.org_id === org.id);
+      const members = memberCounts.find((m) => m.org_id === org.id);
       return {
         id: org.id,
         name: org.name,
@@ -71,6 +79,7 @@ export async function GET(req: NextRequest) {
         inApplication: parseInt(stats?.in_application || "0"),
         inAnalysis: parseInt(stats?.in_analysis || "0"),
         lastActive: stats?.last_active || null,
+        memberCount: parseInt(members?.member_count || "0"),
       };
     });
 
