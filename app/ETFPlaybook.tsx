@@ -2688,7 +2688,7 @@ function CalculatorTab({ event, update, calc }) {
     }));
   };
 
-  const mixTotal = event.calc?.mix?.outOfState || 0 + event.calc?.mix?.texasOutOfMarket || 0 + event.calc?.mix?.dayVisitor || 0;
+  const mixTotal = (event.calc?.mix?.outOfState || 0) + (event.calc?.mix?.texasOutOfMarket || 0) + (event.calc?.mix?.dayVisitor || 0);
 
   return (
     <div>
