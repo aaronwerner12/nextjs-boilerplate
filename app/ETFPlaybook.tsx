@@ -2637,6 +2637,8 @@ function recColor(rec) {
 // ————————————————————————————————————————————————————————————————
 function CalculatorTab({ event, update, calc }) {
   const safeDays = event?.calc?.days || [];
+  const safeRates = event?.calc?.rates || {};
+  const safeMix = event?.calc?.mix || {};
   const addDay = () => {
     update((e) => {
       const days = e.calc?.days || [];
@@ -2768,34 +2770,34 @@ function CalculatorTab({ event, update, calc }) {
       <Section title="Spending Rates" subtitle="Per-person, per-day spending assumptions. Defaults mirror the Adidas 3SSB benchmark.">
         <div style={styles.ratesGrid}>
           <Field label="Hotel rate / room / night ($)">
-            <input type="number" style={styles.input} value={event.calc.rates.hotelRate} onChange={(e) => setRate("hotelRate", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.hotelRate} onChange={(e) => setRate("hotelRate", e.target.value)} />
           </Field>
           <Field label="Persons / room">
-            <input type="number" step="0.1" style={styles.input} value={event.calc.rates.personsPerRoom} onChange={(e) => setRate("personsPerRoom", e.target.value)} />
+            <input type="number" step="0.1" style={styles.input} value={safeRates.personsPerRoom} onChange={(e) => setRate("personsPerRoom", e.target.value)} />
           </Field>
           <Field label="% staying in hotel">
-            <input type="number" style={styles.input} value={event.calc.rates.pctStayingHotel} onChange={(e) => setRate("pctStayingHotel", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.pctStayingHotel} onChange={(e) => setRate("pctStayingHotel", e.target.value)} />
           </Field>
           <Field label="Food & non-alc ($/person/day)">
-            <input type="number" style={styles.input} value={event.calc.rates.foodBev} onChange={(e) => setRate("foodBev", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.foodBev} onChange={(e) => setRate("foodBev", e.target.value)} />
           </Field>
           <Field label="Entertainment & shopping ($/day)">
-            <input type="number" style={styles.input} value={event.calc.rates.entertainment} onChange={(e) => setRate("entertainment", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.entertainment} onChange={(e) => setRate("entertainment", e.target.value)} />
           </Field>
           <Field label="Alcohol ($/day)">
-            <input type="number" style={styles.input} value={event.calc.rates.alcohol} onChange={(e) => setRate("alcohol", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.alcohol} onChange={(e) => setRate("alcohol", e.target.value)} />
           </Field>
           <Field label="% drinking alcohol">
-            <input type="number" style={styles.input} value={event.calc.rates.pctAlcohol} onChange={(e) => setRate("pctAlcohol", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.pctAlcohol} onChange={(e) => setRate("pctAlcohol", e.target.value)} />
           </Field>
           <Field label="Rental car ($/day)">
-            <input type="number" style={styles.input} value={event.calc.rates.rentalCar} onChange={(e) => setRate("rentalCar", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.rentalCar} onChange={(e) => setRate("rentalCar", e.target.value)} />
           </Field>
           <Field label="% renting cars">
-            <input type="number" style={styles.input} value={event.calc.rates.pctRenting} onChange={(e) => setRate("pctRenting", e.target.value)} />
+            <input type="number" style={styles.input} value={safeRates.pctRenting} onChange={(e) => setRate("pctRenting", e.target.value)} />
           </Field>
           <Field label="Persons / rental car">
-            <input type="number" step="0.1" style={styles.input} value={event.calc.rates.personsPerCar} onChange={(e) => setRate("personsPerCar", e.target.value)} />
+            <input type="number" step="0.1" style={styles.input} value={safeRates.personsPerCar} onChange={(e) => setRate("personsPerCar", e.target.value)} />
           </Field>
         </div>
       </Section>
@@ -2803,7 +2805,7 @@ function CalculatorTab({ event, update, calc }) {
       <Section title="Projected Economic Impact">
         <div style={styles.resultsGrid}>
           <ResultCard label="Total Attendance" value={fmtNum(calc.totalAttendance)} sub="all attendee-days" icon={<Users size={18} />} />
-          <ResultCard label="Room Nights" value={fmtNum(calc.totalRoomNights)} sub={`at ${fmtMoney(event.calc.rates.hotelRate)}/night`} icon={<Building2 size={18} />} />
+          <ResultCard label="Room Nights" value={fmtNum(calc.totalRoomNights)} sub={`at ${fmtMoney(safeRates.hotelRate)}/night`} icon={<Building2 size={18} />} />
           <ResultCard label="Total Visitor Spend" value={fmtMoney(calc.totalSpend)} sub="taxable direct spending" icon={<TrendingUp size={18} />} />
         </div>
 
