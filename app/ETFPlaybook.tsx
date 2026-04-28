@@ -233,8 +233,8 @@ function calculateTrustFund(event) {
   let totalRoomNights = 0;
 
   // Mix fractions
-  const mixOOS = (calc.mix.outOfState || 0) / 100;
-  const mixTX = (calc.mix.texasOutOfMarket || 0) / 100;
+  const mixOOS = ((calc.mix?.outOfState) || 0) / 100;
+  const mixTX = ((calc.mix?.texasOutOfMarket) || 0) / 100;
   // Day visitors don't contribute to hotel/incremental tax in same way
   // but still generate food/entertainment sales tax
   const r = calc?.rates || {};
@@ -2663,7 +2663,7 @@ function CalculatorTab({ event, update, calc }) {
       ...e,
       calc: {
         ...e.calc,
-        days: e.calc.days.map((d) => d.id === id ? { ...d, [field]: val } : d),
+        days: (e.calc?.days || []).map((d) => d.id === id ? { ...d, [field]: val } : d),
       },
     }));
   };
@@ -2671,20 +2671,20 @@ function CalculatorTab({ event, update, calc }) {
   const removeDay = (id) => {
     update((e) => ({
       ...e,
-      calc: { ...e.calc, days: e.calc.days.filter((d) => d.id !== id) },
+      calc: { ...e.calc, days: (e.calc?.days || []).filter((d) => d.id !== id) },
     }));
   };
 
   const setRate = (key, val) => {
     update((e) => ({
       ...e,
-      calc: { ...e.calc, rates: { ...e.calc.rates, [key]: Number(val) } },
+      calc: { ...e.calc, rates: { ...(e.calc?.rates || {}), [key]: Number(val) } },
     }));
   };
   const setMix = (key, val) => {
     update((e) => ({
       ...e,
-      calc: { ...e.calc, mix: { ...e.calc.mix, [key]: Number(val) } },
+      calc: { ...e.calc, mix: { ...(e.calc?.mix || {}), [key]: Number(val) } },
     }));
   };
 
