@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     // Look up org by passcode
     const rows = await sql`
-      SELECT id, name, city, state, notify_email
+      SELECT id, name, city, state, notify_email, logo_url, fiscal_year_start
       FROM etf_orgs
       WHERE passcode = ${passcode}
       LIMIT 1
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       state: org.state,
       notifyEmail: org.notify_email,
       logoUrl: org.logo_url || "",
+      fiscalYearStart: org.fiscal_year_start ?? 10,
       venues,
     });
   } catch (error) {
