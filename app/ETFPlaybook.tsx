@@ -929,6 +929,7 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
   const [state, setState] = useState(orgData?.state || "TX");
   const [notifyEmail, setNotifyEmail] = useState(orgData?.notifyEmail || "");
   const [logoUrl, setLogoUrl] = useState(orgData?.logoUrl || "");
+  const [fiscalYearStart, setFiscalYearStart] = useState(orgData?.fiscalYearStart ?? 10); // default October
   const [venues, setVenues] = useState(orgData?.venues || []);
   const [newVenue, setNewVenue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -955,7 +956,7 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const updated = { ...orgData, name, city, state, notifyEmail, logoUrl, venues };
+    const updated = { ...orgData, name, city, state, notifyEmail, logoUrl, fiscalYearStart: Number(fiscalYearStart), venues };
     try {
       await fetch("/api/orgs", {
         method: "POST",
@@ -1010,6 +1011,15 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
         <div style={{ marginBottom: 20 }}>
           <label style={labelStyle}>Notification Email</label>
           <input type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="events@yourorg.com" style={inputStyle} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Fiscal Year Start Month</label>
+          <select value={fiscalYearStart} onChange={(e) => setFiscalYearStart(Number(e.target.value))} style={inputStyle}>
+            {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => (
+              <option key={i} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Used to calculate which fiscal year your ETF local match falls in.</div>
         </div>
 
         {/* Venues */}
@@ -1530,6 +1540,30 @@ function StatusPill({ status }) {
 // ————————————————————————————————————————————————————————————————
 // Dashboard (no event selected)
 // ————————————————————————————————————————————————————————————————
+// ————————————————————————————————————————————————————————————————
+// Fiscal Year Helper
+// ————————————————————————————————————————————————————————————————
+function getFiscalYearForLocalMatch(eventLastDay, fiscalYearStart = 10) {
+  if (!eventLastDay) return null;
+  // Local match due 90 days after event end
+  const due = new Date(eventLastDay);
+  due.setDate(due.getDate() + 90);
+  const m = due.getMonth() + 1; // 1-12
+  const y = due.getFullYear();
+  // Which FY does this date fall in?
+  const fyStartMonth = fiscalYearStart;
+  const fyYear = m >= fyStartMonth ? y : y - 1;
+  const fyEndYear = fyYear + 1;
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const startLabel = `${monthNames[fyStartMonth - 1]} '${String(fyYear).slice(2)}`;
+  const endLabel = `${monthNames[fyStartMonth - 2 < 0 ? 11 : fyStartMonth - 2]} '${String(fyEndYear).slice(2)}`;
+  return {
+    label: `FY${fyEndYear}`,
+    range: `${startLabel} – ${endLabel}`,
+    dueDate: due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+  };
+}
+
 function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreated }) {
   const [intakeItems, setIntakeItems] = useState([]);
   const [intakeLoading, setIntakeLoading] = useState(true);
@@ -1537,15 +1571,26 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
 
   const stats = useMemo(() => {
     let projected = 0;
+    let localMatch = 0;
     let active = 0;
+    let fyLabel = null;
+    let fyRange = null;
+    let fyDue = null;
+    const fyStart = orgData?.fiscalYearStart ?? 10;
     events.forEach((e) => {
       const calc = calculateTrustFund(e);
       const est = calc.totalFund > 0 ? calc.totalFund : calc.quickEstimate;
       projected += est;
+      localMatch += calc.requiredLocalMatch || 0;
       if (e.status !== "complete") active++;
+      // Use the first event with a last day for FY display
+      if (!fyLabel && e.lastDay) {
+        const fy = getFiscalYearForLocalMatch(e.lastDay, fyStart);
+        if (fy) { fyLabel = fy.label; fyRange = fy.range; fyDue = fy.dueDate; }
+      }
     });
-    return { projected, active, total: events.length };
-  }, [events]);
+    return { projected, localMatch, active, total: events.length, fyLabel, fyRange, fyDue };
+  }, [events, orgData]);
 
   useEffect(() => {
     (async () => {
@@ -1648,7 +1693,33 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
       <div style={styles.statGrid} className="etf-stats-row">
         <StatCard label="Active Events" value={stats.active} icon={<Target size={16} />} />
         <StatCard label="Total in Pipeline" value={stats.total} icon={<Folder size={16} />} />
-        <StatCard label="Projected Fund Value" value={fmtMoney(stats.projected)} icon={<DollarSign size={16} />} />
+        <div style={styles.statCard}>
+          <div style={styles.statIcon}><DollarSign size={16} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={styles.statLabel}>Projected Fund Value</div>
+            <div style={styles.statValue}>{fmtMoney(stats.projected)}</div>
+            {stats.fyLabel && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #e8e3db" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#9ca3af", marginBottom: 6 }}>
+                  {stats.fyLabel} · {stats.fyRange}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#6b6660", marginBottom: 3 }}>
+                  <span>State Share</span>
+                  <span style={{ fontWeight: 600, color: "#374151" }}>{fmtMoney(stats.projected - stats.localMatch)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#6b6660", marginBottom: 3 }}>
+                  <span>Local Match Due</span>
+                  <span style={{ fontWeight: 700, color: "#92400e" }}>{fmtMoney(stats.localMatch)}</span>
+                </div>
+                {stats.fyDue && (
+                  <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 4 }}>
+                    Due by {stats.fyDue}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Intake — moved to top, most important action */}
