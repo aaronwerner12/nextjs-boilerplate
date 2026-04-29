@@ -1909,23 +1909,34 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
     </div>
     <div class="stat-box">
       <div class="stat-label">State Contribution</div>
-      <div class="stat-value">${fmtMoney(calc.stateFund || 0)}</div>
+      <div class="stat-value">${fmtMoney(calc.stateTaxTotal || 0)}</div>
     </div>
     <div class="stat-box">
       <div class="stat-label">Required Local Match</div>
-      <div class="stat-value">${fmtMoney(calc.localMatch || 0)}</div>
+      <div class="stat-value">${fmtMoney(calc.requiredLocalMatch || 0)}</div>
     </div>
   </div>
 
   <div class="grid-2 section">
     <div class="stat-box">
       <div class="stat-label">Estimated Room Nights</div>
-      <div class="stat-value">${fmtNum(event.roomNights || calc.roomNights || 0)}</div>
+      <div class="stat-value">${fmtNum(event.roomNights || calc.totalRoomNights || 0)}</div>
     </div>
     <div class="stat-box">
       <div class="stat-label">Out-of-Market Attendance</div>
       <div class="stat-value">${event.outOfMarketPct || 0}%</div>
     </div>
+  </div>
+
+  <div class="section" style="background:#faf8f4;border:1px solid #e8e3db;border-radius:4px;padding:16px 20px;margin-bottom:28px">
+    <div class="section-title">Recommendation</div>
+    <div style="margin-bottom:12px">
+      <span class="badge badge-${decision.recommendation === 'DO NOT PURSUE' ? 'no' : decision.recommendation === 'STRATEGIC PRIORITY' ? 'strategic' : decision.recommendation === 'STRONG TARGET' ? 'strong' : decision.recommendation === 'PURSUE WITH CONDITIONS' ? 'conditional' : 'pursue'}">${decision.recommendation || 'Under Analysis'}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e3db;font-size:12.5px"><span>Projected State Share</span><span style="font-weight:600">${fmtMoney(calc.stateTaxTotal || 0)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e3db;font-size:12.5px"><span>Required Local Match</span><span style="font-weight:600">${fmtMoney(calc.requiredLocalMatch || 0)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e3db;font-size:12.5px"><span>Total Fund Value</span><span style="font-weight:700">${fmtMoney(calc.totalFund || 0)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px"><span>State:Local Ratio</span><span style="font-weight:600">6.25 : 1</span></div>
   </div>
 
   <div class="section">
