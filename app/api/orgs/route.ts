@@ -20,6 +20,7 @@ async function ensureTables() {
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS notify_email TEXT`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS passcode TEXT`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS logo_url TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS fiscal_year_start INT DEFAULT 10`.catch(() => {});
   await sql`
     CREATE TABLE IF NOT EXISTS etf_venues (
       id TEXT PRIMARY KEY,
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
       const venues = await sql`
         SELECT * FROM etf_venues WHERE org_id = ${id} ORDER BY sort_order, name
       `;
-      return NextResponse.json({ ...orgs[0], notifyEmail: orgs[0].notify_email, logoUrl: orgs[0].logo_url, venues });
+      return NextResponse.json({ ...orgs[0], notifyEmail: orgs[0].notify_email, logoUrl: orgs[0].logo_url, fiscalYearStart: orgs[0].fiscal_year_start ?? 10, venues });
     }
 
     const orgs = await sql`SELECT id, name, city, state, notify_email, created_at FROM etf_orgs ORDER BY name`;
@@ -66,20 +67,21 @@ export async function POST(req: NextRequest) {
   try {
     await ensureTables();
     const body = await req.json();
-    const { id, name, city = "", state = "TX", notifyEmail = "", passcode = "", logoUrl = "", venues = [] } = body;
+    const { id, name, city = "", state = "TX", notifyEmail = "", passcode = "", logoUrl = "", fiscalYearStart = 10, venues = [] } = body;
 
     if (!id || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     await sql`
-      INSERT INTO etf_orgs (id, name, city, state, notify_email, passcode, logo_url)
-      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail}, ${passcode}, ${logoUrl})
+      INSERT INTO etf_orgs (id, name, city, state, notify_email, passcode, logo_url, fiscal_year_start)
+      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail}, ${passcode}, ${logoUrl}, ${fiscalYearStart})
       ON CONFLICT (id) DO UPDATE
         SET name = ${name}, city = ${city}, state = ${state},
             notify_email = ${notifyEmail},
             passcode = COALESCE(NULLIF(${passcode}, ''), etf_orgs.passcode),
-            logo_url = ${logoUrl}
+            logo_url = ${logoUrl},
+            fiscal_year_start = ${fiscalYearStart}
     `;
 
     // Replace venues for this org
