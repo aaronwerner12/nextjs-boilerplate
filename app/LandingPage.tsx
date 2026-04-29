@@ -177,6 +177,7 @@ export default function LandingPage() {
         .land-step {
           padding: 36px 32px;
           background: rgba(255,255,255,.02);
+          border-top: 2px solid #c8b97a;
           transition: background .2s;
         }
         .land-step:hover { background: rgba(200,185,122,.04); }
@@ -210,10 +211,11 @@ export default function LandingPage() {
           padding: 28px 28px;
           background: rgba(255,255,255,.02);
           border: 1px solid rgba(255,255,255,.06);
+          border-top: 2px solid #c8b97a;
           border-radius: 6px;
           transition: border-color .2s;
         }
-        .land-feature:hover { border-color: rgba(200,185,122,.2); }
+        .land-feature:hover { border-color: rgba(200,185,122,.4); border-top-color: #c8b97a; }
 
         .land-feature-icon {
           width: 36px; height: 36px;
