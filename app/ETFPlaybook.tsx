@@ -322,7 +322,12 @@ function calculateTrustFund(event) {
 // ————————————————————————————————————————————————————————————————
 // Decision framework — pursuit evaluation logic
 // ————————————————————————————————————————————————————————————————
-function evaluateDecision(event, calcResult) {
+function evaluateDecision(event, calcResult, thresholds = {}) {
+  const t = {
+    min: thresholds.min ?? 75000,
+    strong: thresholds.strong ?? 150000,
+    strategic: thresholds.strategic ?? 300000,
+  };
   const checks = [];
   const elig = event.elig;
 
@@ -340,8 +345,8 @@ function evaluateDecision(event, calcResult) {
   // Financial threshold
   const estimate = calcResult.totalFund > 0 ? calcResult.totalFund : calcResult.quickEstimate;
   checks.push({
-    label: "ETF value exceeds $75K viability floor",
-    pass: estimate >= 75000,
+    label: `ETF value exceeds ${fmtMoney(t.min)} viability floor`,
+    pass: estimate >= t.min,
     critical: true,
     detail: `Projected: ${fmtMoney(estimate)}`,
   });
@@ -368,13 +373,13 @@ function evaluateDecision(event, calcResult) {
   if (!eligibilityPassed) {
     recommendation = "DO NOT PURSUE";
     rationale = "Statutory eligibility not met. Without a competitive bid and site selection letter, the event cannot qualify for ETF.";
-  } else if (estimate < 75000) {
+  } else if (estimate < t.min) {
     recommendation = "DO NOT PURSUE";
-    rationale = "Projected ETF value below $75K — administrative burden likely exceeds the fund value.";
-  } else if (estimate >= 300000) {
+    rationale = `Projected ETF value below ${fmtMoney(t.min)} — administrative burden likely exceeds the fund value.`;
+  } else if (estimate >= t.strategic) {
     recommendation = "STRATEGIC PRIORITY";
     rationale = "High-value event meeting all criteria. Move to application immediately.";
-  } else if (estimate >= 150000) {
+  } else if (estimate >= t.strong) {
     recommendation = "STRONG PURSUE";
     rationale = "Solid ETF value with eligibility intact. Proceed with application.";
   } else {
@@ -382,7 +387,7 @@ function evaluateDecision(event, calcResult) {
     rationale = "Moderate ETF value. Validate room block and out-of-market assumptions before committing.";
   }
 
-  return { checks, recommendation, rationale, estimate };
+  return { checks, recommendation, rationale, estimate, thresholds: t };
 }
 
 
@@ -697,6 +702,7 @@ export default function ETFPlaybook() {
             tab={tab}
             setTab={setTab}
             orgVenues={venues}
+            orgData={orgData}
           />
         )}
       </main>
@@ -936,6 +942,10 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
   const [state, setState] = useState(orgData?.state || "TX");
   const [notifyEmail, setNotifyEmail] = useState(orgData?.notifyEmail || "");
   const [logoUrl, setLogoUrl] = useState(orgData?.logoUrl || "");
+  const [fiscalYearStart, setFiscalYearStart] = useState(orgData?.fiscalYearStart ?? 10);
+  const [thresholdMin, setThresholdMin] = useState(orgData?.thresholdMin ?? 75000);
+  const [thresholdStrong, setThresholdStrong] = useState(orgData?.thresholdStrong ?? 150000);
+  const [thresholdStrategic, setThresholdStrategic] = useState(orgData?.thresholdStrategic ?? 300000);
   const [venues, setVenues] = useState(orgData?.venues || []);
   const [newVenue, setNewVenue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -962,7 +972,7 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const updated = { ...orgData, name, city, state, notifyEmail, logoUrl, venues };
+    const updated = { ...orgData, name, city, state, notifyEmail, logoUrl, fiscalYearStart: Number(fiscalYearStart), thresholdMin: Number(thresholdMin), thresholdStrong: Number(thresholdStrong), thresholdStrategic: Number(thresholdStrategic), venues };
     try {
       await fetch("/api/orgs", {
         method: "POST",
@@ -1017,6 +1027,40 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
         <div style={{ marginBottom: 20 }}>
           <label style={labelStyle}>Notification Email</label>
           <input type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="events@yourorg.com" style={inputStyle} />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Fiscal Year Start Month</label>
+          <select value={fiscalYearStart} onChange={(e) => setFiscalYearStart(Number(e.target.value))} style={inputStyle}>
+            {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => (
+              <option key={i} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Used to calculate which fiscal year your ETF local match falls in.</div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>ETF Pursuit Thresholds</label>
+          <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 10 }}>
+            Set the dollar values that drive your organization's pursuit recommendations. Adjust based on your team's capacity and overhead costs.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#991b1b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Minimum to Pursue ($)</div>
+              <input type="number" value={thresholdMin} onChange={(e) => setThresholdMin(Number(e.target.value))} style={{ ...inputStyle, borderColor: "#fecaca" }} />
+              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>Below this = Do Not Pursue</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#065f46", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Strong Target ($)</div>
+              <input type="number" value={thresholdStrong} onChange={(e) => setThresholdStrong(Number(e.target.value))} style={{ ...inputStyle, borderColor: "#bbf7d0" }} />
+              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>Above this = Strong Pursue</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Strategic Priority ($)</div>
+              <input type="number" value={thresholdStrategic} onChange={(e) => setThresholdStrategic(Number(e.target.value))} style={{ ...inputStyle, borderColor: "#a7f3d0" }} />
+              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>Above this = Strategic Priority</div>
+            </div>
+          </div>
         </div>
 
         {/* Venues */}
@@ -1850,9 +1894,14 @@ function StatCard({ label, value, icon }) {
 // ————————————————————————————————————————————————————————————————
 // Event View — tabs
 // ————————————————————————————————————————————————————————————————
-function EventView({ event, update, tab, setTab, orgVenues }) {
+function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
   const calc = useMemo(() => calculateTrustFund(event), [event]);
-  const decision = useMemo(() => evaluateDecision(event, calc), [event, calc]);
+  const thresholds = useMemo(() => ({
+    min: orgData?.thresholdMin ?? 75000,
+    strong: orgData?.thresholdStrong ?? 150000,
+    strategic: orgData?.thresholdStrategic ?? 300000,
+  }), [orgData]);
+  const decision = useMemo(() => evaluateDecision(event, calc, thresholds), [event, calc, thresholds]);
 
   const exportPDF = () => {
     const deadlines = event.firstDay ? TIMELINE.map(item => ({
@@ -2090,7 +2139,7 @@ function EventView({ event, update, tab, setTab, orgVenues }) {
 
       <div style={styles.tabPanel} className="etf-tab-panel">
         {tab === "overview" && <OverviewTab event={event} update={update} calc={calc} decision={decision} setTab={setTab} orgVenues={orgVenues} />}
-        {tab === "decision" && <DecisionTab event={event} update={update} calc={calc} decision={decision} />}
+        {tab === "decision" && <DecisionTab event={event} update={update} calc={calc} decision={decision} thresholds={thresholds} />}
         {tab === "calculator" && <CalculatorTab event={event} update={update} calc={calc} />}
         {tab === "timeline" && <TimelineTab event={event} update={update} />}
         {tab === "documents" && <DocumentsTab event={event} update={update} />}
@@ -2535,7 +2584,12 @@ function OverviewTab({ event, update, calc, decision, setTab, orgVenues }) {
 // ————————————————————————————————————————————————————————————————
 // Tab 2 — Decision Framework
 // ————————————————————————————————————————————————————————————————
-function DecisionTab({ event, update, calc, decision }) {
+function DecisionTab({ event, update, calc, decision, thresholds = {} }) {
+  const t = {
+    min: thresholds.min ?? 75000,
+    strong: thresholds.strong ?? 150000,
+    strategic: thresholds.strategic ?? 300000,
+  };
   const setElig = (key, val) =>
     update((e) => ({ ...e, elig: { ...e.elig, [key]: val } }));
 
@@ -2595,29 +2649,29 @@ function DecisionTab({ event, update, calc, decision }) {
       <Section title="Financial Framework" subtitle="Recommended thresholds — adjust to your organization's capacity and cost structure">
         <div style={styles.thresholdGrid}>
           {[
-            { range: "< $75K", label: "Not worth pursuing", color: "#991b1b", bg: "#fee2e2" },
-            { range: "$75K – $150K", label: "Pursue with conditions", color: "#92400e", bg: "#fef3c7" },
-            { range: "$150K – $300K", label: "Strong target", color: "#065f46", bg: "#d1fae5" },
-            { range: "$300K +", label: "Strategic priority", color: "#064e3b", bg: "#a7f3d0" },
-          ].map((t, i) => {
+            { range: `< ${fmtMoney(t.min)}`, label: "Not worth pursuing", color: "#991b1b", bg: "#fee2e2" },
+            { range: `${fmtMoney(t.min)} – ${fmtMoney(t.strong)}`, label: "Pursue with conditions", color: "#92400e", bg: "#fef3c7" },
+            { range: `${fmtMoney(t.strong)} – ${fmtMoney(t.strategic)}`, label: "Strong target", color: "#065f46", bg: "#d1fae5" },
+            { range: `${fmtMoney(t.strategic)} +`, label: "Strategic priority", color: "#064e3b", bg: "#a7f3d0" },
+          ].map((th, i) => {
             const isCurrent =
-              (decision.estimate >= 300000 && i === 3) ||
-              (decision.estimate >= 150000 && decision.estimate < 300000 && i === 2) ||
-              (decision.estimate >= 75000 && decision.estimate < 150000 && i === 1) ||
-              (decision.estimate < 75000 && i === 0);
+              (decision.estimate >= t.strategic && i === 3) ||
+              (decision.estimate >= t.strong && decision.estimate < t.strategic && i === 2) ||
+              (decision.estimate >= t.min && decision.estimate < t.strong && i === 1) ||
+              (decision.estimate < t.min && i === 0);
             return (
               <div
                 key={i}
                 style={{
                   ...styles.thresholdCard,
-                  background: t.bg,
-                  color: t.color,
-                  outline: isCurrent ? `2px solid ${t.color}` : "none",
+                  background: th.bg,
+                  color: th.color,
+                  outline: isCurrent ? `2px solid ${th.color}` : "none",
                   transform: isCurrent ? "scale(1.02)" : "scale(1)",
                 }}
               >
-                <div style={styles.thresholdRange}>{t.range}</div>
-                <div style={styles.thresholdLabel}>{t.label}</div>
+                <div style={styles.thresholdRange}>{th.range}</div>
+                <div style={styles.thresholdLabel}>{th.label}</div>
                 {isCurrent && <div style={styles.thresholdCurrent}>← Current projection</div>}
               </div>
             );
