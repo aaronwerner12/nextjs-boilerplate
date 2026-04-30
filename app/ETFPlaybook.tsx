@@ -47,8 +47,9 @@ const api = {
     });
     if (!res.ok) throw new Error("Failed to save event");
   },
-  async deleteEvent(id) {
-    const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
+  async deleteEvent(id, orgId) {
+    const qs = orgId ? `?org_id=${encodeURIComponent(orgId)}` : "";
+    const res = await fetch(`/api/events/${id}${qs}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete event");
   },
   async getTeam(orgId) {
@@ -579,14 +580,13 @@ function ETFPlaybookInner() {
   };
 
   const deleteEvent = async (id) => {
-    if (!window.confirm?.("Delete this event for the entire team?")) return;
     setEvents((prev) => {
       const updated = prev.filter((e) => e.id !== id);
       localStorage.setItem("etf_events_cache", JSON.stringify(updated));
       return updated;
     });
     if (currentEventId === id) setCurrentEventId(null);
-    try { await api.deleteEvent(id); } catch (_) {}
+    try { await api.deleteEvent(id, orgId); } catch (_) {}
   };
 
   const handleLoginComplete = async (name, title, newOrg) => {
@@ -1518,6 +1518,7 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
 }
 
 function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam }) {
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
   return (
     <aside style={styles.sidebar} className={`etf-sidebar${isOpen ? " open" : ""}`}>
       <div style={styles.brand} onClick={onHome}>
@@ -1565,13 +1566,30 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
                 Added by {e.createdBy}
               </div>
             )}
-            <button
-              style={styles.deleteBtn}
-              onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
-              aria-label="Delete"
-            >
-              <Trash2 size={12} />
-            </button>
+            {confirmDeleteId === e.id ? (
+              <div style={{ display: "flex", gap: 4, marginTop: 6 }} onClick={(ev) => ev.stopPropagation()}>
+                <button
+                  onClick={() => { onDelete(e.id); setConfirmDeleteId(null); }}
+                  style={{ flex: 1, padding: "4px 0", background: "#dc2626", color: "#fff", border: "none", borderRadius: 3, fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  style={{ flex: 1, padding: "4px 0", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 3, fontSize: 11, cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                style={styles.deleteBtn}
+                onClick={(ev) => { ev.stopPropagation(); setConfirmDeleteId(e.id); }}
+                aria-label="Delete"
+              >
+                <Trash2 size={12} />
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -1580,7 +1598,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
         <div style={{ marginBottom: 6, fontSize: 12, color: "#6b6660" }}>
           {saveStatus === "saving" && <span style={{ color: "#d97706" }}>⟳ Saving…</span>}
           {saveStatus === "saved"  && <span style={{ color: "#059669" }}>✓ Saved</span>}
-          {saveStatus === "error"  && <span style={{ color: "#dc2626" }}>✗ Save failed</span>}
+          {saveStatus === "error"  && <span style={{ color: "#dc2626" }}>✗ Save failed — check your connection</span>}
           {!saveStatus && <span style={{ color: "#059669" }}>● Shared team database</span>}
         </div>
 
@@ -1651,6 +1669,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
   const [intakeItems, setIntakeItems] = useState([]);
   const [intakeLoading, setIntakeLoading] = useState(true);
   const [promoting, setPromoting] = useState(null);
+  const [confirmDismissId, setConfirmDismissId] = useState(null);
 
   const stats = useMemo(() => {
     let projected = 0;
@@ -1717,7 +1736,6 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
   };
 
   const handleDismiss = async (item) => {
-    if (!window.confirm?.(`Dismiss "${item.eventName}"? This will remove it from the queue.`)) return;
     try {
       await fetch("/api/intake", {
         method: "PATCH",
@@ -1726,6 +1744,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
       });
       setIntakeItems((prev) => prev.filter((i) => i.id !== item.id));
     } catch (_) {}
+    setConfirmDismissId(null);
   };
 
   const intakeUrl = typeof window !== "undefined" ? `${window.location.origin}/intake?org=${orgData?.id || ""}` : "/intake";
@@ -1869,12 +1888,29 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                     >
                       {promoting === item.id ? "Adding…" : "→ Add to Pipeline"}
                     </button>
-                    <button
-                      onClick={() => handleDismiss(item)}
-                      style={{ padding: "8px 16px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
-                    >
-                      Dismiss
-                    </button>
+                    {confirmDismissId === item.id ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <button
+                          onClick={() => handleDismiss(item)}
+                          style={{ padding: "6px 12px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                        >
+                          Confirm dismiss
+                        </button>
+                        <button
+                          onClick={() => setConfirmDismissId(null)}
+                          style={{ padding: "6px 12px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 12, cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDismissId(item.id)}
+                        style={{ padding: "8px 16px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
+                      >
+                        Dismiss
+                      </button>
+                    )}
                   </div>
                 </div>
               );
