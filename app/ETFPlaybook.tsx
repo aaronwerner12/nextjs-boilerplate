@@ -2184,13 +2184,15 @@ function ApplicationWindowStatus({ event }) {
   if (!event.firstDay) {
     return (
       <div style={windowStyles.wrap}>
-        <div style={{ ...windowStyles.light, ...windowStyles.gray }}>
-          <div style={windowStyles.dot} />
-        </div>
-        <div style={windowStyles.body}>
-          <div style={windowStyles.status}>Awaiting Event Date</div>
-          <div style={windowStyles.detail}>
-            Set the event's first day in Event Details below to calculate your 120-day application deadline.
+        <div style={windowStyles.topRow}>
+          <div style={{ ...windowStyles.light, ...windowStyles.gray }}>
+            <div style={windowStyles.dot} />
+          </div>
+          <div style={windowStyles.body}>
+            <div style={windowStyles.status}>Awaiting Event Date</div>
+            <div style={windowStyles.detail}>
+              Set the event's first day in Event Details below to calculate your 120-day application deadline.
+            </div>
           </div>
         </div>
         <div style={windowStyles.rule}>
@@ -2248,42 +2250,43 @@ function ApplicationWindowStatus({ event }) {
 
   return (
     <div style={{ ...windowStyles.wrap, ...toneStyle.wrap }}>
-      <div style={{ ...windowStyles.light, ...toneStyle.light }}>
-        <div style={{ ...windowStyles.dot, ...toneStyle.dot }} />
-      </div>
-
-      <div style={windowStyles.body}>
-        <div style={windowStyles.statusRow}>
-          <div style={{ ...windowStyles.status, color: toneStyle.textColor }}>{statusText}</div>
-          {!appSubmitted && daysUntilDeadline >= 0 && daysUntilEvent >= 0 && (
-            <div style={windowStyles.countdown}>
-              <span style={{ ...windowStyles.countdownNum, color: toneStyle.textColor }}>
-                {daysUntilDeadline}
-              </span>
-              <span style={windowStyles.countdownLabel}>
-                {daysUntilDeadline === 1 ? "day left" : "days left"}
-              </span>
-            </div>
-          )}
+      <div style={windowStyles.topRow}>
+        <div style={{ ...windowStyles.light, ...toneStyle.light }}>
+          <div style={{ ...windowStyles.dot, ...toneStyle.dot }} />
         </div>
-        <div style={windowStyles.detail}>{detailText}</div>
-
-        {!appSubmitted && daysUntilDeadline >= 0 && daysUntilEvent >= 0 && (
-          <div style={windowStyles.progressWrap}>
-            <div style={windowStyles.progressTrack}>
-              <div style={{
-                ...windowStyles.progressFill,
-                width: `${pct}%`,
-                background: toneStyle.bar,
-              }} />
-            </div>
-            <div style={windowStyles.progressMarkers}>
-              <span>Deadline: {fmtDate(deadline)}</span>
-              <span>Event: {fmtDate(eventDate)}</span>
-            </div>
+        <div style={windowStyles.body}>
+          <div style={windowStyles.statusRow}>
+            <div style={{ ...windowStyles.status, color: toneStyle.textColor }}>{statusText}</div>
+            {!appSubmitted && daysUntilDeadline >= 0 && daysUntilEvent >= 0 && (
+              <div style={windowStyles.countdown}>
+                <span style={{ ...windowStyles.countdownNum, color: toneStyle.textColor }}>
+                  {daysUntilDeadline}
+                </span>
+                <span style={windowStyles.countdownLabel}>
+                  {daysUntilDeadline === 1 ? "day left" : "days left"}
+                </span>
+              </div>
+            )}
           </div>
-        )}
+          <div style={windowStyles.detail}>{detailText}</div>
+        </div>
       </div>
+
+      {!appSubmitted && daysUntilDeadline >= 0 && daysUntilEvent >= 0 && (
+        <div style={windowStyles.progressWrap}>
+          <div style={windowStyles.progressTrack}>
+            <div style={{
+              ...windowStyles.progressFill,
+              width: `${pct}%`,
+              background: toneStyle.bar,
+            }} />
+          </div>
+          <div style={windowStyles.progressMarkers}>
+            <span>Deadline: {fmtDate(deadline)}</span>
+            <span>Event: {fmtDate(eventDate)}</span>
+          </div>
+        </div>
+      )}
 
       <div style={windowStyles.rule}>
         <div style={windowStyles.ruleLabel}>ETF Application Deadline</div>
@@ -2296,16 +2299,20 @@ function ApplicationWindowStatus({ event }) {
 
 const windowStyles = {
   wrap: {
-    display: "grid",
-    gridTemplateColumns: "auto 1fr auto",
-    gap: 20,
-    alignItems: "center",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 12,
     padding: "18px 22px",
     background: "#fff",
     border: "1px solid #e8e3db",
     borderLeft: "4px solid #9ca3af",
     marginBottom: 20,
     borderRadius: 3,
+  },
+  topRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
   },
   light: {
     width: 44,
@@ -2322,13 +2329,13 @@ const windowStyles = {
     borderRadius: "50%",
     background: "#6b7280",
   },
-  body: { minWidth: 0 },
+  body: { minWidth: 0, flex: 1 },
   statusRow: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: 16,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   status: {
     fontFamily: `'Fraunces', Georgia, serif`,
@@ -2352,7 +2359,7 @@ const windowStyles = {
   countdownLabel: {
     fontSize: 11,
     color: "#6b6660",
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     letterSpacing: ".1em",
     fontWeight: 600,
   },
@@ -2379,19 +2386,18 @@ const windowStyles = {
     fontSize: 10.5,
     color: "#6b6660",
     marginTop: 5,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     letterSpacing: ".05em",
     fontWeight: 500,
   },
   rule: {
-    borderLeft: "1px solid #e8e3db",
-    paddingLeft: 20,
+    borderTop: "1px solid #e8e3db",
+    paddingTop: 10,
     fontSize: 11.5,
-    maxWidth: 220,
   },
   ruleLabel: {
     fontSize: 10,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
     letterSpacing: ".1em",
     color: "#6b6660",
     fontWeight: 700,
@@ -2407,7 +2413,7 @@ const windowStyles = {
     fontSize: 10,
     color: "#9ca3af",
     marginTop: 4,
-    fontStyle: "italic",
+    fontStyle: "italic" as const,
   },
 
   // Tone variants
