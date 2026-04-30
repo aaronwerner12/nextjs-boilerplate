@@ -84,10 +84,8 @@ export default function AdminPage() {
       return 0;
     });
 
-  // Derive totals from per-org data so headline numbers match the table
-  const totalEvents = filteredOrgs === data?.orgs
-    ? (data?.orgs || []).reduce((sum, o) => sum + (o.totalEvents || 0), 0)
-    : data?.summary?.totalEvents || 0;
+  // Sum from per-org data so headline numbers always match the table
+  const totalEvents = (data?.orgs || []).reduce((sum, o) => sum + (o.totalEvents || 0), 0);
   const avgEventsPerOrg = data?.summary?.totalOrgs > 0
     ? (totalEvents / data.summary.totalOrgs).toFixed(1).replace(/\.0$/, "")
     : 0;
