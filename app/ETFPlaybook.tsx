@@ -402,7 +402,6 @@ export default function ETFPlaybook() {
   const [events, setEvents] = useState([]);
   const [currentEventId, setCurrentEventId] = useState(null);
   const [tab, setTab] = useState("dashboard");
-  const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
