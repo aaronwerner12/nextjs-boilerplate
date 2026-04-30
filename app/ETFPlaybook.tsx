@@ -612,15 +612,16 @@ function ETFPlaybookInner() {
     const memberId = "mbr_" + (name.toLowerCase().replace(/[^a-z0-9]/g, "_")) + "_" + (resolvedOrgId || "").substring(0, 8);
     localStorage.setItem("etf_member_id", memberId);
     if (resolvedOrgId) {
-      const record = await api.upsertMember({ id: memberId, orgId: resolvedOrgId, name, title: title || "" });
-      if (record) {
-        setMemberRecord(record);
-        // Show admin welcome on first time only
-        if (record.is_admin && !localStorage.getItem("etf_seen_admin_welcome")) {
-          setShowAdminWelcome(true);
-          localStorage.setItem("etf_seen_admin_welcome", "1");
+      try {
+        const record = await api.upsertMember({ id: memberId, orgId: resolvedOrgId, name, title: title || "" });
+        if (record) {
+          setMemberRecord(record);
+          if (record.is_admin && !localStorage.getItem("etf_seen_admin_welcome")) {
+            setShowAdminWelcome(true);
+            localStorage.setItem("etf_seen_admin_welcome", "1");
+          }
         }
-      }
+      } catch (_) {}
     }
 
     setSetupStep(null);

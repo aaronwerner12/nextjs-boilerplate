@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
       orgId: user.org_id || "",
     });
 
-    return NextResponse.redirect(`${appUrl}/?auth=${params.toString()}`);
+    return NextResponse.redirect(`${appUrl}/?auth=${encodeURIComponent(params.toString())}`);
   } catch (error) {
     console.error("GET /api/auth/verify error:", error);
     return NextResponse.redirect(new URL("/auth?error=server", req.url));
