@@ -392,13 +392,45 @@ function evaluateDecision(event, calcResult, thresholds = {}) {
 
 
 // ————————————————————————————————————————————————————————————————
+// Error Boundary — catches crashes and shows a recovery screen
+// ————————————————————————————————————————————————————————————————
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#faf8f4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', sans-serif" }}>
+          <div style={{ maxWidth: 400, textAlign: "center" }}>
+            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 600, marginBottom: 12 }}>Something went wrong</div>
+            <p style={{ color: "#6b6660", fontSize: 14, marginBottom: 24 }}>The app ran into an error. Try clearing your browser data for this site and signing in again.</p>
+            <button
+              onClick={() => { localStorage.clear(); window.location.reload(); }}
+              style={{ padding: "12px 24px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >
+              Clear data & reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ————————————————————————————————————————————————————————————————
 // Component — Main App (Neon Postgres team edition)
 // ————————————————————————————————————————————————————————————————
 
 // ————————————————————————————————————————————————————————————————
 // Component — Main App (Multi-org edition)
 // ————————————————————————————————————————————————————————————————
-export default function ETFPlaybook() {
+function ETFPlaybookInner() {
   const [events, setEvents] = useState([]);
   const [currentEventId, setCurrentEventId] = useState(null);
   const [tab, setTab] = useState("dashboard");
@@ -508,14 +540,16 @@ export default function ETFPlaybook() {
 
   const currentEvent = events.find((e) => e.id === currentEventId);
 
+  const saveTimerRef = React.useRef(null);
+
   const updateEvent = (updater) => {
     const current = events.find((e) => e.id === currentEventId);
     if (!current) return;
     const updated = updater(current);
     setEvents((prev) => prev.map((e) => (e.id === currentEventId ? updated : e)));
     setSaveStatus("saving");
-    clearTimeout(window._etfSaveTimer);
-    window._etfSaveTimer = setTimeout(async () => {
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
       try {
         await api.saveEvent({ ...updated, createdBy: teamMember }, orgId);
         // Update local cache so events persist on refresh if API is slow
@@ -720,6 +754,14 @@ export default function ETFPlaybook() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function ETFPlaybook() {
+  return (
+    <ErrorBoundary>
+      <ETFPlaybookInner />
+    </ErrorBoundary>
   );
 }
 
