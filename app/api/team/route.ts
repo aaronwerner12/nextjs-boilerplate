@@ -1,5 +1,11 @@
+import { createHmac } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
+
+function hashPasscode(passcode: string): string {
+  const secret = process.env.PASSCODE_SECRET || "etf-passcode-secret";
+  return createHmac("sha256", secret).update(passcode).digest("hex");
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -102,7 +108,7 @@ export async function PATCH(req: NextRequest) {
       if (!newPasscode || newPasscode.length < 4) {
         return NextResponse.json({ error: "Passcode must be at least 4 characters" }, { status: 400 });
       }
-      await sql`UPDATE etf_orgs SET passcode = ${newPasscode} WHERE id = ${orgId}`;
+      await sql`UPDATE etf_orgs SET passcode_hash = ${hashPasscode(newPasscode)}, passcode = NULL WHERE id = ${orgId}`;
     }
 
     return NextResponse.json({ ok: true });

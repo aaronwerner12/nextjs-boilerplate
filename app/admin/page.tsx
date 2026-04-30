@@ -22,27 +22,43 @@ function fmtRelative(d) {
   return `${Math.floor(days / 365)}y ago`;
 }
 
+function fmtTime(d) {
+  if (!d) return "—";
+  return new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
 export default function AdminPage() {
   const [pwd, setPwd] = useState("");
   const [authed, setAuthed] = useState(false);
   const [data, setData] = useState(null);
+  const [fetchedAt, setFetchedAt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("joinedAt");
 
+  const fetchData = async (password: string) => {
+    const res = await fetch("/api/admin", {
+      headers: { "x-admin-pwd": password },
+    });
+    if (res.status === 401) throw new Error("unauthorized");
+    if (res.status === 503) throw new Error("notconfigured");
+    if (!res.ok) throw new Error("server");
+    return res.json();
+  };
+
   const handleLogin = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin?pwd=${encodeURIComponent(pwd)}`);
-      if (res.status === 401) { setError("Incorrect password."); setLoading(false); return; }
-      if (!res.ok) throw new Error("Server error");
-      const json = await res.json();
+      const json = await fetchData(pwd);
       setData(json);
+      setFetchedAt(new Date());
       setAuthed(true);
     } catch (e) {
-      setError("Failed to load. Check your connection.");
+      if (e.message === "unauthorized") setError("Incorrect password.");
+      else if (e.message === "notconfigured") setError("ADMIN_PASSWORD env var is not set on the server.");
+      else setError("Failed to load. Check your connection.");
     }
     setLoading(false);
   };
@@ -50,9 +66,9 @@ export default function AdminPage() {
   const refresh = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin?pwd=${encodeURIComponent(pwd)}`);
-      const json = await res.json();
+      const json = await fetchData(pwd);
       setData(json);
+      setFetchedAt(new Date());
     } catch (_) {}
     setLoading(false);
   };
@@ -67,6 +83,12 @@ export default function AdminPage() {
       if (sortBy === "name") return a.name.localeCompare(b.name);
       return 0;
     });
+
+  // Sum from per-org data so headline numbers always match the table
+  const totalEvents = (data?.orgs || []).reduce((sum, o) => sum + (o.totalEvents || 0), 0);
+  const avgEventsPerOrg = data?.summary?.totalOrgs > 0
+    ? (totalEvents / data.summary.totalOrgs).toFixed(1).replace(/\.0$/, "")
+    : 0;
 
   const styles = {
     page: { minHeight: "100vh", background: "#0f0e0c", color: "#f5f0e8", fontFamily: "'Inter', system-ui, sans-serif" },
@@ -126,7 +148,7 @@ export default function AdminPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ fontSize: 12, color: "#6b6660" }}>
-            {loading ? "Refreshing…" : `Last updated ${fmtRelative(new Date())}`}
+            {loading ? "Refreshing…" : fetchedAt ? `Last updated ${fmtTime(fetchedAt)}` : ""}
           </div>
           <button onClick={refresh} style={{ padding: "6px 14px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#9e9890", fontSize: 12, cursor: "pointer" }}>
             Refresh
@@ -143,7 +165,7 @@ export default function AdminPage() {
             <div style={styles.statLabel}>Organizations</div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statValue}>{data?.summary?.totalEvents || 0}</div>
+            <div style={styles.statValue}>{totalEvents}</div>
             <div style={styles.statLabel}>Total ETF Analyses</div>
           </div>
           <div style={styles.statCard}>
@@ -155,11 +177,7 @@ export default function AdminPage() {
             <div style={styles.statLabel}>Promoted to Pipeline</div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statValue}>
-              {data?.summary?.totalOrgs > 0
-                ? Math.round((data?.summary?.totalEvents || 0) / data.summary.totalOrgs)
-                : 0}
-            </div>
+            <div style={styles.statValue}>{avgEventsPerOrg}</div>
             <div style={styles.statLabel}>Avg Events / Org</div>
           </div>
         </div>

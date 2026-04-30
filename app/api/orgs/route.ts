@@ -1,9 +1,15 @@
+import { createHmac } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
 const sql = neon(process.env.DATABASE_URL!);
+
+function hashPasscode(passcode: string): string {
+  const secret = process.env.PASSCODE_SECRET || "etf-passcode-secret";
+  return createHmac("sha256", secret).update(passcode).digest("hex");
+}
 
 async function ensureTables() {
   await sql`
@@ -19,6 +25,7 @@ async function ensureTables() {
   `;
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS notify_email TEXT`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS passcode TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS passcode_hash TEXT`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS logo_url TEXT`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS fiscal_year_start INT DEFAULT 10`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS threshold_min INT DEFAULT 75000`.catch(() => {});
@@ -34,11 +41,10 @@ async function ensureTables() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  // Add org_id to events table if it doesn't exist yet
   await sql`
     ALTER TABLE etf_events
     ADD COLUMN IF NOT EXISTS org_id TEXT REFERENCES etf_orgs(id)
-  `.catch(() => {}); // ignore if etf_events doesn't exist yet — events route will create it
+  `.catch(() => {});
 }
 
 export async function GET(req: NextRequest) {
@@ -48,14 +54,28 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
 
     if (id) {
-      const orgs = await sql`SELECT * FROM etf_orgs WHERE id = ${id}`;
+      const orgs = await sql`
+        SELECT id, name, city, state, notify_email, logo_url,
+               fiscal_year_start, threshold_min, threshold_strong, threshold_strategic
+        FROM etf_orgs WHERE id = ${id}
+      `;
       if (orgs.length === 0) {
         return NextResponse.json({ error: "Org not found" }, { status: 404 });
       }
       const venues = await sql`
         SELECT * FROM etf_venues WHERE org_id = ${id} ORDER BY sort_order, name
       `;
-      return NextResponse.json({ ...orgs[0], notifyEmail: orgs[0].notify_email, logoUrl: orgs[0].logo_url, fiscalYearStart: orgs[0].fiscal_year_start ?? 10, thresholdMin: orgs[0].threshold_min ?? 75000, thresholdStrong: orgs[0].threshold_strong ?? 150000, thresholdStrategic: orgs[0].threshold_strategic ?? 300000, venues });
+      const org = orgs[0];
+      return NextResponse.json({
+        ...org,
+        notifyEmail: org.notify_email,
+        logoUrl: org.logo_url,
+        fiscalYearStart: org.fiscal_year_start ?? 10,
+        thresholdMin: org.threshold_min ?? 75000,
+        thresholdStrong: org.threshold_strong ?? 150000,
+        thresholdStrategic: org.threshold_strategic ?? 300000,
+        venues,
+      });
     }
 
     const orgs = await sql`SELECT id, name, city, state, notify_email, created_at FROM etf_orgs ORDER BY name`;
@@ -70,19 +90,26 @@ export async function POST(req: NextRequest) {
   try {
     await ensureTables();
     const body = await req.json();
-    const { id, name, city = "", state = "TX", notifyEmail = "", passcode = "", logoUrl = "", fiscalYearStart = 10, thresholdMin = 75000, thresholdStrong = 150000, thresholdStrategic = 300000, venues = [] } = body;
+    const {
+      id, name, city = "", state = "TX", notifyEmail = "", passcode = "",
+      logoUrl = "", fiscalYearStart = 10,
+      thresholdMin = 75000, thresholdStrong = 150000, thresholdStrategic = 300000,
+      venues = [],
+    } = body;
 
     if (!id || !name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const passcodeHash = passcode ? hashPasscode(passcode) : null;
+
     await sql`
-      INSERT INTO etf_orgs (id, name, city, state, notify_email, passcode, logo_url, fiscal_year_start, threshold_min, threshold_strong, threshold_strategic)
-      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail}, ${passcode}, ${logoUrl}, ${fiscalYearStart}, ${thresholdMin}, ${thresholdStrong}, ${thresholdStrategic})
+      INSERT INTO etf_orgs (id, name, city, state, notify_email, passcode_hash, logo_url, fiscal_year_start, threshold_min, threshold_strong, threshold_strategic)
+      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail}, ${passcodeHash}, ${logoUrl}, ${fiscalYearStart}, ${thresholdMin}, ${thresholdStrong}, ${thresholdStrategic})
       ON CONFLICT (id) DO UPDATE
         SET name = ${name}, city = ${city}, state = ${state},
             notify_email = ${notifyEmail},
-            passcode = COALESCE(NULLIF(${passcode}, ''), etf_orgs.passcode),
+            passcode_hash = CASE WHEN ${passcodeHash}::TEXT IS NOT NULL THEN ${passcodeHash} ELSE etf_orgs.passcode_hash END,
             logo_url = ${logoUrl},
             fiscal_year_start = ${fiscalYearStart},
             threshold_min = ${thresholdMin},

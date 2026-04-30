@@ -5,21 +5,21 @@ export const dynamic = 'force-dynamic';
 
 const sql = neon(process.env.DATABASE_URL!);
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "dtexas2025";
-
 export async function GET(req: NextRequest) {
   try {
-    // Simple password check via header or query param
-    const { searchParams } = new URL(req.url);
-    const pwd = searchParams.get("pwd") || req.headers.get("x-admin-pwd");
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      return NextResponse.json({ error: "Admin not configured" }, { status: 503 });
+    }
 
-    if (pwd !== ADMIN_PASSWORD) {
+    const pwd = req.headers.get("x-admin-pwd");
+    if (pwd !== adminPassword) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Orgs summary
     const orgs = await sql`
-      SELECT 
+      SELECT
         id,
         name,
         city,
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     // Event counts per org
     const eventCounts = await sql`
-      SELECT 
+      SELECT
         org_id,
         COUNT(*) as total_events,
         COUNT(CASE WHEN data->>'status' = 'complete' THEN 1 END) as completed,
