@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     // Member counts per org
     const memberCounts = await sql`
       SELECT org_id, COUNT(*) as member_count
-      FROM etf_team
+      FROM etf_team_members
       GROUP BY org_id
     `.catch(() => []);
 
