@@ -591,6 +591,20 @@ export default function ETFPlaybook() {
 
     setSetupStep(null);
     setLoading(true);
+
+    // Directly load events here since useEffect may not re-fire if orgId didn't change
+    try {
+      const evts = await api.getEvents(resolvedOrgId);
+      setEvents(evts);
+      localStorage.setItem("etf_events_cache", JSON.stringify(evts));
+    } catch (e) {
+      console.error("Failed to load events after login:", e);
+      // Fall back to cache
+      const cached = localStorage.getItem("etf_events_cache");
+      if (cached) try { setEvents(JSON.parse(cached)); } catch (_) {}
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Setup flows ───────────────────────────────────────────────
