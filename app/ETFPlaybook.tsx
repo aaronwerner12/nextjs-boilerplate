@@ -579,7 +579,7 @@ function ETFPlaybookInner() {
   };
 
   const deleteEvent = async (id) => {
-    if (!window.confirm("Delete this event for the entire team?")) return;
+    if (!window.confirm?.("Delete this event for the entire team?")) return;
     setEvents((prev) => {
       const updated = prev.filter((e) => e.id !== id);
       localStorage.setItem("etf_events_cache", JSON.stringify(updated));
@@ -626,16 +626,26 @@ function ETFPlaybookInner() {
     setSetupStep(null);
     setLoading(true);
 
-    // Directly load events here since useEffect may not re-fire if orgId didn't change
+    // Load fresh org data first
+    if (resolvedOrgId) {
+      try {
+        const freshOrg = await api.getOrg(resolvedOrgId);
+        setOrgData(freshOrg);
+        localStorage.setItem("etf_org_data", JSON.stringify(freshOrg));
+      } catch (_) {
+        // keep whatever orgData is already set
+      }
+    }
+
+    // Then load events
     try {
       const evts = await api.getEvents(resolvedOrgId);
-      setEvents(evts);
+      setEvents(Array.isArray(evts) ? evts : []);
       localStorage.setItem("etf_events_cache", JSON.stringify(evts));
     } catch (e) {
       console.error("Failed to load events after login:", e);
-      // Fall back to cache
       const cached = localStorage.getItem("etf_events_cache");
-      if (cached) try { setEvents(JSON.parse(cached)); } catch (_) {}
+      if (cached) try { setEvents(JSON.parse(cached) || []); } catch (_) { setEvents([]); }
     } finally {
       setLoading(false);
     }
@@ -653,7 +663,7 @@ function ETFPlaybookInner() {
   }
 
   // Venues from org database, falling back to McKinney defaults
-  const venues = orgData?.venues?.map((v) => v.address ? `${v.name} — ${v.address}` : v.name) || [];
+  const venues = Array.isArray(orgData?.venues) ? orgData.venues.map((v) => v.address ? `${v.name} — ${v.address}` : v.name) : [];
 
   return (
     <div style={styles.app} className="etf-app">
@@ -1706,7 +1716,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
   };
 
   const handleDismiss = async (item) => {
-    if (!window.confirm(`Dismiss "${item.eventName}"? This will remove it from the queue.`)) return;
+    if (!window.confirm?.(`Dismiss "${item.eventName}"? This will remove it from the queue.`)) return;
     try {
       await fetch("/api/intake", {
         method: "PATCH",
