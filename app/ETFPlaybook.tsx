@@ -1017,6 +1017,14 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkText, setBulkText] = useState("");
+  const [address, setAddress] = useState(orgData?.address || "");
+  const [contactName, setContactName] = useState(orgData?.contactName || "");
+  const [contactTitle, setContactTitle] = useState(orgData?.contactTitle || "");
+  const [contactPhone, setContactPhone] = useState(orgData?.contactPhone || "");
+  const [contactEmail, setContactEmail] = useState(orgData?.contactEmail || "");
+  const [taxId, setTaxId] = useState(orgData?.taxId || "");
+  const [signatoryName, setSignatoryName] = useState(orgData?.signatoryName || "");
+  const [signatoryTitle, setSignatoryTitle] = useState(orgData?.signatoryTitle || "");
 
   const addVenue = () => {
     if (!newVenue.trim()) return;
@@ -1038,7 +1046,15 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const updated = { ...orgData, name, city, state, notifyEmail, logoUrl, fiscalYearStart: Number(fiscalYearStart), thresholdMin: Number(thresholdMin), thresholdStrong: Number(thresholdStrong), thresholdStrategic: Number(thresholdStrategic), venues };
+    const updated = {
+      ...orgData, name, city, state, notifyEmail, logoUrl,
+      fiscalYearStart: Number(fiscalYearStart),
+      thresholdMin: Number(thresholdMin),
+      thresholdStrong: Number(thresholdStrong),
+      thresholdStrategic: Number(thresholdStrategic),
+      venues, address, contactName, contactTitle, contactPhone, contactEmail,
+      taxId, signatoryName, signatoryTitle,
+    };
     try {
       await fetch("/api/orgs", {
         method: "POST",
@@ -1159,6 +1175,55 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ETF Application Profile */}
+        <div style={{ borderTop: "1px solid #e8e3db", paddingTop: 20, marginBottom: 20 }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 600, marginBottom: 4 }}>ETF Application Profile</div>
+          <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Used to pre-fill the Generate Application Packet on the Apply tab. Fill out once — reused on every event.</div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Mailing Address</label>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, McKinney, TX 75069" style={inputStyle} />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Primary Contact Name</label>
+              <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Jane Smith" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Contact Title</label>
+              <input value={contactTitle} onChange={(e) => setContactTitle(e.target.value)} placeholder="Director of Sports" style={inputStyle} />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Contact Phone</label>
+              <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(972) 555-0100" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Contact Email</label>
+              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="jane@yourorg.com" style={inputStyle} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Federal Tax ID (EIN) <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>— for ACH form</span></label>
+            <input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" style={inputStyle} />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={labelStyle}>Authorized Signatory Name</label>
+              <input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} placeholder="John Doe" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Signatory Title</label>
+              <input value={signatoryTitle} onChange={(e) => setSignatoryTitle(e.target.value)} placeholder="City Manager" style={inputStyle} />
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -2246,7 +2311,7 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
         {tab === "timeline" && <TimelineTab event={event} update={update} />}
         {tab === "documents" && <DocumentsTab event={event} update={update} />}
         {tab === "costs" && <CostsTab />}
-        {tab === "apply" && <ApplyTab event={event} calc={calc} decision={decision} />}
+        {tab === "apply" && <ApplyTab event={event} calc={calc} decision={decision} orgData={orgData} />}
         {tab === "reference" && <ReferenceTab />}
       </div>
     </div>
@@ -3364,10 +3429,286 @@ function CostsTab() {
 // Shows when event passes decision framework. Links to all official
 // EDT documents and generates a pre-filled email draft.
 // ————————————————————————————————————————————————————————————————
-function ApplyTab({ event, calc, decision }) {
+function ApplyTab({ event, calc, decision, orgData }) {
   const isEligible = decision.recommendation && decision.recommendation !== "DO NOT PURSUE";
   const appDeadline = event.firstDay ? addDays(event.firstDay, -120) : null;
   const daysUntilDeadline = appDeadline ? Math.ceil((appDeadline - new Date()) / (1000 * 60 * 60 * 24)) : null;
+
+  const generatePacket = () => {
+    const org = orgData || {};
+    const safeDays = event.calc?.days || [];
+    const totalRoomNights = Math.round(calc.totalRoomNights || event.roomNights || 0);
+    const totalAttendance = Math.round(calc.totalAttendance || 0);
+
+    // — Attendance Chart CSV download —
+    const csvRows = [
+      ["Date", "Players/Competitors", "Coaches", "Staff", "Scouts/College Coaches", "Media/TV", "Friends/Family/Spectators", "Daily Total"],
+    ];
+    let colTotals = [0, 0, 0, 0, 0, 0, 0];
+    safeDays.forEach((day) => {
+      const vals = [
+        Number(day.players) || 0,
+        Number(day.coaches) || 0,
+        Number(day.staff) || 0,
+        Number(day.scouts) || 0,
+        Number(day.media) || 0,
+        Number(day.spectators) || 0,
+      ];
+      const dayTotal = vals.reduce((a, b) => a + b, 0);
+      vals.forEach((v, i) => { colTotals[i] += v; });
+      colTotals[6] += dayTotal;
+      csvRows.push([day.date || "", ...vals, dayTotal]);
+    });
+    csvRows.push(["TOTAL", ...colTotals]);
+
+    const csvContent = csvRows.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
+    const csvBlob = new Blob([csvContent], { type: "text/csv" });
+    const csvUrl = URL.createObjectURL(csvBlob);
+    const csvLink = document.createElement("a");
+    csvLink.href = csvUrl;
+    csvLink.download = `${(event.name || "ETF").replace(/[^a-z0-9]/gi, "-")}-Attendance-Chart.csv`;
+    csvLink.click();
+    URL.revokeObjectURL(csvUrl);
+
+    // — Application form HTML —
+    const blank = (val, fallback = "___________________________") => val || `<span style="color:#dc2626">${fallback}</span>`;
+    const field = (label, val, placeholder) => `
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#6b6660;margin-bottom:4px">${label}</div>
+        <div style="padding:8px 12px;border:1px solid ${val ? "#d1d5db" : "#fca5a5"};border-radius:3px;font-size:13px;min-height:36px;background:${val ? "#fff" : "#fff7f7"}">${blank(val, placeholder || "— not filled —")}</div>
+      </div>`;
+
+    const eventDuration = (event.firstDay && event.lastDay)
+      ? `${fmtDate(event.firstDay)} – ${fmtDate(event.lastDay)}`
+      : (event.firstDay ? fmtDate(event.firstDay) : "");
+
+    const eligChecks = [
+      { label: "Competitive site selection (out-of-state alternatives)", val: event.elig?.competitive },
+      { label: "Annual or cyclical event (not one-time)", val: event.elig?.annual },
+      { label: "Sole Texas site (or sole regional site)", val: event.elig?.solesite },
+      { label: "Not held elsewhere in TX or adjoining states same year", val: event.elig?.notelsewhere },
+    ];
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ETF Application — ${event.name || "Event"}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; color: #1a1613; background: #fff; font-size: 13px; line-height: 1.5; }
+  .page { max-width: 850px; margin: 0 auto; padding: 48px 48px 80px; }
+  .cover-header { border-bottom: 3px solid #1a1613; padding-bottom: 20px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-weight: 600; }
+  .subtitle { font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .1em; margin-top: 4px; }
+  .disclaimer { font-size: 11px; color: #9ca3af; text-align: right; max-width: 260px; line-height: 1.4; }
+  .section { margin-bottom: 32px; page-break-inside: avoid; }
+  .section-title { font-family: 'Fraunces', Georgia, serif; font-size: 16px; font-weight: 600; border-bottom: 1px solid #e8e3db; padding-bottom: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .section-num { font-size: 11px; font-weight: 400; color: #9ca3af; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 16px; }
+  .elig-row { display: flex; align-items: center; gap: 10; padding: 8px 12px; margin-bottom: 6px; border-radius: 3px; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+  th { background: #f9f8f5; padding: 7px 10px; text-align: left; font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: #6b6660; border: 1px solid #e8e3db; }
+  td { padding: 6px 10px; border: 1px solid #e8e3db; vertical-align: top; }
+  .total-row td { font-weight: 700; background: #f9f8f5; }
+  .sig-line { border-bottom: 1px solid #1a1613; margin-bottom: 4px; min-height: 40px; }
+  .sig-label { font-size: 10.5px; color: #6b6660; }
+  .notice { background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 12px 14px; font-size: 12px; color: #78350f; margin-bottom: 24px; line-height: 1.6; }
+  .missing-notice { background: #fff7f7; border: 1px solid #fca5a5; border-radius: 4px; padding: 12px 14px; font-size: 12px; color: #991b1b; margin-bottom: 20px; }
+  .footer { margin-top: 48px; padding-top: 12px; border-top: 1px solid #e8e3db; font-size: 10px; color: #9ca3af; display: flex; justify-content: space-between; }
+  @media print {
+    body { padding: 0; }
+    .page { padding: 32px; }
+    .no-print { display: none !important; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover-header">
+    <div>
+      <h1>ETF Application Packet</h1>
+      <div class="subtitle">${org.name || "Organization"} · Generated ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
+    </div>
+    <div class="disclaimer">NOT an official state form. Use this as a reference to fill out the official gov.texas.gov documents. Verify all data before submitting.</div>
+  </div>
+
+  <div class="notice">
+    ⚠ <strong>This is a working reference document, not the official application.</strong> Download and complete the official forms at gov.texas.gov/business/page/event-trust-funds-program. The Attendance Chart CSV was also downloaded — use it to fill the official Excel template.
+  </div>
+
+  ${(() => {
+    const missing = [];
+    if (!org.address) missing.push("Mailing address");
+    if (!org.contactName) missing.push("Primary contact name");
+    if (!org.contactPhone) missing.push("Contact phone");
+    if (!org.taxId) missing.push("Federal Tax ID (EIN)");
+    if (!org.signatoryName) missing.push("Authorized signatory");
+    if (!event.name) missing.push("Event name");
+    if (!event.firstDay) missing.push("Event start date");
+    if (!event.siteSelectionOrg) missing.push("Site selection organization");
+    return missing.length ? `<div class="missing-notice"><strong>Missing fields (${missing.length}):</strong> ${missing.join(" · ")}<br><small>Go to Organization Settings → ETF Application Profile to fill these in.</small></div>` : "";
+  })()}
+
+  <!-- SECTION 1: Applicant -->
+  <div class="section">
+    <div class="section-title">Applicant / Endorsing Entity Information <span class="section-num">Section 1 of 6</span></div>
+    ${field("Organization Name", org.name)}
+    ${field("Mailing Address", org.address)}
+    <div class="grid2">
+      ${field("Primary Contact", org.contactName)}
+      ${field("Title", org.contactTitle)}
+    </div>
+    <div class="grid3">
+      ${field("Phone", org.contactPhone)}
+      ${field("Email", org.contactEmail || org.notifyEmail)}
+      ${field("Federal Tax ID (EIN)", org.taxId)}
+    </div>
+  </div>
+
+  <!-- SECTION 2: Event Information -->
+  <div class="section">
+    <div class="section-title">Event Information <span class="section-num">Section 2 of 6</span></div>
+    ${field("Event Name", event.name)}
+    <div class="grid2">
+      ${field("Event Dates", eventDuration)}
+      ${field("Number of Event Days", event.calc?.days?.length || "")}
+    </div>
+    ${field("Venue(s)", event.venues?.join("; "))}
+    ${field("Site Selection Organization", event.siteSelectionOrg)}
+    <div class="grid2">
+      ${field("Estimated Total Attendance", totalAttendance > 0 ? totalAttendance.toLocaleString() : "")}
+      ${field("Estimated Room Nights", totalRoomNights > 0 ? totalRoomNights.toLocaleString() : (event.roomNights ? Number(event.roomNights).toLocaleString() : ""))}
+    </div>
+  </div>
+
+  <!-- SECTION 3: Eligibility -->
+  <div class="section">
+    <div class="section-title">Eligibility Criteria <span class="section-num">Section 3 of 6</span></div>
+    <div style="margin-bottom:12px;font-size:12.5px;color:#374151">Each question must be answered YES for the event to qualify under Texas Government Code § 480.0051.</div>
+    ${eligChecks.map((c) => `
+      <div class="elig-row" style="background:${c.val ? "#f0fdf4" : "#fef2f2"};border:1px solid ${c.val ? "#bbf7d0" : "#fecaca"}">
+        <span style="font-size:16px;flex-shrink:0">${c.val ? "✓" : "✗"}</span>
+        <span style="color:${c.val ? "#065f46" : "#991b1b"}">${c.label}</span>
+        <span style="margin-left:auto;font-weight:700;font-size:12px;color:${c.val ? "#059669" : "#dc2626"}">${c.val ? "YES" : c.val === false ? "NO" : "NOT ANSWERED"}</span>
+      </div>`).join("")}
+  </div>
+
+  <!-- SECTION 4: Estimated Attendance Chart -->
+  <div class="section">
+    <div class="section-title">Estimated Attendance (Summary) <span class="section-num">Section 4 of 6</span></div>
+    <div style="font-size:12px;color:#6b6660;margin-bottom:10px">The CSV file downloaded alongside this packet contains the full day-by-day breakdown. Transfer the data into the official Excel Estimated Attendance Chart form.</div>
+    ${safeDays.length > 0 ? `
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Players</th>
+          <th>Coaches</th>
+          <th>Staff</th>
+          <th>Scouts</th>
+          <th>Media</th>
+          <th>Spectators</th>
+          <th>Day Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${safeDays.map((day) => {
+          const vals = [
+            Number(day.players)||0, Number(day.coaches)||0, Number(day.staff)||0,
+            Number(day.scouts)||0, Number(day.media)||0, Number(day.spectators)||0,
+          ];
+          const dayTotal = vals.reduce((a,b)=>a+b,0);
+          return `<tr>
+            <td>${day.date || "—"}</td>
+            ${vals.map(v=>`<td style="text-align:right">${v||"—"}</td>`).join("")}
+            <td style="text-align:right;font-weight:600">${dayTotal}</td>
+          </tr>`;
+        }).join("")}
+        <tr class="total-row">
+          <td>TOTAL</td>
+          ${[0,1,2,3,4,5].map(ci => {
+            const t = safeDays.reduce((s,d)=>s+(Number([d.players,d.coaches,d.staff,d.scouts,d.media,d.spectators][ci])||0),0);
+            return `<td style="text-align:right">${t}</td>`;
+          }).join("")}
+          <td style="text-align:right">${totalAttendance}</td>
+        </tr>
+      </tbody>
+    </table>` : `<div style="padding:16px;background:#f9f8f5;border:1px solid #e8e3db;border-radius:3px;font-size:13px;color:#6b6660">No day-by-day attendance entered yet. Use the Impact Calculator tab to enter attendance by category and day.</div>`}
+  </div>
+
+  <!-- SECTION 5: Economic Impact Summary -->
+  <div class="section">
+    <div class="section-title">Economic Impact Summary <span class="section-num">Section 5 of 6</span></div>
+    <div class="grid2">
+      <div>
+        ${field("Projected State Tax Revenue", calc.stateTaxTotal > 0 ? "$" + Math.round(calc.stateTaxTotal).toLocaleString() : "")}
+        ${field("Required Local Match (1:6.25 ratio)", calc.requiredLocalMatch > 0 ? "$" + Math.round(calc.requiredLocalMatch).toLocaleString() : "")}
+        ${field("Total Projected ETF Fund Value", decision.estimate > 0 ? "$" + Math.round(decision.estimate).toLocaleString() : "")}
+      </div>
+      <div>
+        ${field("Total Estimated Room Nights", totalRoomNights > 0 ? totalRoomNights.toLocaleString() : (event.roomNights ? Number(event.roomNights).toLocaleString() : ""))}
+        ${field("Pursuit Recommendation", decision.recommendation || "")}
+        ${field("Application Deadline (120 days prior)", appDeadline ? fmtDate(appDeadline.toISOString().split("T")[0]) : "")}
+      </div>
+    </div>
+    ${event.notes ? `<div style="margin-top:8px">${field("Analysis Notes", event.notes)}</div>` : ""}
+  </div>
+
+  <!-- SECTION 6: Signatures -->
+  <div class="section">
+    <div class="section-title">Authorizations & Signatures <span class="section-num">Section 6 of 6</span></div>
+    <div style="margin-bottom:8px;font-size:12px;color:#6b6660">The affidavits must be signed by an authorized official of the endorsing municipality, county, or local organizing committee AND notarized by a licensed notary.</div>
+    <div class="grid2" style="gap:40px;margin-top:24px">
+      <div>
+        <div class="sig-line"></div>
+        <div class="sig-label">Signature of Authorized Official</div>
+        <div style="margin-top:12px;font-size:13px;color:#1a1613;font-weight:600">${org.signatoryName || "___________________________"}</div>
+        <div style="font-size:12px;color:#6b6660">${org.signatoryTitle || ""}</div>
+        <div style="font-size:12px;color:#6b6660">${org.name || ""}</div>
+      </div>
+      <div>
+        <div class="sig-line"></div>
+        <div class="sig-label">Date Signed</div>
+        <div style="margin-top:16px">
+          <div class="sig-line" style="margin-top:24px"></div>
+          <div class="sig-label">Notary Signature / Stamp</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Generated by ETF Analysis Tool · ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
+    <span>NOT affiliated with the Texas Office of the Governor or EDT. For internal planning purposes only.</span>
+  </div>
+
+  <div class="no-print" style="position:fixed;bottom:20px;right:20px;display:flex;gap:10px">
+    <button onclick="window.print()" style="padding:10px 20px;background:#1a1613;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Print / Save as PDF</button>
+    <button onclick="window.close()" style="padding:10px 18px;background:transparent;border:1px solid #d1d5db;border-radius:4px;font-size:14px;cursor:pointer;font-family:inherit">Close</button>
+  </div>
+</div>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank", "width=950,height=800");
+    if (!win) {
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(event.name || "ETF-Application").replace(/[^a-z0-9]/gi, "-")}-Packet.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+  };
 
   const emailSubject = encodeURIComponent(
     `ETF Application — ${event.name || "Untitled Event"}${event.firstDay ? ` — ${fmtDate(event.firstDay)}` : ""}`
@@ -3507,6 +3848,23 @@ Thank you,
           </div>
         </div>
       )}
+
+      {/* Generate Application Packet */}
+      <div style={{ background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 6, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1613", marginBottom: 4 }}>Generate Application Packet</div>
+          <div style={{ fontSize: 13, color: "#6b6660", lineHeight: 1.5 }}>
+            Opens a pre-filled reference document with all your event data, plus downloads the Attendance Chart as a CSV.<br />
+            <span style={{ color: "#9ca3af", fontSize: 12 }}>Fill out the ETF Application Profile in Organization Settings for the best results.</span>
+          </div>
+        </div>
+        <button
+          onClick={generatePacket}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+          <Download size={15} /> Generate Packet
+        </button>
+      </div>
 
       {/* Pre-submission checklist */}
       <Section title="Pre-Submission Checklist" subtitle={`${completedCount} of ${CHECKLIST.length} confirmed`}>

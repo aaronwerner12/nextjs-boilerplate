@@ -31,6 +31,14 @@ async function ensureTables() {
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS threshold_min INT DEFAULT 75000`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS threshold_strong INT DEFAULT 150000`.catch(() => {});
   await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS threshold_strategic INT DEFAULT 300000`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS address TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS contact_name TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS contact_title TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS contact_phone TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS contact_email TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS tax_id TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS signatory_name TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_orgs ADD COLUMN IF NOT EXISTS signatory_title TEXT`.catch(() => {});
   await sql`
     CREATE TABLE IF NOT EXISTS etf_venues (
       id TEXT PRIMARY KEY,
@@ -56,7 +64,9 @@ export async function GET(req: NextRequest) {
     if (id) {
       const orgs = await sql`
         SELECT id, name, city, state, notify_email, logo_url,
-               fiscal_year_start, threshold_min, threshold_strong, threshold_strategic
+               fiscal_year_start, threshold_min, threshold_strong, threshold_strategic,
+               address, contact_name, contact_title, contact_phone, contact_email,
+               tax_id, signatory_name, signatory_title
         FROM etf_orgs WHERE id = ${id}
       `;
       if (orgs.length === 0) {
@@ -74,6 +84,13 @@ export async function GET(req: NextRequest) {
         thresholdMin: org.threshold_min ?? 75000,
         thresholdStrong: org.threshold_strong ?? 150000,
         thresholdStrategic: org.threshold_strategic ?? 300000,
+        contactName: org.contact_name,
+        contactTitle: org.contact_title,
+        contactPhone: org.contact_phone,
+        contactEmail: org.contact_email,
+        taxId: org.tax_id,
+        signatoryName: org.signatory_name,
+        signatoryTitle: org.signatory_title,
         venues,
       });
     }
@@ -95,6 +112,8 @@ export async function POST(req: NextRequest) {
       logoUrl = "", fiscalYearStart = 10,
       thresholdMin = 75000, thresholdStrong = 150000, thresholdStrategic = 300000,
       venues = [],
+      address = "", contactName = "", contactTitle = "", contactPhone = "",
+      contactEmail = "", taxId = "", signatoryName = "", signatoryTitle = "",
     } = body;
 
     if (!id || !name) {
@@ -104,8 +123,10 @@ export async function POST(req: NextRequest) {
     const passcodeHash = passcode ? hashPasscode(passcode) : null;
 
     await sql`
-      INSERT INTO etf_orgs (id, name, city, state, notify_email, passcode_hash, logo_url, fiscal_year_start, threshold_min, threshold_strong, threshold_strategic)
-      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail}, ${passcodeHash}, ${logoUrl}, ${fiscalYearStart}, ${thresholdMin}, ${thresholdStrong}, ${thresholdStrategic})
+      INSERT INTO etf_orgs (id, name, city, state, notify_email, passcode_hash, logo_url, fiscal_year_start, threshold_min, threshold_strong, threshold_strategic,
+        address, contact_name, contact_title, contact_phone, contact_email, tax_id, signatory_name, signatory_title)
+      VALUES (${id}, ${name}, ${city}, ${state}, ${notifyEmail}, ${passcodeHash}, ${logoUrl}, ${fiscalYearStart}, ${thresholdMin}, ${thresholdStrong}, ${thresholdStrategic},
+        ${address}, ${contactName}, ${contactTitle}, ${contactPhone}, ${contactEmail}, ${taxId}, ${signatoryName}, ${signatoryTitle})
       ON CONFLICT (id) DO UPDATE
         SET name = ${name}, city = ${city}, state = ${state},
             notify_email = ${notifyEmail},
@@ -114,7 +135,15 @@ export async function POST(req: NextRequest) {
             fiscal_year_start = ${fiscalYearStart},
             threshold_min = ${thresholdMin},
             threshold_strong = ${thresholdStrong},
-            threshold_strategic = ${thresholdStrategic}
+            threshold_strategic = ${thresholdStrategic},
+            address = ${address},
+            contact_name = ${contactName},
+            contact_title = ${contactTitle},
+            contact_phone = ${contactPhone},
+            contact_email = ${contactEmail},
+            tax_id = ${taxId},
+            signatory_name = ${signatoryName},
+            signatory_title = ${signatoryTitle}
     `;
 
     // Replace venues for this org
