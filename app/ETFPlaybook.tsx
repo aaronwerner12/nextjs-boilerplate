@@ -3547,7 +3547,6 @@ function ApplyTab({ event, calc, decision, orgData }) {
     if (!org.contactName) missing.push("Primary contact name");
     if (!org.contactPhone) missing.push("Contact phone");
     if (!org.taxId) missing.push("Federal Tax ID (EIN)");
-    if (!org.signatoryName) missing.push("Authorized signatory");
     if (!event.name) missing.push("Event name");
     if (!event.firstDay) missing.push("Event start date");
     if (!event.siteSelectionOrg) missing.push("Site selection organization");
@@ -3643,7 +3642,7 @@ function ApplyTab({ event, calc, decision, orgData }) {
 
   <!-- SECTION 5: Economic Impact Summary -->
   <div class="section">
-    <div class="section-title">Economic Impact Summary <span class="section-num">Section 5 of 6</span></div>
+    <div class="section-title">Economic Impact Summary <span class="section-num">Section 5 of 5</span></div>
     <div class="grid2">
       <div>
         ${field("Projected State Tax Revenue", calc.stateTaxTotal > 0 ? "$" + Math.round(calc.stateTaxTotal).toLocaleString() : "")}
@@ -3657,29 +3656,6 @@ function ApplyTab({ event, calc, decision, orgData }) {
       </div>
     </div>
     ${event.notes ? `<div style="margin-top:8px">${field("Analysis Notes", event.notes)}</div>` : ""}
-  </div>
-
-  <!-- SECTION 6: Signatures -->
-  <div class="section">
-    <div class="section-title">Authorizations & Signatures <span class="section-num">Section 6 of 6</span></div>
-    <div style="margin-bottom:8px;font-size:12px;color:#6b6660">The affidavits must be signed by an authorized official of the endorsing municipality, county, or local organizing committee AND notarized by a licensed notary.</div>
-    <div class="grid2" style="gap:40px;margin-top:24px">
-      <div>
-        <div class="sig-line"></div>
-        <div class="sig-label">Signature of Authorized Official</div>
-        <div style="margin-top:12px;font-size:13px;color:#1a1613;font-weight:600">${org.signatoryName || "___________________________"}</div>
-        <div style="font-size:12px;color:#6b6660">${org.signatoryTitle || ""}</div>
-        <div style="font-size:12px;color:#6b6660">${org.name || ""}</div>
-      </div>
-      <div>
-        <div class="sig-line"></div>
-        <div class="sig-label">Date Signed</div>
-        <div style="margin-top:16px">
-          <div class="sig-line" style="margin-top:24px"></div>
-          <div class="sig-label">Notary Signature / Stamp</div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="footer">
