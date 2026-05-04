@@ -3133,6 +3133,8 @@ function TimelineTab({ event, update }) {
 // Tab 5 — Documents
 // ————————————————————————————————————————————————————————————————
 function DocumentsTab({ event, update }) {
+  const docs = event.docs || {};
+
   const DOC_LIST = [
     { key: "application", label: "Events Trust Fund Application", phase: "Pre-Event (by Day -120)", desc: "Completed and signed by an official authorized to bind the applying entity." },
     { key: "endorsement", label: "Endorsement Documentation", phase: "Pre-Event (by Day -120)", desc: "Letter from the endorsing municipality/county requesting participation; signed by an authorized person and naming the LOC if applicable." },
@@ -3148,27 +3150,34 @@ function DocumentsTab({ event, update }) {
   ];
 
   const toggleDoc = (key) => {
-    update((e) => ({
-      ...e,
-      docs: {
-        ...e.docs,
-        [key]: {
-          done: !e.docs[key].done,
-          date: !e.docs[key].done ? new Date().toISOString().split("T")[0] : "",
+    update((e) => {
+      const currentDocs = e.docs || {};
+      const current = currentDocs[key] || { done: false, date: "" };
+      return {
+        ...e,
+        docs: {
+          ...currentDocs,
+          [key]: {
+            done: !current.done,
+            date: !current.done ? new Date().toISOString().split("T")[0] : "",
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const setDocDate = (key, date) => {
-    update((e) => ({
-      ...e,
-      docs: { ...e.docs, [key]: { ...e.docs[key], date } },
-    }));
+    update((e) => {
+      const currentDocs = e.docs || {};
+      return {
+        ...e,
+        docs: { ...currentDocs, [key]: { ...(currentDocs[key] || {}), date } },
+      };
+    });
   };
 
   const phases = [...new Set(DOC_LIST.map((d) => d.phase))];
-  const completed = DOC_LIST.filter((d) => event.docs[d.key]?.done).length;
+  const completed = DOC_LIST.filter((d) => docs[d.key]?.done).length;
 
   return (
     <div>
@@ -3184,7 +3193,7 @@ function DocumentsTab({ event, update }) {
           <div key={phase} style={styles.phaseGroup}>
             <div style={styles.phaseLabel}>{phase}</div>
             {DOC_LIST.filter((d) => d.phase === phase).map((d) => {
-              const doc = event.docs[d.key] || { done: false, date: "" };
+              const doc = docs[d.key] || { done: false, date: "" };
               return (
                 <div
                   key={d.key}
