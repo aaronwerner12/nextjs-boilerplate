@@ -406,13 +406,13 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight: "100vh", background: "#faf8f4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ minHeight: "100vh", background: "#FBF3E8", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', sans-serif" }}>
           <div style={{ maxWidth: 400, textAlign: "center" }}>
             <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 600, marginBottom: 12 }}>Something went wrong</div>
-            <p style={{ color: "#6b6660", fontSize: 14, marginBottom: 24 }}>The app ran into an error. Try clearing your browser data for this site and signing in again.</p>
+            <p style={{ color: "#7A6A58", fontSize: 14, marginBottom: 24 }}>The app ran into an error. Try clearing your browser data for this site and signing in again.</p>
             <button
               onClick={() => { localStorage.clear(); window.location.reload(); }}
-              style={{ padding: "12px 24px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              style={{ padding: "12px 24px", background: "#2C1C0E", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
             >
               Clear data & reload
             </button>
@@ -688,7 +688,7 @@ function ETFPlaybookInner() {
         </div>
         <button
           onClick={createEvent}
-          style={{ background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, padding: "6px 12px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
+          style={{ background: "#2C1C0E", color: "#fff", border: "none", borderRadius: 10, padding: "6px 12px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
         >
           + New
         </button>
@@ -860,33 +860,33 @@ function LoginScreen({ onComplete }) {
   };
 
   const s = {
-    input: { width: "100%", padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" },
-    label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", display: "block", marginBottom: 6 },
+    input: { width: "100%", padding: "12px 14px", background: "#1C1208", border: "1px solid #3E2F20", borderRadius: 10, color: "#F2E8D6", fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" },
+    label: { fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#7A6A58", display: "block", marginBottom: 6 },
     field: { marginBottom: 16 },
   };
 
   const logo = (
     <div style={{ textAlign: "center", marginBottom: 32 }}>
-      <div style={{ width: 52, height: 52, background: "#c8b97a", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#0f0e0c" }}>ETF</div>
-      <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#f5f0e8" }}>Texas Events Trust Fund</div>
-      <div style={{ fontSize: 12, color: "#6b6660", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Analysis Tool</div>
+      <div style={{ width: 52, height: 52, background: "#D4784A", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#1C1208" }}>ETF</div>
+      <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#F2E8D6" }}>Texas Events Trust Fund</div>
+      <div style={{ fontSize: 12, color: "#7A6A58", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Analysis Tool</div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f0e0c", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#1C1208", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         {logo}
 
         {/* Returning user — streamlined */}
         {mode === "returning" && (
-          <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "32px 28px" }}>
-            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#f5f0e8", marginBottom: 4 }}>
+          <div style={{ background: "#271910", border: "1px solid #3E2F20", borderRadius: 14, padding: "32px 28px" }}>
+            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#F2E8D6", marginBottom: 4 }}>
               Welcome back, {storedName.split(" ")[0]}.
             </div>
-            <p style={{ fontSize: 13, color: "#6b6660", margin: "0 0 24px" }}>Enter your access code to continue.</p>
+            <p style={{ fontSize: 13, color: "#7A6A58", margin: "0 0 24px" }}>Enter your access code to continue.</p>
 
-            {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 4, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
+            {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 10, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
 
             <div style={s.field}>
               <input
@@ -903,7 +903,7 @@ function LoginScreen({ onComplete }) {
             <button
               onClick={() => handlePasscodeLogin(storedName)}
               disabled={loading || !passcode}
-              style={{ width: "100%", padding: "13px", background: passcode ? "#c8b97a" : "#2a2720", color: passcode ? "#0f0e0c" : "#6b6660", border: "none", borderRadius: 4, fontSize: 15, fontWeight: 700, cursor: passcode ? "pointer" : "default", fontFamily: "inherit", marginBottom: 14 }}
+              style={{ width: "100%", padding: "13px", background: passcode ? "#D4784A" : "#3E2F20", color: passcode ? "#fff" : "#7A6A58", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: passcode ? "pointer" : "default", fontFamily: "inherit", marginBottom: 14 }}
             >
               {loading ? "Signing in…" : "Enter →"}
             </button>
@@ -911,7 +911,7 @@ function LoginScreen({ onComplete }) {
             <div style={{ textAlign: "center" }}>
               <button
                 onClick={() => { localStorage.removeItem("etf_team_member"); setMode("join"); setName(""); setAgreed(false); }}
-                style={{ background: "none", border: "none", color: "#4a4740", fontSize: 12.5, cursor: "pointer", textDecoration: "underline" }}
+                style={{ background: "none", border: "none", color: "#6B5645", fontSize: 12.5, cursor: "pointer", textDecoration: "underline" }}
               >
                 Not {storedName.split(" ")[0]}? Switch account
               </button>
@@ -923,16 +923,16 @@ function LoginScreen({ onComplete }) {
         {mode !== "returning" && (
           <>
             <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-              <button onClick={() => { setMode("join"); setError(""); }} style={{ flex: 1, padding: "11px", borderRadius: 4, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", background: mode === "join" ? "#c8b97a" : "#1a1814", color: mode === "join" ? "#0f0e0c" : "#6b6660", transition: "all .15s" }}>
+              <button onClick={() => { setMode("join"); setError(""); }} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", background: mode === "join" ? "#D4784A" : "#271910", color: mode === "join" ? "#fff" : "#7A6A58", transition: "all .15s" }}>
                 Sign In
               </button>
-              <button onClick={() => { setMode("create"); setError(""); }} style={{ flex: 1, padding: "11px", borderRadius: 4, border: "1px solid #2a2720", fontSize: 14, fontWeight: 600, cursor: "pointer", background: mode === "create" ? "#c8b97a" : "transparent", color: mode === "create" ? "#0f0e0c" : "#9e9890", transition: "all .15s" }}>
+              <button onClick={() => { setMode("create"); setError(""); }} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "1px solid #3E2F20", fontSize: 14, fontWeight: 600, cursor: "pointer", background: mode === "create" ? "#D4784A" : "transparent", color: mode === "create" ? "#fff" : "#9E8E7C", transition: "all .15s" }}>
                 New Organization
               </button>
             </div>
 
-            <div style={{ background: "#1a1814", border: "1px solid #2a2720", borderRadius: 8, padding: "28px 24px" }}>
-              {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 4, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
+            <div style={{ background: "#271910", border: "1px solid #3E2F20", borderRadius: 14, padding: "28px 24px" }}>
+              {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 10, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
 
               {mode === "join" ? (
                 <>
@@ -941,24 +941,24 @@ function LoginScreen({ onComplete }) {
                     <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="e.g. Jamie Rodriguez" style={s.input} />
                   </div>
                   <div style={s.field}>
-                    <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                    <label style={s.label}>Your Title <span style={{ color: "#6B5645", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
                     <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Director of Sports Tourism" style={s.input} />
                   </div>
                   <div style={s.field}>
                     <label style={s.label}>Access Code</label>
                     <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="Your team's access code" style={s.input} />
-                    <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Get this from your team admin.</div>
+                    <div style={{ fontSize: 11.5, color: "#6B5645", marginTop: 5 }}>Get this from your team admin.</div>
                   </div>
                 </>
               ) : (
                 <>
-                  <p style={{ fontSize: 13, color: "#6b6660", lineHeight: 1.6, marginBottom: 20, marginTop: 0 }}>Create a new organization. You'll be the admin and can invite teammates after setup.</p>
+                  <p style={{ fontSize: 13, color: "#7A6A58", lineHeight: 1.6, marginBottom: 20, marginTop: 0 }}>Create a new organization. You'll be the admin and can invite teammates after setup.</p>
                   <div style={s.field}>
                     <label style={s.label}>Your Name</label>
                     <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Jamie Rodriguez" style={s.input} />
                   </div>
                   <div style={s.field}>
-                    <label style={s.label}>Your Title <span style={{ color: "#4a4740", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                    <label style={s.label}>Your Title <span style={{ color: "#6B5645", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
                     <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Executive Director" style={s.input} />
                   </div>
                   <div style={s.field}>
@@ -968,7 +968,7 @@ function LoginScreen({ onComplete }) {
                   <div style={s.field}>
                     <label style={s.label}>Create Access Code</label>
                     <input type="password" value={newPasscode} onChange={(e) => setNewPasscode(e.target.value)} placeholder="Min. 4 characters" style={s.input} />
-                    <div style={{ fontSize: 11.5, color: "#4a4740", marginTop: 5 }}>Share this with teammates so they can sign in.</div>
+                    <div style={{ fontSize: 11.5, color: "#6B5645", marginTop: 5 }}>Share this with teammates so they can sign in.</div>
                   </div>
                 </>
               )}
@@ -976,10 +976,10 @@ function LoginScreen({ onComplete }) {
               <div style={{ marginBottom: 18 }}>
                 <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
                   <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} style={{ marginTop: 3, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: "#6b6660", lineHeight: 1.6 }}>
+                  <span style={{ fontSize: 12, color: "#7A6A58", lineHeight: 1.6 }}>
                     I agree to the{" "}
-                    <a href="/terms" target="_blank" style={{ color: "#c8b97a" }}>Terms of Service</a>{" "}and{" "}
-                    <a href="/privacy" target="_blank" style={{ color: "#c8b97a" }}>Privacy Policy</a>.
+                    <a href="/terms" target="_blank" style={{ color: "#D4784A" }}>Terms of Service</a>{" "}and{" "}
+                    <a href="/privacy" target="_blank" style={{ color: "#D4784A" }}>Privacy Policy</a>.
                     This tool is not affiliated with the State of Texas or EDT.
                   </span>
                 </label>
@@ -988,7 +988,7 @@ function LoginScreen({ onComplete }) {
               <button
                 onClick={mode === "join" ? handleJoin : handleCreate}
                 disabled={loading || !agreed}
-                style={{ width: "100%", padding: "13px", background: agreed ? "#c8b97a" : "#2a2720", color: agreed ? "#0f0e0c" : "#6b6660", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 700, cursor: loading || !agreed ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "13px", background: agreed ? "#D4784A" : "#3E2F20", color: agreed ? "#fff" : "#7A6A58", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: loading || !agreed ? "default" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}
               >
                 {loading ? "Please wait…" : mode === "join" ? "Sign In →" : "Create Organization →"}
               </button>
@@ -996,7 +996,7 @@ function LoginScreen({ onComplete }) {
           </>
         )}
 
-        <p style={{ textAlign: "center", fontSize: 11, color: "#3a3730", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
+        <p style={{ textAlign: "center", fontSize: 11, color: "#4E3D2C", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
       </div>
     </div>
   );
@@ -1066,28 +1066,28 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
     onSave(updated);
   };
 
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" };
-  const labelStyle = { fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#6b6660", display: "block", marginBottom: 5 };
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" };
+  const labelStyle = { fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A6A58", display: "block", marginBottom: 5 };
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: 36, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+      <div style={{ background: "#fff", border: "1px solid #DDD0BB", borderRadius: 12, padding: 36, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600 }}>Organization Settings</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9ca3af" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9A8E7E" }}>✕</button>
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Organization Logo URL <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none", fontSize: 11 }}>(optional)</span></label>
+          <label style={labelStyle}>Organization Logo URL <span style={{ color: "#9A8E7E", fontWeight: 400, textTransform: "none", fontSize: 11 }}>(optional)</span></label>
           <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://yourorg.com/logo.png" style={inputStyle} />
-          <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 5 }}>
+          <div style={{ fontSize: 11.5, color: "#9A8E7E", marginTop: 5 }}>
             Paste a direct link to your logo image. It will appear in the sidebar.
-            {logoUrl && <span> — <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#6b6660" }}>Preview ↗</a></span>}
+            {logoUrl && <span> — <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#7A6A58" }}>Preview ↗</a></span>}
           </div>
           {logoUrl && (
-            <div style={{ marginTop: 10, padding: 10, background: "#1a1613", borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <div style={{ marginTop: 10, padding: 10, background: "#2C1C0E", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 8 }}>
               <img src={logoUrl} alt="Logo preview" style={{ height: 32, width: 32, objectFit: "contain", background: "#fff", borderRadius: 3, padding: 2 }} onError={(e) => e.target.style.display = 'none'} />
-              <span style={{ fontSize: 12, color: "#6b6660" }}>Preview</span>
+              <span style={{ fontSize: 12, color: "#7A6A58" }}>Preview</span>
             </div>
           )}
         </div>
@@ -1118,29 +1118,29 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
               <option key={i} value={i + 1}>{m}</option>
             ))}
           </select>
-          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Used to calculate which fiscal year your ETF local match falls in.</div>
+          <div style={{ fontSize: 12, color: "#9A8E7E", marginTop: 4 }}>Used to calculate which fiscal year your ETF local match falls in.</div>
         </div>
 
         <div style={{ marginBottom: 20 }}>
           <label style={labelStyle}>ETF Pursuit Thresholds</label>
-          <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 10 }}>
+          <div style={{ fontSize: 12, color: "#9A8E7E", marginBottom: 10 }}>
             Set the dollar values that drive your organization's pursuit recommendations. Adjust based on your team's capacity and overhead costs.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: "#991b1b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Minimum to Pursue ($)</div>
               <input type="number" value={thresholdMin} onChange={(e) => setThresholdMin(Number(e.target.value))} style={{ ...inputStyle, borderColor: "#fecaca" }} />
-              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>Below this = Do Not Pursue</div>
+              <div style={{ fontSize: 11, color: "#9A8E7E", marginTop: 3 }}>Below this = Do Not Pursue</div>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: "#065f46", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Strong Target ($)</div>
               <input type="number" value={thresholdStrong} onChange={(e) => setThresholdStrong(Number(e.target.value))} style={{ ...inputStyle, borderColor: "#bbf7d0" }} />
-              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>Above this = Strong Pursue</div>
+              <div style={{ fontSize: 11, color: "#9A8E7E", marginTop: 3 }}>Above this = Strong Pursue</div>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Strategic Priority ($)</div>
               <input type="number" value={thresholdStrategic} onChange={(e) => setThresholdStrategic(Number(e.target.value))} style={{ ...inputStyle, borderColor: "#a7f3d0" }} />
-              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>Above this = Strategic Priority</div>
+              <div style={{ fontSize: 11, color: "#9A8E7E", marginTop: 3 }}>Above this = Strategic Priority</div>
             </div>
           </div>
         </div>
@@ -1149,7 +1149,7 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <label style={labelStyle}>Venues</label>
-            <button onClick={() => setBulkMode(!bulkMode)} style={{ fontSize: 12, color: "#6b6660", background: "transparent", border: "1px solid #e8e3db", borderRadius: 3, padding: "3px 10px", cursor: "pointer" }}>
+            <button onClick={() => setBulkMode(!bulkMode)} style={{ fontSize: 12, color: "#7A6A58", background: "transparent", border: "1px solid #DDD0BB", borderRadius: 3, padding: "3px 10px", cursor: "pointer" }}>
               {bulkMode ? "Switch to list" : "Paste a list"}
             </button>
           </div>
@@ -1157,30 +1157,30 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
           {bulkMode ? (
             <div>
               <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} placeholder={"One venue per line:\nAl Ruschhaupt Soccer Complex — 2701 Northbrook Drive"} rows={6} style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5, resize: "vertical" }} />
-              <button onClick={parseBulk} style={{ marginTop: 8, fontSize: 12.5, padding: "5px 12px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>Preview →</button>
+              <button onClick={parseBulk} style={{ marginTop: 8, fontSize: 12.5, padding: "5px 12px", background: "#2C1C0E", color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>Preview →</button>
             </div>
           ) : (
             <div>
               <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 8 }}>
                 {venues.map((v, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 3, marginBottom: 4 }}>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#FBF3E8", border: "1px solid #DDD0BB", borderRadius: 3, marginBottom: 4 }}>
                     <span style={{ flex: 1, fontSize: 13 }}>{v.name}{v.address ? ` — ${v.address}` : ""}</span>
-                    <button onClick={() => removeVenue(i)} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 14 }}>✕</button>
+                    <button onClick={() => removeVenue(i)} style={{ background: "none", border: "none", color: "#9A8E7E", cursor: "pointer", fontSize: 14 }}>✕</button>
                   </div>
                 ))}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={newVenue} onChange={(e) => setNewVenue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="Add venue name" style={{ ...inputStyle, flex: 1 }} />
-                <button onClick={addVenue} style={{ padding: "10px 16px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 13 }}>Add</button>
+                <button onClick={addVenue} style={{ padding: "10px 16px", background: "#2C1C0E", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontSize: 13 }}>Add</button>
               </div>
             </div>
           )}
         </div>
 
         {/* ETF Application Profile */}
-        <div style={{ borderTop: "1px solid #e8e3db", paddingTop: 20, marginBottom: 20 }}>
+        <div style={{ borderTop: "1px solid #DDD0BB", paddingTop: 20, marginBottom: 20 }}>
           <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 600, marginBottom: 4 }}>ETF Application Profile</div>
-          <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Used to pre-fill the Generate Application Packet on the Apply tab. Fill out once — reused on every event.</div>
+          <div style={{ fontSize: 12, color: "#9A8E7E", marginBottom: 16 }}>Used to pre-fill the Generate Application Packet on the Apply tab. Fill out once — reused on every event.</div>
 
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>Mailing Address</label>
@@ -1210,7 +1210,7 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
           </div>
 
           <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Federal Tax ID (EIN) <span style={{ color: "#9ca3af", fontWeight: 400, textTransform: "none" }}>— for ACH form</span></label>
+            <label style={labelStyle}>Federal Tax ID (EIN) <span style={{ color: "#9A8E7E", fontWeight: 400, textTransform: "none" }}>— for ACH form</span></label>
             <input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" style={inputStyle} />
           </div>
 
@@ -1227,8 +1227,8 @@ function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
         </div>
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ padding: "10px 18px", background: "transparent", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 14, cursor: "pointer" }}>Cancel</button>
-          <button onClick={handleSave} disabled={saving} style={{ padding: "10px 20px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+          <button onClick={onClose} style={{ padding: "10px 18px", background: "transparent", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: "10px 20px", background: "#2C1C0E", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
             {saving ? "Saving…" : "Save Changes"}
           </button>
         </div>
@@ -1247,7 +1247,7 @@ const WALKTHROUGH_STEPS = [
     title: "Start with the basics",
     body: "Enter the event name, dates, site selection organization, and your venue. This is the foundation of your analysis.",
     tip: "The site selection org is whoever chose your city — could be a national sports governing body, a trade association, or the event organizer themselves.",
-    color: "#c8b97a",
+    color: "#D4784A",
   },
   {
     step: "02",
@@ -1307,10 +1307,10 @@ function WalkthroughOverlay({ onClose, setTab }) {
       backdropFilter: "blur(4px)",
     }}>
       <div style={{
-        background: "#1a1814",
+        background: "#271910",
         border: `1px solid ${current.color}44`,
         borderTop: `3px solid ${current.color}`,
-        borderRadius: 8,
+        borderRadius: 14,
         padding: "40px 36px",
         maxWidth: 520,
         width: "100%",
@@ -1321,7 +1321,7 @@ function WalkthroughOverlay({ onClose, setTab }) {
           {WALKTHROUGH_STEPS.map((_, i) => (
             <div key={i} style={{
               height: 3, flex: 1, borderRadius: 2,
-              background: i <= step ? current.color : "#2a2720",
+              background: i <= step ? current.color : "#3E2F20",
               transition: "background .3s",
             }} />
           ))}
@@ -1330,20 +1330,20 @@ function WalkthroughOverlay({ onClose, setTab }) {
         <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: current.color, marginBottom: 8, letterSpacing: ".1em" }}>
           STEP {current.step} OF 05
         </div>
-        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 600, color: "#f5f0e8", marginBottom: 14, lineHeight: 1.3 }}>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 24, fontWeight: 600, color: "#F2E8D6", marginBottom: 14, lineHeight: 1.3 }}>
           {current.title}
         </div>
-        <p style={{ fontSize: 14.5, color: "#9e9890", lineHeight: 1.7, margin: "0 0 20px" }}>
+        <p style={{ fontSize: 14.5, color: "#9E8E7C", lineHeight: 1.7, margin: "0 0 20px" }}>
           {current.body}
         </p>
         <div style={{
-          background: "#0f0e0c",
-          border: "1px solid #2a2720",
+          background: "#1C1208",
+          border: "1px solid #3E2F20",
           borderLeft: `3px solid ${current.color}`,
-          borderRadius: 4,
+          borderRadius: 10,
           padding: "12px 16px",
           fontSize: 13,
-          color: "#6b6660",
+          color: "#7A6A58",
           lineHeight: 1.6,
           marginBottom: 28,
         }}>
@@ -1353,7 +1353,7 @@ function WalkthroughOverlay({ onClose, setTab }) {
         <div style={{ display: "flex", gap: 10, justifyContent: "space-between", alignItems: "center" }}>
           <button
             onClick={onClose}
-            style={{ fontSize: 12.5, color: "#4a4740", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+            style={{ fontSize: 12.5, color: "#6B5645", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
           >
             Skip walkthrough
           </button>
@@ -1361,14 +1361,14 @@ function WalkthroughOverlay({ onClose, setTab }) {
             {step > 0 && (
               <button
                 onClick={() => setStep(step - 1)}
-                style={{ padding: "10px 18px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#9e9890", fontSize: 13.5, cursor: "pointer" }}
+                style={{ padding: "10px 18px", background: "transparent", border: "1px solid #3E2F20", borderRadius: 10, color: "#9E8E7C", fontSize: 13.5, cursor: "pointer" }}
               >
                 ← Back
               </button>
             )}
             <button
               onClick={handleNext}
-              style={{ padding: "10px 24px", background: current.color, color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+              style={{ padding: "10px 24px", background: current.color, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
             >
               {isLast ? "Start analyzing →" : "Next →"}
             </button>
@@ -1467,8 +1467,8 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
     display: "flex", alignItems: "flex-start", justifyContent: "flex-start",
   };
   const cardStyle = {
-    background: "#1a1814", width: 320, height: "100vh",
-    borderRight: "1px solid #2a2720", overflowY: "auto" as const,
+    background: "#271910", width: 320, height: "100vh",
+    borderRight: "1px solid #3E2F20", overflowY: "auto" as const,
     padding: "24px 20px",
   };
 
@@ -1476,32 +1476,32 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
     <div style={panelStyle} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div style={cardStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 600, color: "#f5f0e8" }}>Team Management</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#6b6660", cursor: "pointer", fontSize: 18 }}>✕</button>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 600, color: "#F2E8D6" }}>Team Management</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#7A6A58", cursor: "pointer", fontSize: 18 }}>✕</button>
         </div>
 
         {actionMsg && (
-          <div style={{ padding: "8px 12px", background: "#059669", color: "#fff", borderRadius: 4, fontSize: 12.5, marginBottom: 16 }}>{actionMsg}</div>
+          <div style={{ padding: "8px 12px", background: "#059669", color: "#fff", borderRadius: 10, fontSize: 12.5, marginBottom: 16 }}>{actionMsg}</div>
         )}
 
         {/* Team members list */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", marginBottom: 12 }}>Team Members</div>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#7A6A58", marginBottom: 12 }}>Team Members</div>
           {loading ? (
-            <div style={{ fontSize: 13, color: "#6b6660" }}>Loading…</div>
+            <div style={{ fontSize: 13, color: "#7A6A58" }}>Loading…</div>
           ) : members.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#6b6660" }}>No members yet.</div>
+            <div style={{ fontSize: 13, color: "#7A6A58" }}>No members yet.</div>
           ) : members.map((m) => (
-            <div key={m.id} style={{ padding: "12px 14px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, marginBottom: 8 }}>
+            <div key={m.id} style={{ padding: "12px 14px", background: "#1C1208", border: "1px solid #3E2F20", borderRadius: 10, marginBottom: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: m.is_active ? "#f5f0e8" : "#4a4740" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: m.is_active ? "#F2E8D6" : "#6B5645" }}>
                     {m.name}
-                    {m.is_admin && <span style={{ marginLeft: 6, fontSize: 10, background: "#c8b97a22", color: "#c8b97a", border: "1px solid #c8b97a33", borderRadius: 3, padding: "1px 6px" }}>Admin</span>}
+                    {m.is_admin && <span style={{ marginLeft: 6, fontSize: 10, background: "#D4784A22", color: "#D4784A", border: "1px solid #D4784A33", borderRadius: 3, padding: "1px 6px" }}>Admin</span>}
                     {!m.is_active && <span style={{ marginLeft: 6, fontSize: 10, background: "#dc262622", color: "#f87171", border: "1px solid #dc262633", borderRadius: 3, padding: "1px 6px" }}>Inactive</span>}
                   </div>
-                  {m.title && <div style={{ fontSize: 11.5, color: "#6b6660", marginTop: 2 }}>{m.title}</div>}
-                  <div style={{ fontSize: 11, color: "#4a4740", marginTop: 3 }}>
+                  {m.title && <div style={{ fontSize: 11.5, color: "#7A6A58", marginTop: 2 }}>{m.title}</div>}
+                  <div style={{ fontSize: 11, color: "#6B5645", marginTop: 3 }}>
                     Last seen {m.last_seen ? new Date(m.last_seen).toLocaleDateString() : "never"}
                   </div>
                 </div>
@@ -1517,11 +1517,11 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
                       </button>
                     )}
                     {!m.is_admin ? (
-                      <button onClick={() => doAction("promote", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #c8b97a", borderRadius: 3, color: "#c8b97a", cursor: "pointer" }}>
+                      <button onClick={() => doAction("promote", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #D4784A", borderRadius: 3, color: "#D4784A", cursor: "pointer" }}>
                         Make Admin
                       </button>
                     ) : (
-                      <button onClick={() => doAction("demote", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #6b6660", borderRadius: 3, color: "#9ca3af", cursor: "pointer" }}>
+                      <button onClick={() => doAction("demote", m.id)} style={{ fontSize: 11, padding: "3px 8px", background: "transparent", border: "1px solid #7A6A58", borderRadius: 3, color: "#9A8E7E", cursor: "pointer" }}>
                         Remove Admin
                       </button>
                     )}
@@ -1533,29 +1533,29 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
         </div>
 
         {/* Invite section */}
-        <div style={{ borderTop: "1px solid #2a2720", paddingTop: 20, marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", marginBottom: 12 }}>Invite Team Members</div>
-          <p style={{ fontSize: 12.5, color: "#6b6660", lineHeight: 1.6, marginBottom: 12 }}>
+        <div style={{ borderTop: "1px solid #3E2F20", paddingTop: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#7A6A58", marginBottom: 12 }}>Invite Team Members</div>
+          <p style={{ fontSize: 12.5, color: "#7A6A58", lineHeight: 1.6, marginBottom: 12 }}>
             Share this pre-written email with anyone you want to add. It includes the tool link and access code.
           </p>
           {copyMsg && <div style={{ fontSize: 12.5, color: "#4ade80", marginBottom: 8 }}>{copyMsg}</div>}
-          <div style={{ background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, padding: "12px 14px", fontSize: 12, color: "#6b6660", fontFamily: "monospace", lineHeight: 1.7, marginBottom: 10, whiteSpace: "pre-wrap", maxHeight: 180, overflowY: "auto" }}>
+          <div style={{ background: "#1C1208", border: "1px solid #3E2F20", borderRadius: 10, padding: "12px 14px", fontSize: 12, color: "#7A6A58", fontFamily: "monospace", lineHeight: 1.7, marginBottom: 10, whiteSpace: "pre-wrap", maxHeight: 180, overflowY: "auto" }}>
             {inviteEmail}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={copyInvite} style={{ flex: 1, padding: "9px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={copyInvite} style={{ flex: 1, padding: "9px", background: "#D4784A", color: "#fff", border: "none", borderRadius: 10, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
               Copy Email
             </button>
-            <button onClick={emailInvite} style={{ flex: 1, padding: "9px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#9e9890", fontSize: 12.5, cursor: "pointer" }}>
+            <button onClick={emailInvite} style={{ flex: 1, padding: "9px", background: "transparent", border: "1px solid #3E2F20", borderRadius: 10, color: "#9E8E7C", fontSize: 12.5, cursor: "pointer" }}>
               Open in Mail
             </button>
           </div>
         </div>
 
         {/* Change passcode */}
-        <div style={{ borderTop: "1px solid #2a2720", paddingTop: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#6b6660", marginBottom: 12 }}>Access Code</div>
-          <p style={{ fontSize: 12.5, color: "#6b6660", lineHeight: 1.6, marginBottom: 12 }}>
+        <div style={{ borderTop: "1px solid #3E2F20", paddingTop: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".1em", color: "#7A6A58", marginBottom: 12 }}>Access Code</div>
+          <p style={{ fontSize: 12.5, color: "#7A6A58", lineHeight: 1.6, marginBottom: 12 }}>
             Changing the access code locks out anyone with the old code. Share the new code with current team members.
           </p>
           {passcodeMsg && <div style={{ fontSize: 12.5, color: "#4ade80", marginBottom: 10 }}>{passcodeMsg}</div>}
@@ -1566,13 +1566,13 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
                 onChange={(e) => setNewPasscode(e.target.value)}
                 placeholder="New access code"
                 type="password"
-                style={{ flex: 1, padding: "8px 10px", background: "#0f0e0c", border: "1px solid #2a2720", borderRadius: 4, color: "#f5f0e8", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                style={{ flex: 1, padding: "8px 10px", background: "#1C1208", border: "1px solid #3E2F20", borderRadius: 10, color: "#F2E8D6", fontSize: 13, outline: "none", fontFamily: "inherit" }}
               />
-              <button onClick={handlePasscodeChange} style={{ padding: "8px 12px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Save</button>
-              <button onClick={() => setChangingPasscode(false)} style={{ padding: "8px 10px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#6b6660", fontSize: 12.5, cursor: "pointer" }}>✕</button>
+              <button onClick={handlePasscodeChange} style={{ padding: "8px 12px", background: "#D4784A", color: "#fff", border: "none", borderRadius: 10, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Save</button>
+              <button onClick={() => setChangingPasscode(false)} style={{ padding: "8px 10px", background: "transparent", border: "1px solid #3E2F20", borderRadius: 10, color: "#7A6A58", fontSize: 12.5, cursor: "pointer" }}>✕</button>
             </div>
           ) : (
-            <button onClick={() => setChangingPasscode(true)} style={{ width: "100%", padding: "10px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, color: "#9e9890", fontSize: 13, cursor: "pointer" }}>
+            <button onClick={() => setChangingPasscode(true)} style={{ width: "100%", padding: "10px", background: "transparent", border: "1px solid #3E2F20", borderRadius: 10, color: "#9E8E7C", fontSize: 13, cursor: "pointer" }}>
               Change Access Code
             </button>
           )}
@@ -1588,7 +1588,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
     <aside style={styles.sidebar} className={`etf-sidebar${isOpen ? " open" : ""}`}>
       <div style={styles.brand} onClick={onHome}>
         {orgData?.logoUrl ? (
-          <img src={orgData.logoUrl} alt={orgData.name} style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 4, background: "#fff", padding: 2 }} onError={(e) => { e.target.style.display = 'none'; }} />
+          <img src={orgData.logoUrl} alt={orgData.name} style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 10, background: "#fff", padding: 2 }} onError={(e) => { e.target.style.display = 'none'; }} />
         ) : (
           <div style={styles.brandMark}>ETF</div>
         )}
@@ -1627,7 +1627,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
               {e.firstDay ? fmtDate(e.firstDay) : "No date"} · <StatusPill status={e.status} />
             </div>
             {e.createdBy && (
-              <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 2 }}>
+              <div style={{ fontSize: 10.5, color: "#9A8E7E", marginTop: 2 }}>
                 Added by {e.createdBy}
               </div>
             )}
@@ -1660,8 +1660,8 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
       </div>
 
       <div style={styles.sidebarFooter}>
-        <div style={{ marginBottom: 6, fontSize: 12, color: "#6b6660" }}>
-          {saveStatus === "saving" && <span style={{ color: "#d97706" }}>⟳ Saving…</span>}
+        <div style={{ marginBottom: 6, fontSize: 12, color: "#7A6A58" }}>
+          {saveStatus === "saving" && <span style={{ color: "#D4784A" }}>⟳ Saving…</span>}
           {saveStatus === "saved"  && <span style={{ color: "#059669" }}>✓ Saved</span>}
           {saveStatus === "error"  && <span style={{ color: "#dc2626" }}>✗ Save failed — check your connection</span>}
           {!saveStatus && <span style={{ color: "#059669" }}>● Shared team database</span>}
@@ -1669,15 +1669,15 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
 
         {/* Name + admin badge */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-          {teamMember && <span style={{ color: "#1a1613", fontWeight: 600, fontSize: 13 }}>{teamMember}</span>}
+          {teamMember && <span style={{ color: "#2C1C0E", fontWeight: 600, fontSize: 13 }}>{teamMember}</span>}
           {memberRecord?.is_admin && (
-            <span style={{ fontSize: 10, fontWeight: 700, background: "#c8b97a", color: "#0f0e0c", borderRadius: 3, padding: "1px 6px", textTransform: "uppercase", letterSpacing: ".06em" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, background: "#D4784A", color: "#fff", borderRadius: 3, padding: "1px 6px", textTransform: "uppercase", letterSpacing: ".06em" }}>
               Admin
             </span>
           )}
         </div>
         {typeof window !== "undefined" && localStorage.getItem("etf_team_title") && (
-          <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
+          <div style={{ color: "#9A8E7E", fontSize: 11, marginBottom: 8 }}>
             {localStorage.getItem("etf_team_title")}
           </div>
         )}
@@ -1686,7 +1686,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
         {memberRecord?.is_admin && (
           <button
             onClick={onOpenTeam}
-            style={{ width: "100%", padding: "8px 12px", background: "#1a1613", color: "#c8b97a", border: "1px solid #c8b97a33", borderRadius: 4, fontSize: 12.5, fontWeight: 600, cursor: "pointer", marginBottom: 8, textAlign: "left", display: "flex", alignItems: "center", gap: 6 }}
+            style={{ width: "100%", padding: "8px 12px", background: "#2C1C0E", color: "#D4784A", border: "1px solid #D4784A33", borderRadius: 10, fontSize: 12.5, fontWeight: 600, cursor: "pointer", marginBottom: 8, textAlign: "left", display: "flex", alignItems: "center", gap: 6 }}
           >
             <span>⚙</span> Manage Team & Access
           </button>
@@ -1694,10 +1694,10 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
 
         {/* Links row */}
         <div style={{ display: "flex", gap: 10, fontSize: 11, flexWrap: "wrap" }}>
-          <button onClick={onManageVenues} style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+          <button onClick={onManageVenues} style={{ fontSize: 11, color: "#9A8E7E", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
             Org settings
           </button>
-          <span style={{ color: "#2a2720" }}>·</span>
+          <span style={{ color: "#3E2F20" }}>·</span>
           <button
             onClick={() => {
               localStorage.removeItem("etf_authed");
@@ -1705,7 +1705,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
               localStorage.removeItem("etf_member_id");
               window.location.reload();
             }}
-            style={{ fontSize: 11, color: "#9ca3af", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+            style={{ fontSize: 11, color: "#9A8E7E", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
           >
             Sign out
           </button>
@@ -1717,7 +1717,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
 
 function StatusPill({ status }) {
   const colors = {
-    analysis: { bg: "#fef3c7", fg: "#92400e", label: "Analysis" },
+    analysis: { bg: "#FDE8D8", fg: "#9A572D", label: "Analysis" },
     application: { bg: "#dbeafe", fg: "#1e40af", label: "Application" },
     approved: { bg: "#d1fae5", fg: "#065f46", label: "Approved" },
     "post-event": { bg: "#ede9fe", fg: "#5b21b6", label: "Post-Event" },
@@ -1830,9 +1830,9 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
           <div style={{
             marginTop: 14,
             padding: "10px 16px",
-            background: "#fef3c7",
+            background: "#FDE8D8",
             border: "1px solid #fcd34d",
-            borderLeft: "3px solid #d97706",
+            borderLeft: "3px solid #D4784A",
             borderRadius: 3,
             fontSize: 12.5,
             color: "#78350f",
@@ -1855,7 +1855,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
       {/* Intake — moved to top, most important action */}
       <section style={{ marginBottom: 40 }}>
         {/* Share card */}
-        <div style={{ background: "#1a1613", borderRadius: 8, padding: "24px 28px", marginBottom: 20, display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
+        <div style={{ background: "#2C1C0E", borderRadius: 14, padding: "24px 28px", marginBottom: 20, display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" }}>
           {/* QR Code */}
           <div style={{ flexShrink: 0 }}>
             <img
@@ -1863,23 +1863,23 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
               alt="QR code for intake form"
               width={120}
               height={120}
-              style={{ borderRadius: 6, display: "block" }}
+              style={{ borderRadius: 12, display: "block" }}
             />
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "#c8b97a", marginBottom: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".12em", color: "#D4784A", marginBottom: 6 }}>
               Event Organizer Intake Form
             </div>
-            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#f5f0e8", marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#F2E8D6", marginBottom: 8 }}>
               Share with event organizers
             </div>
-            <div style={{ fontSize: 13.5, color: "#9e9890", lineHeight: 1.6, marginBottom: 16 }}>
+            <div style={{ fontSize: 13.5, color: "#9E8E7C", lineHeight: 1.6, marginBottom: 16 }}>
               Organizers scan the QR code or visit the link to submit their event details. Submissions land directly in your pipeline for review — no manual data entry needed.
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button
                 onClick={() => { navigator.clipboard?.writeText(intakeUrl); }}
-                style={{ padding: "9px 18px", background: "#c8b97a", color: "#0f0e0c", border: "none", borderRadius: 4, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+                style={{ padding: "9px 18px", background: "#D4784A", color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
               >
                 Copy Link
               </button>
@@ -1889,7 +1889,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                   const body = encodeURIComponent(`Hi,\n\nWe'd love to evaluate your event for Texas Events Trust Fund eligibility. Please complete our quick intake form:\n\n${intakeUrl}\n\nIt takes about 5 minutes and helps us determine if your event qualifies for funding support.\n\nLet us know if you have any questions!`);
                   window.open(`mailto:?subject=${subject}&body=${body}`);
                 }}
-                style={{ padding: "9px 18px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, fontSize: 13.5, color: "#9e9890", cursor: "pointer" }}
+                style={{ padding: "9px 18px", background: "transparent", border: "1px solid #3E2F20", borderRadius: 10, fontSize: 13.5, color: "#9E8E7C", cursor: "pointer" }}
               >
                 Email to Organizer
               </button>
@@ -1897,7 +1897,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                 href={intakeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ padding: "9px 18px", background: "transparent", border: "1px solid #2a2720", borderRadius: 4, fontSize: 13.5, color: "#9e9890", textDecoration: "none", display: "inline-block" }}
+                style={{ padding: "9px 18px", background: "transparent", border: "1px solid #3E2F20", borderRadius: 10, fontSize: 13.5, color: "#9E8E7C", textDecoration: "none", display: "inline-block" }}
               >
                 Preview Form ↗
               </a>
@@ -1918,9 +1918,9 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
         </div>
 
         {intakeLoading ? (
-          <div style={{ padding: 24, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Loading…</div>
+          <div style={{ padding: 24, textAlign: "center", color: "#9A8E7E", fontSize: 13 }}>Loading…</div>
         ) : intakeItems.length === 0 ? (
-          <div style={{ padding: "20px 24px", background: "#faf8f4", border: "1px dashed #e8e3db", borderRadius: 4, textAlign: "center", fontSize: 13.5, color: "#9ca3af" }}>
+          <div style={{ padding: "20px 24px", background: "#FBF3E8", border: "1px dashed #DDD0BB", borderRadius: 10, textAlign: "center", fontSize: 13.5, color: "#9A8E7E" }}>
             No pending submissions. Share the intake link with event organizers to get started.
           </div>
         ) : (
@@ -1931,25 +1931,25 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                 : 0;
               const eligTotal = ELIG_KEYS.length;
               return (
-                <div key={item.id} style={{ background: "#fff", border: "1px solid #e8e3db", borderRadius: 6, padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 20 }}>
+                <div key={item.id} style={{ background: "#fff", border: "1px solid #DDD0BB", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 20 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1613", marginBottom: 4 }}>{item.eventName || "Untitled Event"}</div>
-                    <div style={{ fontSize: 12.5, color: "#6b6660", marginBottom: 8 }}>
-                      {item.orgName} · {item.contactName} · <a href={`mailto:${item.contactEmail}`} style={{ color: "#6b6660" }}>{item.contactEmail}</a>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#2C1C0E", marginBottom: 4 }}>{item.eventName || "Untitled Event"}</div>
+                    <div style={{ fontSize: 12.5, color: "#7A6A58", marginBottom: 8 }}>
+                      {item.orgName} · {item.contactName} · <a href={`mailto:${item.contactEmail}`} style={{ color: "#7A6A58" }}>{item.contactEmail}</a>
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12 }}>
                       {item.firstDay && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>📅 {item.firstDay}{item.lastDay ? ` → ${item.lastDay}` : ""}</span>}
                       {item.totalAttendance && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>👥 {item.totalAttendance} attendees</span>}
                       {item.roomNightsNeeded && <span style={{ padding: "2px 8px", background: "#f3f4f6", borderRadius: 10, color: "#374151" }}>🏨 {item.roomNightsNeeded} room nights</span>}
-                      {item.elig && <span style={{ padding: "2px 8px", background: eligPassed >= 3 ? "#d1fae5" : "#fef3c7", borderRadius: 10, color: eligPassed >= 3 ? "#065f46" : "#92400e" }}>Eligibility: {eligPassed}/{eligTotal}</span>}
+                      {item.elig && <span style={{ padding: "2px 8px", background: eligPassed >= 3 ? "#d1fae5" : "#FDE8D8", borderRadius: 10, color: eligPassed >= 3 ? "#065f46" : "#9A572D" }}>Eligibility: {eligPassed}/{eligTotal}</span>}
                     </div>
-                    {item.notes && <div style={{ fontSize: 12.5, color: "#6b6660", marginTop: 8, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{item.notes}"</div>}
+                    {item.notes && <div style={{ fontSize: 12.5, color: "#7A6A58", marginTop: 8, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{item.notes}"</div>}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
                     <button
                       onClick={() => handlePromote(item)}
                       disabled={promoting === item.id}
-                      style={{ padding: "8px 16px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                      style={{ padding: "8px 16px", background: "#2C1C0E", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
                     >
                       {promoting === item.id ? "Adding…" : "→ Add to Pipeline"}
                     </button>
@@ -1957,13 +1957,13 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <button
                           onClick={() => handleDismiss(item)}
-                          style={{ padding: "6px 12px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                          style={{ padding: "6px 12px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
                         >
                           Confirm dismiss
                         </button>
                         <button
                           onClick={() => setConfirmDismissId(null)}
-                          style={{ padding: "6px 12px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 12, cursor: "pointer" }}
+                          style={{ padding: "6px 12px", background: "transparent", color: "#9A8E7E", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 12, cursor: "pointer" }}
                         >
                           Cancel
                         </button>
@@ -1971,7 +1971,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                     ) : (
                       <button
                         onClick={() => setConfirmDismissId(item.id)}
-                        style={{ padding: "8px 16px", background: "transparent", color: "#9ca3af", border: "1px solid #e8e3db", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
+                        style={{ padding: "8px 16px", background: "transparent", color: "#9A8E7E", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 13, cursor: "pointer" }}
                       >
                         Dismiss
                       </button>
@@ -2083,33 +2083,33 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; color: #1a1613; background: #fff; padding: 48px; font-size: 13px; line-height: 1.5; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #1a1613; }
+  body { font-family: 'Inter', sans-serif; color: #2C1C0E; background: #fff; padding: 48px; font-size: 13px; line-height: 1.5; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #2C1C0E; }
   .header-left h1 { font-family: 'Fraunces', Georgia, serif; font-size: 28px; font-weight: 600; margin-bottom: 4px; }
-  .header-left p { font-size: 13px; color: #6b6660; }
+  .header-left p { font-size: 13px; color: #7A6A58; }
   .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
   .badge-pursue { background: #d1fae5; color: #065f46; }
-  .badge-conditional { background: #fef3c7; color: #92400e; }
+  .badge-conditional { background: #FDE8D8; color: #9A572D; }
   .badge-strong { background: #dbeafe; color: #1e40af; }
   .badge-strategic { background: #ede9fe; color: #5b21b6; }
   .badge-no { background: #fee2e2; color: #991b1b; }
   .section { margin-bottom: 28px; }
-  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #9ca3af; margin-bottom: 12px; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #9A8E7E; margin-bottom: 12px; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  .stat-box { background: #faf8f4; border: 1px solid #e8e3db; border-radius: 4px; padding: 14px 16px; }
-  .stat-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+  .stat-box { background: #FBF3E8; border: 1px solid #DDD0BB; border-radius: 4px; padding: 14px 16px; }
+  .stat-label { font-size: 11px; color: #9A8E7E; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
   .stat-value { font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 600; }
-  .stat-value.gold { color: #92400e; }
+  .stat-value.gold { color: #9A572D; }
   .elig-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12.5px; }
   .elig-row:last-child { border-bottom: none; }
   .pass { color: #059669; font-weight: 600; }
   .fail { color: #dc2626; font-weight: 600; }
-  .na { color: #9ca3af; }
+  .na { color: #9A8E7E; }
   .deadline-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #f3f4f6; font-size: 12.5px; }
   .deadline-row:last-child { border-bottom: none; }
   .deadline-date { font-weight: 600; color: #374151; }
-  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e8e3db; display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; }
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #DDD0BB; display: flex; justify-content: space-between; font-size: 11px; color: #9A8E7E; }
   @media print { body { padding: 32px; } }
 </style>
 </head>
@@ -2121,7 +2121,7 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
     </div>
     <div>
       <div class="badge badge-${decision.recommendation === 'DO NOT PURSUE' ? 'no' : decision.recommendation === 'STRATEGIC PRIORITY' ? 'strategic' : decision.recommendation === 'STRONG TARGET' ? 'strong' : decision.recommendation === 'PURSUE WITH CONDITIONS' ? 'conditional' : 'pursue'}">${decision.recommendation || 'Under Analysis'}</div>
-      <p style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:right">Generated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>
+      <p style="font-size:11px;color:#9A8E7E;margin-top:6px;text-align:right">Generated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>
     </div>
   </div>
 
@@ -2151,14 +2151,14 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
     </div>
   </div>
 
-  <div class="section" style="background:#faf8f4;border:1px solid #e8e3db;border-radius:4px;padding:16px 20px;margin-bottom:28px">
+  <div class="section" style="background:#FBF3E8;border:1px solid #DDD0BB;border-radius:4px;padding:16px 20px;margin-bottom:28px">
     <div class="section-title">Recommendation</div>
     <div style="margin-bottom:12px">
       <span class="badge badge-${decision.recommendation === 'DO NOT PURSUE' ? 'no' : decision.recommendation === 'STRATEGIC PRIORITY' ? 'strategic' : decision.recommendation === 'STRONG TARGET' ? 'strong' : decision.recommendation === 'PURSUE WITH CONDITIONS' ? 'conditional' : 'pursue'}">${decision.recommendation || 'Under Analysis'}</span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e3db;font-size:12.5px"><span>Projected State Share</span><span style="font-weight:600">${fmtMoney(calc.stateTaxTotal || 0)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e3db;font-size:12.5px"><span>Required Local Match</span><span style="font-weight:600">${fmtMoney(calc.requiredLocalMatch || 0)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e3db;font-size:12.5px"><span>Total Fund Value</span><span style="font-weight:700">${fmtMoney(calc.totalFund || 0)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #DDD0BB;font-size:12.5px"><span>Projected State Share</span><span style="font-weight:600">${fmtMoney(calc.stateTaxTotal || 0)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #DDD0BB;font-size:12.5px"><span>Required Local Match</span><span style="font-weight:600">${fmtMoney(calc.requiredLocalMatch || 0)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #DDD0BB;font-size:12.5px"><span>Total Fund Value</span><span style="font-weight:700">${fmtMoney(calc.totalFund || 0)}</span></div>
     <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px"><span>State:Local Ratio</span><span style="font-weight:600">6.25 : 1</span></div>
   </div>
 
@@ -2274,7 +2274,7 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
           <div style={styles.headerStat}>
             <button
               onClick={exportPDF}
-              style={{ padding: "6px 14px", background: "#1a1613", color: "#f5f0e8", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+              style={{ padding: "6px 14px", background: "#2C1C0E", color: "#F2E8D6", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
             >
               ↓ Export PDF
             </button>
@@ -2322,7 +2322,7 @@ function RecPill({ rec }) {
   const map = {
     "STRATEGIC PRIORITY": { bg: "#064e3b", fg: "#ecfdf5" },
     "STRONG PURSUE": { bg: "#065f46", fg: "#d1fae5" },
-    "PURSUE WITH CONDITIONS": { bg: "#92400e", fg: "#fef3c7" },
+    "PURSUE WITH CONDITIONS": { bg: "#9A572D", fg: "#FDE8D8" },
     "DO NOT PURSUE": { bg: "#7f1d1d", fg: "#fee2e2" },
   };
   const c = map[rec] || map["DO NOT PURSUE"];
@@ -2458,8 +2458,8 @@ const windowStyles = {
     gap: 12,
     padding: "18px 22px",
     background: "#fff",
-    border: "1px solid #e8e3db",
-    borderLeft: "4px solid #9ca3af",
+    border: "1px solid #DDD0BB",
+    borderLeft: "4px solid #9A8E7E",
     marginBottom: 20,
     borderRadius: 3,
   },
@@ -2512,14 +2512,14 @@ const windowStyles = {
   },
   countdownLabel: {
     fontSize: 11,
-    color: "#6b6660",
+    color: "#7A6A58",
     textTransform: "uppercase" as const,
     letterSpacing: ".1em",
     fontWeight: 600,
   },
   detail: {
     fontSize: 13,
-    color: "#6b6660",
+    color: "#7A6A58",
     marginTop: 4,
     lineHeight: 1.5,
   },
@@ -2538,14 +2538,14 @@ const windowStyles = {
     display: "flex",
     justifyContent: "space-between",
     fontSize: 10.5,
-    color: "#6b6660",
+    color: "#7A6A58",
     marginTop: 5,
     textTransform: "uppercase" as const,
     letterSpacing: ".05em",
     fontWeight: 500,
   },
   rule: {
-    borderTop: "1px solid #e8e3db",
+    borderTop: "1px solid #DDD0BB",
     paddingTop: 10,
     fontSize: 11.5,
   },
@@ -2553,19 +2553,19 @@ const windowStyles = {
     fontSize: 10,
     textTransform: "uppercase" as const,
     letterSpacing: ".1em",
-    color: "#6b6660",
+    color: "#7A6A58",
     fontWeight: 700,
     marginBottom: 4,
   },
   ruleText: {
     fontSize: 12.5,
-    color: "#1a1613",
+    color: "#2C1C0E",
     fontWeight: 500,
     lineHeight: 1.4,
   },
   ruleCite: {
     fontSize: 10,
-    color: "#9ca3af",
+    color: "#9A8E7E",
     marginTop: 4,
     fontStyle: "italic" as const,
   },
@@ -2579,11 +2579,11 @@ const windowStyles = {
     textColor: "#065f46",
   },
   yellow: {
-    wrap: { borderLeftColor: "#d97706" },
-    light: { background: "#fef3c7", boxShadow: "0 0 0 4px rgba(217, 119, 6, 0.15)" },
-    dot: { background: "#d97706", boxShadow: "0 0 12px rgba(217, 119, 6, 0.6)" },
-    bar: "#d97706",
-    textColor: "#92400e",
+    wrap: { borderLeftColor: "#D4784A" },
+    light: { background: "#FDE8D8", boxShadow: "0 0 0 4px rgba(217, 119, 6, 0.15)" },
+    dot: { background: "#D4784A", boxShadow: "0 0 12px rgba(217, 119, 6, 0.6)" },
+    bar: "#D4784A",
+    textColor: "#9A572D",
   },
   red: {
     wrap: { borderLeftColor: "#dc2626" },
@@ -2593,11 +2593,11 @@ const windowStyles = {
     textColor: "#991b1b",
   },
   black: {
-    wrap: { borderLeftColor: "#1a1613" },
+    wrap: { borderLeftColor: "#2C1C0E" },
     light: { background: "#e5e7eb" },
-    dot: { background: "#1a1613" },
-    bar: "#1a1613",
-    textColor: "#1a1613",
+    dot: { background: "#2C1C0E" },
+    bar: "#2C1C0E",
+    textColor: "#2C1C0E",
   },
   gray: {
     background: "#f2ede5",
@@ -2737,7 +2737,7 @@ function OverviewTab({ event, update, calc, decision, setTab, orgVenues }) {
           <div style={styles.summaryLabel}>Eligibility Checks</div>
           {decision.checks.map((c, i) => (
             <div key={i} style={styles.checkSummary}>
-              {c.pass ? <CheckCircle2 size={16} color="#059669" /> : <XCircle size={16} color={c.critical ? "#dc2626" : "#d97706"} />}
+              {c.pass ? <CheckCircle2 size={16} color="#059669" /> : <XCircle size={16} color={c.critical ? "#dc2626" : "#D4784A"} />}
               <div style={{ flex: 1 }}>
                 <div style={styles.checkSummaryLabel}>{c.label}</div>
                 {c.detail && <div style={styles.checkSummaryDetail}>{c.detail}</div>}
@@ -2823,7 +2823,7 @@ function DecisionTab({ event, update, calc, decision, thresholds = {} }) {
         <div style={styles.thresholdGrid}>
           {[
             { range: `< ${fmtMoney(t.min)}`, label: "Not worth pursuing", color: "#991b1b", bg: "#fee2e2" },
-            { range: `${fmtMoney(t.min)} – ${fmtMoney(t.strong)}`, label: "Pursue with conditions", color: "#92400e", bg: "#fef3c7" },
+            { range: `${fmtMoney(t.min)} – ${fmtMoney(t.strong)}`, label: "Pursue with conditions", color: "#9A572D", bg: "#FDE8D8" },
             { range: `${fmtMoney(t.strong)} – ${fmtMoney(t.strategic)}`, label: "Strong target", color: "#065f46", bg: "#d1fae5" },
             { range: `${fmtMoney(t.strategic)} +`, label: "Strategic priority", color: "#064e3b", bg: "#a7f3d0" },
           ].map((th, i) => {
@@ -2872,7 +2872,7 @@ function recColor(rec) {
   return {
     "STRATEGIC PRIORITY": "#064e3b",
     "STRONG PURSUE": "#065f46",
-    "PURSUE WITH CONDITIONS": "#92400e",
+    "PURSUE WITH CONDITIONS": "#9A572D",
     "DO NOT PURSUE": "#7f1d1d",
   }[rec] || "#999";
 }
@@ -3007,7 +3007,7 @@ function CalculatorTab({ event, update, calc }) {
             <input type="number" style={styles.input} value={event.calc?.mix?.dayVisitor || 0} onChange={(e) => setMix("dayVisitor", e.target.value)} />
           </Field>
         </div>
-        <div style={{ ...styles.mixBanner, background: mixTotal === 100 ? "#f0fdf4" : "#fef3c7" }}>
+        <div style={{ ...styles.mixBanner, background: mixTotal === 100 ? "#f0fdf4" : "#FDE8D8" }}>
           {mixTotal === 100 ? "✓ " : "⚠ "} Mix totals {mixTotal}% {mixTotal !== 100 && "— should equal 100%"}
         </div>
       </Section>
@@ -3146,8 +3146,8 @@ function TimelineTab({ event, update }) {
                 <div style={styles.timelineLeft}>
                   <div style={{
                     ...styles.timelineDot,
-                    background: isEvent ? "#111" : isPast ? "#ccc" : isNow ? "#d97706" : "#fff",
-                    borderColor: isEvent ? "#111" : isNow ? "#d97706" : "#ccc",
+                    background: isEvent ? "#111" : isPast ? "#ccc" : isNow ? "#D4784A" : "#fff",
+                    borderColor: isEvent ? "#111" : isNow ? "#D4784A" : "#ccc",
                   }} />
                   {i < timeline.length - 1 && <div style={styles.timelineLine} />}
                 </div>
@@ -3543,14 +3543,14 @@ Thank you,
       desc: "Official application — updated October 15, 2025. Must be submitted ≥120 days before first event day.",
       url: "https://gov.texas.gov/uploads/files/business/Events_Application.docx",
       tag: "Submit to ETF",
-      tagColor: "#92400e",
+      tagColor: "#9A572D",
     },
     {
       title: "Estimated Attendance Chart",
       desc: "Required attachment to the application — updated September 2025.",
       url: "https://gov.texas.gov/uploads/files/business/Estimated_Attendance_Chart_for_Application.xlsx",
       tag: "Submit to ETF",
-      tagColor: "#92400e",
+      tagColor: "#9A572D",
     },
     {
       title: "Affidavit of Endorsing Entity",
@@ -3606,14 +3606,14 @@ Thank you,
 
       {/* Recommendation banner */}
       {!isEligible ? (
-        <div style={{ padding: "16px 20px", background: "#fef2f2", border: "1px solid #fecaca", borderLeft: "4px solid #dc2626", borderRadius: 4, marginBottom: 24 }}>
+        <div style={{ padding: "16px 20px", background: "#fef2f2", border: "1px solid #fecaca", borderLeft: "4px solid #dc2626", borderRadius: 10, marginBottom: 24 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#991b1b", marginBottom: 4 }}>⛔ DO NOT PURSUE</div>
           <div style={{ fontSize: 13.5, color: "#7f1d1d", lineHeight: 1.6 }}>
             This event does not meet the eligibility or financial threshold requirements. Return to the Decision Framework tab to review which criteria failed before proceeding.
           </div>
         </div>
       ) : (
-        <div style={{ padding: "16px 20px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderLeft: "4px solid #059669", borderRadius: 4, marginBottom: 24 }}>
+        <div style={{ padding: "16px 20px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderLeft: "4px solid #059669", borderRadius: 10, marginBottom: 24 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#065f46", marginBottom: 4 }}>
             ✓ {decision.recommendation} — Ready to apply
           </div>
@@ -3621,7 +3621,7 @@ Thank you,
             Projected ETF value: <strong>{fmtMoney(decision.estimate)}</strong> &nbsp;·&nbsp;
             Application deadline: <strong>{appDeadline ? fmtDate(appDeadline.toISOString().split("T")[0]) : "Set event dates first"}</strong>
             {daysUntilDeadline !== null && (
-              <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 10, fontSize: 12, fontWeight: 600, background: daysUntilDeadline < 14 ? "#dc2626" : daysUntilDeadline < 30 ? "#d97706" : "#059669", color: "#fff" }}>
+              <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 10, fontSize: 12, fontWeight: 600, background: daysUntilDeadline < 14 ? "#dc2626" : daysUntilDeadline < 30 ? "#D4784A" : "#059669", color: "#fff" }}>
                 {daysUntilDeadline > 0 ? `${daysUntilDeadline} days left` : "DEADLINE PASSED"}
               </span>
             )}
@@ -3630,17 +3630,17 @@ Thank you,
       )}
 
       {/* Generate Application Packet */}
-      <div style={{ background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 6, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+      <div style={{ background: "#FBF3E8", border: "1px solid #DDD0BB", borderRadius: 12, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1613", marginBottom: 4 }}>Generate Application Packet</div>
-          <div style={{ fontSize: 13, color: "#6b6660", lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#2C1C0E", marginBottom: 4 }}>Generate Application Packet</div>
+          <div style={{ fontSize: 13, color: "#7A6A58", lineHeight: 1.5 }}>
             Opens a pre-filled reference document with all your event data, plus downloads the Attendance Chart as a CSV.<br />
-            <span style={{ color: "#9ca3af", fontSize: 12 }}>Fill out the ETF Application Profile in Organization Settings for the best results.</span>
+            <span style={{ color: "#9A8E7E", fontSize: 12 }}>Fill out the ETF Application Profile in Organization Settings for the best results.</span>
           </div>
         </div>
         <button
           onClick={generatePacket}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "#1a1613", color: "#fff", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "#2C1C0E", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
         >
           <Download size={15} /> Generate Packet
         </button>
@@ -3650,14 +3650,14 @@ Thank you,
       <Section title="Pre-Submission Checklist" subtitle={`${completedCount} of ${CHECKLIST.length} confirmed`}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {CHECKLIST.map((item, i) => (
-            <label key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: "8px 10px", background: checked[i] ? "#f0fdf4" : "#faf8f4", border: `1px solid ${checked[i] ? "#bbf7d0" : "#e8e3db"}`, borderRadius: 4 }}>
+            <label key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: "8px 10px", background: checked[i] ? "#f0fdf4" : "#FBF3E8", border: `1px solid ${checked[i] ? "#bbf7d0" : "#DDD0BB"}`, borderRadius: 10 }}>
               <input
                 type="checkbox"
                 checked={!!checked[i]}
                 onChange={() => setChecked((prev) => ({ ...prev, [i]: !prev[i] }))}
                 style={{ marginTop: 2, flexShrink: 0 }}
               />
-              <span style={{ fontSize: 13.5, color: checked[i] ? "#065f46" : "#1a1613", lineHeight: 1.5 }}>
+              <span style={{ fontSize: 13.5, color: checked[i] ? "#065f46" : "#2C1C0E", lineHeight: 1.5 }}>
                 {item.critical && <span style={{ fontSize: 10.5, fontWeight: 700, color: "#dc2626", marginRight: 6, textTransform: "uppercase" }}>Statutory</span>}
                 {item.item}
               </span>
@@ -3675,15 +3675,15 @@ Thank you,
               href={doc.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "12px 16px", background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 4, textDecoration: "none", color: "inherit" }}
+              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "12px 16px", background: "#FBF3E8", border: "1px solid #DDD0BB", borderRadius: 10, textDecoration: "none", color: "inherit" }}
             >
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "#1a1613", marginBottom: 3 }}>{doc.title}</div>
-                <div style={{ fontSize: 12.5, color: "#6b6660", lineHeight: 1.5 }}>{doc.desc}</div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: "#2C1C0E", marginBottom: 3 }}>{doc.title}</div>
+                <div style={{ fontSize: 12.5, color: "#7A6A58", lineHeight: 1.5 }}>{doc.desc}</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: doc.tagColor + "22", color: doc.tagColor }}>{doc.tag}</span>
-                <ArrowRight size={14} color="#9ca3af" />
+                <ArrowRight size={14} color="#9A8E7E" />
               </div>
             </a>
           ))}
@@ -3692,15 +3692,15 @@ Thank you,
 
       {/* Email EDT */}
       <Section title="Email EDT" subtitle="Opens your email client with event details pre-filled — review and attach documents before sending">
-        <div style={{ padding: "16px 20px", background: "#faf8f4", border: "1px solid #e8e3db", borderRadius: 4, marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: "#6b6660", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>To</div>
+        <div style={{ padding: "16px 20px", background: "#FBF3E8", border: "1px solid #DDD0BB", borderRadius: 10, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: "#7A6A58", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>To</div>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>eventsfund@gov.texas.gov</div>
-          <div style={{ fontSize: 12, color: "#6b6660", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>Subject</div>
-          <div style={{ fontSize: 13.5, marginBottom: 16, color: "#1a1613" }}>
+          <div style={{ fontSize: 12, color: "#7A6A58", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>Subject</div>
+          <div style={{ fontSize: 13.5, marginBottom: 16, color: "#2C1C0E" }}>
             ETF Application — {event.name || "Untitled Event"}{event.firstDay ? ` — ${fmtDate(event.firstDay)}` : ""}
           </div>
-          <div style={{ fontSize: 12, color: "#6b6660", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>Body preview</div>
-          <div style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-line", background: "#fff", padding: 12, border: "1px solid #e8e3db", borderRadius: 3, maxHeight: 200, overflow: "auto" }}>
+          <div style={{ fontSize: 12, color: "#7A6A58", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>Body preview</div>
+          <div style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-line", background: "#fff", padding: 12, border: "1px solid #DDD0BB", borderRadius: 3, maxHeight: 200, overflow: "auto" }}>
 {`Dear EDT Events Trust Fund Team,
 
 We are submitting an application for Events Trust Fund consideration:
@@ -3716,11 +3716,11 @@ Complete application packet attached.`}
         <div style={{ display: "flex", gap: 10 }}>
           <a
             href={`mailto:eventsfund@gov.texas.gov?subject=${emailSubject}&body=${emailBody}`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "#1a1613", color: "#fff", borderRadius: 4, textDecoration: "none", fontSize: 14, fontWeight: 600 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "#2C1C0E", color: "#fff", borderRadius: 10, textDecoration: "none", fontSize: 14, fontWeight: 600 }}
           >
             <ArrowRight size={14} /> Open in Email Client
           </a>
-          <div style={{ fontSize: 12, color: "#9ca3af", display: "flex", alignItems: "center", lineHeight: 1.4 }}>
+          <div style={{ fontSize: 12, color: "#9A8E7E", display: "flex", alignItems: "center", lineHeight: 1.4 }}>
             ⚠ Always attach your full application packet before sending. This tool does not transmit files to EDT.
           </div>
         </div>
@@ -3740,7 +3740,7 @@ Complete application packet attached.`}
             "Affidavits not notarized",
             "Attendance Certification not submitted within 45 days of last event day",
           ].map((reason, i) => (
-            <div key={i} style={{ display: "flex", gap: 10, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 4, fontSize: 13 }}>
+            <div key={i} style={{ display: "flex", gap: 10, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, fontSize: 13 }}>
               <span style={{ color: "#dc2626", flexShrink: 0 }}>✗</span>
               <span style={{ color: "#7f1d1d", lineHeight: 1.5 }}>{reason}</span>
             </div>
@@ -3889,9 +3889,9 @@ function ReferenceTab() {
             <li><strong>§ 480.0204</strong> — Allowable expenses</li>
             <li><strong>§ 480.0206</strong> — Prohibited disbursements</li>
           </ul>
-          <p>Full statute: <a href="https://statutes.capitol.texas.gov/Docs/GV/htm/GV.480.htm" target="_blank" rel="noopener noreferrer" style={{ color: "#92400e" }}>statutes.capitol.texas.gov</a></p>
+          <p>Full statute: <a href="https://statutes.capitol.texas.gov/Docs/GV/htm/GV.480.htm" target="_blank" rel="noopener noreferrer" style={{ color: "#9A572D" }}>statutes.capitol.texas.gov</a></p>
           <p>Administrative rules: Texas Administrative Code, Title 10, Part 5, Chapter 184.1 – 184.51</p>
-          <p>Program page: <a href="https://gov.texas.gov/business/page/event-trust-funds-program" target="_blank" rel="noopener noreferrer" style={{ color: "#92400e" }}>gov.texas.gov</a></p>
+          <p>Program page: <a href="https://gov.texas.gov/business/page/event-trust-funds-program" target="_blank" rel="noopener noreferrer" style={{ color: "#9A572D" }}>gov.texas.gov</a></p>
         </div>
       ),
     },
@@ -4108,7 +4108,7 @@ const venueStyles = {
     alignItems: "center",
     gap: 4,
     padding: "4px 4px 4px 10px",
-    background: "#fef3c7",
+    background: "#FDE8D8",
     color: "#78350f",
     fontSize: 12,
     fontWeight: 500,
@@ -4125,7 +4125,7 @@ const venueStyles = {
     cursor: "pointer",
   },
   list: {
-    border: "1px solid #e8e3db",
+    border: "1px solid #DDD0BB",
     borderRadius: 3,
     background: "#fff",
     maxHeight: 280,
@@ -4147,17 +4147,17 @@ const venueStyles = {
   checkbox: {
     width: 14,
     height: 14,
-    accentColor: "#92400e",
+    accentColor: "#9A572D",
     cursor: "pointer",
     margin: 0,
   },
-  label: { flex: 1, color: "#1a1613" },
+  label: { flex: 1, color: "#2C1C0E" },
   defaultTag: {
     fontSize: 9.5,
     textTransform: "uppercase",
     letterSpacing: ".08em",
-    color: "#92400e",
-    background: "#fef3c7",
+    color: "#9A572D",
+    background: "#FDE8D8",
     padding: "2px 6px",
     borderRadius: 2,
     fontWeight: 600,
@@ -4165,7 +4165,7 @@ const venueStyles = {
   removeBtn: {
     background: "transparent",
     border: "none",
-    color: "#9ca3af",
+    color: "#9A8E7E",
     padding: 4,
     display: "flex",
     alignItems: "center",
@@ -4174,7 +4174,7 @@ const venueStyles = {
   addInput: {
     flex: 1,
     padding: "8px 12px",
-    border: "1px solid #e8e3db",
+    border: "1px solid #DDD0BB",
     background: "#fff",
     fontSize: 13,
     borderRadius: 3,
@@ -4182,8 +4182,8 @@ const venueStyles = {
   },
   addBtn: {
     padding: "8px 14px",
-    background: "#1a1613",
-    color: "#faf8f4",
+    background: "#2C1C0E",
+    color: "#FBF3E8",
     border: "none",
     fontSize: 12.5,
     fontWeight: 600,
@@ -4209,7 +4209,7 @@ function GlobalStyles() {
       }
       input[type="date"]:focus, input[type="number"]:focus, input[type="text"]:focus, select:focus, textarea:focus {
         outline: none;
-        border-color: #92400e;
+        border-color: #9A572D;
         box-shadow: 0 0 0 3px rgba(146, 64, 14, .12);
       }
       button:hover { cursor: pointer; }
@@ -4261,7 +4261,7 @@ function GlobalStyles() {
         top: 0;
         z-index: 30;
         background: #fff;
-        border-bottom: 1px solid #e8e3db;
+        border-bottom: 1px solid #DDD0BB;
         padding: 12px 16px;
         align-items: center;
         justify-content: space-between;
@@ -4274,7 +4274,7 @@ function GlobalStyles() {
         cursor: pointer;
         display: flex;
         align-items: center;
-        color: #1a1613;
+        color: #2C1C0E;
       }
 
       /* Two-column grids → single column on mobile */
@@ -4360,12 +4360,12 @@ function GlobalStyles() {
 // ————————————————————————————————————————————————————————————————
 const SERIF = `'Fraunces', Georgia, serif`;
 const SANS = `'Inter', -apple-system, BlinkMacSystemFont, sans-serif`;
-const BG = "#faf8f4";
-const INK = "#1a1613";
-const MUTED = "#6b6660";
-const LINE = "#e8e3db";
-const ACCENT = "#92400e";
-const ACCENT_SOFT = "#fef3c7";
+const BG = "#F2E8D6";
+const INK = "#2C1C0E";
+const MUTED = "#7A6A58";
+const LINE = "#DDD0BB";
+const ACCENT = "#9A572D";
+const ACCENT_SOFT = "#FDE8D8";
 
 const styles = {
   app: {
@@ -4386,8 +4386,8 @@ const styles = {
   // Sidebar
   sidebar: {
     width: 260,
-    background: "#fff",
-    borderRight: `1px solid ${LINE}`,
+    background: "#2C1C0E",
+    borderRight: "none",
     display: "flex",
     flexDirection: "column",
     position: "sticky",
@@ -4400,24 +4400,26 @@ const styles = {
     padding: "24px 20px 20px",
     display: "flex", gap: 12, alignItems: "center",
     cursor: "pointer",
-    borderBottom: `1px solid ${LINE}`,
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
   },
   brandMark: {
     width: 36, height: 36,
-    background: INK,
-    color: BG,
+    background: "#D4784A",
+    color: "#fff",
     display: "flex", alignItems: "center", justifyContent: "center",
     fontFamily: SERIF, fontWeight: 700, fontSize: 14,
     letterSpacing: ".5px",
+    borderRadius: 14,
   },
-  brandTitle: { fontFamily: SERIF, fontSize: 17, fontWeight: 600, letterSpacing: "-.01em" },
-  brandSub: { fontSize: 10.5, color: MUTED, textTransform: "uppercase", letterSpacing: ".1em" },
+  brandTitle: { fontFamily: SERIF, fontSize: 17, fontWeight: 600, letterSpacing: "-.01em", color: "#F2E8D6" },
+  brandSub: { fontSize: 10.5, color: "#9E8E7C", textTransform: "uppercase", letterSpacing: ".1em" },
   newBtn: {
     margin: "16px 20px 0",
     padding: "10px 14px",
-    background: INK,
-    color: BG,
+    background: "#D4784A",
+    color: "#fff",
     border: "none",
+    borderRadius: 10,
     fontSize: 12.5,
     fontWeight: 600,
     letterSpacing: ".02em",
@@ -4427,32 +4429,33 @@ const styles = {
     display: "flex", justifyContent: "space-between",
     padding: "20px 20px 8px",
     fontSize: 10.5,
-    color: MUTED,
+    color: "#9E8E7C",
     textTransform: "uppercase",
     letterSpacing: ".1em",
     fontWeight: 600,
   },
   count: {
-    background: LINE,
+    background: "rgba(255,255,255,0.12)",
+    color: "#F2E8D6",
     padding: "1px 7px",
     borderRadius: 10,
     fontSize: 10,
   },
   eventList: { flex: 1, overflow: "auto", padding: "0 8px" },
-  emptyList: { padding: 16, color: MUTED, fontSize: 12, fontStyle: "italic" },
+  emptyList: { padding: 16, color: "#9E8E7C", fontSize: 12, fontStyle: "italic" },
   eventItem: {
     position: "relative",
     padding: "10px 12px",
-    borderRadius: 6,
+    borderRadius: 14,
     marginBottom: 2,
     cursor: "pointer",
     transition: "background .15s",
   },
-  eventItemActive: { background: ACCENT_SOFT },
+  eventItemActive: { background: "rgba(212,120,74,0.25)" },
   eventItemName: {
     fontSize: 13,
     fontWeight: 500,
-    color: INK,
+    color: "#F2E8D6",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -4460,7 +4463,7 @@ const styles = {
   },
   eventItemMeta: {
     fontSize: 11,
-    color: MUTED,
+    color: "#9E8E7C",
     marginTop: 3,
     display: "flex",
     gap: 6,
@@ -4472,20 +4475,20 @@ const styles = {
     top: 8,
     background: "transparent",
     border: "none",
-    color: MUTED,
+    color: "#9E8E7C",
     padding: 4,
     opacity: 0.5,
   },
   sidebarFooter: {
     padding: "12px 20px",
     fontSize: 10.5,
-    color: MUTED,
-    borderTop: `1px solid ${LINE}`,
+    color: "#9E8E7C",
+    borderTop: "1px solid rgba(255,255,255,0.08)",
     display: "flex",
     flexDirection: "column",
     gap: 4,
     flexShrink: 0,
-    background: "#fff",
+    background: "#2C1C0E",
   },
 
   // Main
@@ -4528,6 +4531,7 @@ const styles = {
   statCard: {
     background: "#fff",
     border: `1px solid ${LINE}`,
+    borderRadius: 14,
     padding: "20px 22px",
     display: "flex",
     gap: 14,
@@ -4537,8 +4541,9 @@ const styles = {
     width: 36, height: 36,
     background: ACCENT_SOFT,
     color: ACCENT,
+    borderRadius: 14,
     display: "flex", alignItems: "center", justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: 12,
   },
   statLabel: { fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 600, marginBottom: 4 },
   statValue: { fontFamily: SERIF, fontSize: 24, fontWeight: 600, letterSpacing: "-.01em" },
@@ -4661,12 +4666,12 @@ const styles = {
     border: `1px solid ${LINE}`,
     background: "#fff",
     fontWeight: 500,
-    borderRadius: 3,
+    borderRadius: 14,
   },
 
   tabs: {
     display: "flex",
-    gap: 2,
+    gap: 4,
     marginBottom: 32,
     borderBottom: `1px solid ${LINE}`,
     flexWrap: "wrap",
@@ -4676,6 +4681,7 @@ const styles = {
     background: "transparent",
     border: "none",
     borderBottom: `2px solid transparent`,
+    borderRadius: "8px 8px 0 0",
     fontSize: 13,
     color: MUTED,
     fontWeight: 500,
@@ -4686,6 +4692,7 @@ const styles = {
     color: INK,
     borderBottomColor: ACCENT,
     fontWeight: 600,
+    background: "rgba(154,87,45,0.06)",
   },
 
   tabPanel: { paddingBottom: 40 },
@@ -4693,6 +4700,7 @@ const styles = {
   section: {
     background: "#fff",
     border: `1px solid ${LINE}`,
+    borderRadius: 14,
     padding: "24px 26px",
     marginBottom: 20,
   },
@@ -4828,7 +4836,7 @@ const styles = {
   thresholdCard: {
     padding: "16px 14px",
     transition: "transform .2s",
-    borderRadius: 4,
+    borderRadius: 10,
   },
   thresholdRange: { fontFamily: SERIF, fontSize: 18, fontWeight: 700, marginBottom: 4 },
   thresholdLabel: { fontSize: 12, fontWeight: 500 },
@@ -4924,7 +4932,7 @@ const styles = {
   },
   resultCard: {
     padding: "18px 18px",
-    background: "#faf8f4",
+    background: "#FBF3E8",
     border: `1px solid ${LINE}`,
   },
   resultIcon: { color: ACCENT, marginBottom: 8 },
@@ -4933,7 +4941,7 @@ const styles = {
   resultSub: { fontSize: 11.5, color: MUTED, marginTop: 4 },
 
   breakdownTable: {
-    background: "#faf8f4",
+    background: "#FBF3E8",
     padding: "12px 16px",
     marginBottom: 16,
   },
@@ -5072,7 +5080,7 @@ const styles = {
     display: "flex",
     gap: 14,
     padding: "12px 14px",
-    background: "#faf8f4",
+    background: "#FBF3E8",
     marginBottom: 6,
     alignItems: "flex-start",
     borderRadius: 3,
@@ -5130,7 +5138,7 @@ const styles = {
     fontSize: 13,
     lineHeight: 1.45,
   },
-  rulesBox: { background: "#faf8f4", padding: "16px 20px", borderRadius: 3 },
+  rulesBox: { background: "#FBF3E8", padding: "16px 20px", borderRadius: 3 },
   ruleH: { fontFamily: SERIF, fontSize: 15, fontWeight: 600, margin: "12px 0 6px" },
   rulesList: { margin: "4px 0 8px", paddingLeft: 20, fontSize: 13, lineHeight: 1.7 },
 

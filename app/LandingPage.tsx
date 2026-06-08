@@ -13,7 +13,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div style={{ background: "#0a0906", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", color: "#f5f0e8", overflowX: "hidden" }}>
+    <div style={{ background: "#0a0906", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", color: "#F2E8D6", overflowX: "hidden" }}>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600&display=swap');
@@ -53,7 +53,7 @@ export default function LandingPage() {
           display: inline-flex; align-items: center; gap: 8px;
           font-size: 11px; font-weight: 600;
           letter-spacing: .16em;
-          color: #c8b97a;
+          color: #D4784A;
           background: rgba(200,185,122,.1);
           border: 1px solid rgba(200,185,122,.2);
           border-radius: 20px; padding: 6px 14px;
@@ -72,12 +72,12 @@ export default function LandingPage() {
 
         .land-h1 em {
           font-style: italic;
-          color: #c8b97a;
+          color: #D4784A;
         }
 
         .land-lede {
           font-size: clamp(16px, 2vw, 19px);
-          color: #9e9890;
+          color: #9E8E7C;
           line-height: 1.7;
           max-width: 560px;
           margin: 0 auto 44px;
@@ -90,7 +90,7 @@ export default function LandingPage() {
 
         .land-btn-primary {
           padding: 14px 32px;
-          background: #c8b97a;
+          background: #D4784A;
           color: #0a0906;
           border: none; border-radius: 4px;
           font-size: 15px; font-weight: 700;
@@ -104,7 +104,7 @@ export default function LandingPage() {
         .land-btn-secondary {
           padding: 14px 28px;
           background: transparent;
-          color: #9e9890;
+          color: #9E8E7C;
           border: 1px solid rgba(255,255,255,.12);
           border-radius: 4px;
           font-size: 15px; font-weight: 500;
@@ -113,7 +113,7 @@ export default function LandingPage() {
           transition: all .15s;
           font-family: inherit;
         }
-        .land-btn-secondary:hover { border-color: rgba(200,185,122,.4); color: #c8b97a; }
+        .land-btn-secondary:hover { border-color: rgba(200,185,122,.4); color: #D4784A; }
 
         /* Stats bar */
         .land-stats {
@@ -133,11 +133,11 @@ export default function LandingPage() {
         .land-stat-val {
           font-family: 'Fraunces', Georgia, serif;
           font-size: 32px; font-weight: 600;
-          color: #c8b97a; line-height: 1;
+          color: #D4784A; line-height: 1;
           margin-bottom: 6px;
         }
         .land-stat-label {
-          font-size: 12px; color: #6b6660;
+          font-size: 12px; color: #7A6A58;
           text-transform: uppercase; letter-spacing: .1em;
         }
 
@@ -150,7 +150,7 @@ export default function LandingPage() {
         .land-section-eyebrow {
           font-size: 11px; font-weight: 600;
           text-transform: uppercase; letter-spacing: .16em;
-          color: #c8b97a; margin-bottom: 16px;
+          color: #D4784A; margin-bottom: 16px;
         }
 
         .land-section-title {
@@ -161,7 +161,7 @@ export default function LandingPage() {
         }
 
         .land-section-sub {
-          font-size: 17px; color: #9e9890; line-height: 1.7;
+          font-size: 17px; color: #9E8E7C; line-height: 1.7;
           max-width: 520px; margin-bottom: 64px;
         }
 
@@ -177,7 +177,7 @@ export default function LandingPage() {
         .land-step {
           padding: 36px 32px;
           background: rgba(255,255,255,.02);
-          border-top: 2px solid #c8b97a;
+          border-top: 2px solid #D4784A;
           transition: background .2s;
         }
         .land-step:hover { background: rgba(200,185,122,.04); }
@@ -185,18 +185,18 @@ export default function LandingPage() {
         .land-step-num {
           font-family: 'Fraunces', Georgia, serif;
           font-size: 13px; font-weight: 400;
-          color: #c8b97a; margin-bottom: 16px;
+          color: #D4784A; margin-bottom: 16px;
           font-style: italic;
         }
 
         .land-step-title {
           font-size: 17px; font-weight: 600;
-          color: #f5f0e8; margin-bottom: 10px;
+          color: #F2E8D6; margin-bottom: 10px;
           line-height: 1.3;
         }
 
         .land-step-body {
-          font-size: 14px; color: #6b6660; line-height: 1.7;
+          font-size: 14px; color: #7A6A58; line-height: 1.7;
         }
 
         /* Features */
@@ -211,11 +211,11 @@ export default function LandingPage() {
           padding: 28px 28px;
           background: rgba(255,255,255,.02);
           border: 1px solid rgba(255,255,255,.06);
-          border-top: 2px solid #c8b97a;
+          border-top: 2px solid #D4784A;
           border-radius: 6px;
           transition: border-color .2s;
         }
-        .land-feature:hover { border-color: rgba(200,185,122,.4); border-top-color: #c8b97a; }
+        .land-feature:hover { border-color: rgba(200,185,122,.4); border-top-color: #D4784A; }
 
         .land-feature-icon {
           width: 36px; height: 36px;
@@ -227,11 +227,11 @@ export default function LandingPage() {
 
         .land-feature-title {
           font-size: 15px; font-weight: 600;
-          color: #f5f0e8; margin-bottom: 8px;
+          color: #F2E8D6; margin-bottom: 8px;
         }
 
         .land-feature-body {
-          font-size: 13.5px; color: #6b6660; line-height: 1.6;
+          font-size: 13.5px; color: #7A6A58; line-height: 1.6;
         }
 
         /* Divider */
@@ -275,8 +275,8 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className={`land-nav${scrolled ? " scrolled" : ""}`}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: "#c8b97a", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 13, color: "#0a0906" }}>ETF</div>
-          <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 15, fontWeight: 600, color: "#f5f0e8" }}>TX ETF Analysis Tool</span>
+          <div style={{ width: 32, height: 32, background: "#D4784A", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 13, color: "#0a0906" }}>ETF</div>
+          <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 15, fontWeight: 600, color: "#F2E8D6" }}>TX ETF Analysis Tool</span>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <a href="/?signin=1" className="land-btn-secondary" style={{ padding: "9px 20px", fontSize: 13.5 }}>Sign In</a>
@@ -359,15 +359,15 @@ export default function LandingPage() {
       <section className="land-cta-section">
         <div className="land-section-eyebrow" style={{ justifyContent: "center", display: "flex", marginBottom: 20 }}>Get Started Today</div>
         <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(32px, 5vw, 56px)", fontWeight: 600, lineHeight: 1.15, marginBottom: 20, letterSpacing: "-.02em" }}>
-          Your next ETF award<br />starts <em style={{ fontStyle: "italic", color: "#c8b97a" }}>here.</em>
+          Your next ETF award<br />starts <em style={{ fontStyle: "italic", color: "#D4784A" }}>here.</em>
         </h2>
-        <p style={{ fontSize: 17, color: "#9e9890", lineHeight: 1.7, maxWidth: 480, margin: "0 auto 40px" }}>
+        <p style={{ fontSize: 17, color: "#9E8E7C", lineHeight: 1.7, maxWidth: 480, margin: "0 auto 40px" }}>
           Create your organization, add your team, and start analyzing events in minutes. No setup fee, no contract.
         </p>
         <div className="land-cta-row">
           <a href="/?signin=1" className="land-btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>Create Your Organization →</a>
         </div>
-        <p style={{ marginTop: 20, fontSize: 12.5, color: "#4a4740" }}>
+        <p style={{ marginTop: 20, fontSize: 12.5, color: "#6B5645" }}>
           Not affiliated with the Texas Office of the Governor or its Economic Development and Tourism division. This is an independently operated tool and is not affiliated with any DMO, CVB, or municipality.
         </p>
       </section>
@@ -375,13 +375,13 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="land-footer">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 24, height: 24, background: "#c8b97a", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 10, color: "#0a0906" }}>ETF</div>
-          <span style={{ fontSize: 13, color: "#4a4740" }}>Texas Events Trust Fund Analysis Tool</span>
+          <div style={{ width: 24, height: 24, background: "#D4784A", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 10, color: "#0a0906" }}>ETF</div>
+          <span style={{ fontSize: 13, color: "#6B5645" }}>Texas Events Trust Fund Analysis Tool</span>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-          <a href="/terms" style={{ fontSize: 12.5, color: "#4a4740", textDecoration: "none" }}>Terms</a>
-          <a href="/privacy" style={{ fontSize: 12.5, color: "#4a4740", textDecoration: "none" }}>Privacy</a>
-          <a href="/?signin=1" style={{ fontSize: 12.5, color: "#6b6660", textDecoration: "none" }}>Sign In →</a>
+          <a href="/terms" style={{ fontSize: 12.5, color: "#6B5645", textDecoration: "none" }}>Terms</a>
+          <a href="/privacy" style={{ fontSize: 12.5, color: "#6B5645", textDecoration: "none" }}>Privacy</a>
+          <a href="/?signin=1" style={{ fontSize: 12.5, color: "#7A6A58", textDecoration: "none" }}>Sign In →</a>
         </div>
       </footer>
 
