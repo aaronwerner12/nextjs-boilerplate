@@ -6,9 +6,24 @@ export const dynamic = 'force-dynamic';
 
 const sql = neon(process.env.DATABASE_URL!);
 
-function hashPasscode(passcode: string): string {
-  const secret = process.env.PASSCODE_SECRET || "etf-passcode-secret";
+const DEFAULT_SECRET = "etf-passcode-secret";
+
+function hashWith(passcode: string, secret: string): string {
   return createHmac("sha256", secret).update(passcode).digest("hex");
+}
+
+function hashPasscode(passcode: string): string {
+  return hashWith(passcode, process.env.PASSCODE_SECRET || DEFAULT_SECRET);
+}
+
+// Hashes under every secret this deployment may have used. Orgs whose
+// passcode was hashed before PASSCODE_SECRET was configured (or after it
+// was removed) still match, and get re-migrated to the current secret.
+function candidateHashes(passcode: string): string[] {
+  const current = process.env.PASSCODE_SECRET || DEFAULT_SECRET;
+  const hashes = [hashWith(passcode, current)];
+  if (current !== DEFAULT_SECRET) hashes.push(hashWith(passcode, DEFAULT_SECRET));
+  return hashes;
 }
 
 const ORG_COLUMNS = sql`
@@ -25,15 +40,26 @@ export async function POST(req: NextRequest) {
     }
 
     const hash = hashPasscode(passcode);
+    const candidates = candidateHashes(passcode);
 
-    // Try hashed lookup first (new orgs)
+    // Try hashed lookup first (new orgs). Matches hashes made under the
+    // current secret OR the default secret from before PASSCODE_SECRET
+    // was configured.
     let rows = await sql`
       SELECT id, name, city, state, notify_email, logo_url,
-             fiscal_year_start, threshold_min, threshold_strong, threshold_strategic
+             fiscal_year_start, threshold_min, threshold_strong, threshold_strategic,
+             passcode_hash
       FROM etf_orgs
-      WHERE passcode_hash = ${hash}
+      WHERE passcode_hash = ANY(${candidates})
       LIMIT 1
     `;
+
+    // If matched under an old secret, re-hash under the current one
+    if (rows.length > 0 && rows[0].passcode_hash !== hash) {
+      await sql`
+        UPDATE etf_orgs SET passcode_hash = ${hash} WHERE id = ${rows[0].id}
+      `.catch(() => {});
+    }
 
     // Fall back to plaintext for orgs created before hashing was added, then migrate
     if (rows.length === 0) {
