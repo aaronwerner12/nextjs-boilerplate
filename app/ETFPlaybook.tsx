@@ -1788,9 +1788,100 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone
           >
             Sign out
           </button>
+          <span style={{ color: "#2E5644" }}>·</span>
+          <FeedbackButton orgData={orgData} teamMember={teamMember} />
         </div>
       </div>
     </aside>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+// Feedback button + modal — files issues straight into the repo's
+// GitHub queue when configured, otherwise just stores them.
+// ————————————————————————————————————————————————————————————————
+function FeedbackButton({ orgData, teamMember }) {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("bug");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState(""); // "" | sending | sent | error
+
+  const submit = async () => {
+    if (message.trim().length < 5) return;
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          category,
+          orgId: orgData?.id || "",
+          orgName: orgData?.name || "",
+          memberName: teamMember || "",
+          page: typeof window !== "undefined" ? window.location.pathname : "",
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setStatus("sent");
+      setMessage("");
+      setTimeout(() => { setOpen(false); setStatus(""); }, 2000);
+    } catch (_) {
+      setStatus("error");
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        style={{ fontSize: 11, color: "#979A8D", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+      >
+        Report an issue
+      </button>
+      {open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 28, maxWidth: 440, width: "100%", color: "#1E4536" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 19, fontWeight: 600 }}>Report an issue</div>
+              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#979A8D" }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12.5, color: "#6C7065", marginBottom: 16 }}>
+              Something broken, confusing, or missing? It goes straight to the development queue.
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              {[["bug", "🐛 Something's broken"], ["idea", "💡 Idea / request"]].map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setCategory(key)}
+                  style={{ flex: 1, padding: "8px 10px", borderRadius: 10, fontSize: 12.5, fontWeight: 600, cursor: "pointer", border: `1px solid ${category === key ? "#E0784E" : "#DFDDD0"}`, background: category === key ? "#FBE4D8" : "#fff", color: category === key ? "#B04E31" : "#6C7065" }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={category === "bug" ? "What happened? What did you expect to happen?" : "What would make this tool more useful?"}
+              rows={5}
+              autoFocus
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid #DFDDD0", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit", resize: "vertical", marginBottom: 14 }}
+            />
+            {status === "error" && (
+              <div style={{ fontSize: 12.5, color: "#dc2626", marginBottom: 10 }}>Couldn't send — check your connection and try again.</div>
+            )}
+            <button
+              onClick={submit}
+              disabled={status === "sending" || status === "sent" || message.trim().length < 5}
+              style={{ width: "100%", padding: "11px", background: status === "sent" ? "#059669" : "#E0784E", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: status === "sending" ? 0.7 : 1 }}
+            >
+              {status === "sent" ? "✓ Sent — thank you!" : status === "sending" ? "Sending…" : "Send feedback"}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
