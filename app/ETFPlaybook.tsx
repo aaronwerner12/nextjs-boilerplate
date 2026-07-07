@@ -639,10 +639,11 @@ function ETFPlaybookInner() {
     try { await api.saveEvent(clone, orgId); } catch (_) {}
   };
 
-  const handleLoginComplete = async (name, title, newOrg) => {
+  const handleLoginComplete = async (name, title, newOrg, email) => {
     localStorage.setItem("etf_authed", "1");
     localStorage.setItem("etf_team_member", name);
     localStorage.setItem("etf_team_title", title || "");
+    if (email) localStorage.setItem("etf_member_email", email);
     setTeamMember(name);
     setTeamMemberTitle(title || "");
 
@@ -663,7 +664,7 @@ function ETFPlaybookInner() {
     localStorage.setItem("etf_member_id", memberId);
     if (resolvedOrgId) {
       try {
-        const record = await api.upsertMember({ id: memberId, orgId: resolvedOrgId, name, title: title || "" });
+        const record = await api.upsertMember({ id: memberId, orgId: resolvedOrgId, name, title: title || "", email: email || "" });
         if (record) {
           setMemberRecord(record);
           if (record.is_admin && !localStorage.getItem("etf_seen_admin_welcome")) {
@@ -835,11 +836,13 @@ export default function ETFPlaybook() {
 // ————————————————————————————————————————————————————————————————
 function LoginScreen({ onComplete }) {
   const storedName = typeof window !== "undefined" ? localStorage.getItem("etf_team_member") || "" : "";
+  const storedEmail = typeof window !== "undefined" ? localStorage.getItem("etf_member_email") || "" : "";
   const isReturning = !!storedName;
 
   const [mode, setMode] = useState(isReturning ? "returning" : "join");
   const [name, setName] = useState(storedName);
   const [title, setTitle] = useState("");
+  const [email, setEmail] = useState(storedEmail);
   const [orgName, setOrgName] = useState("");
   const [passcode, setPasscode] = useState("");
   const [newPasscode, setNewPasscode] = useState("");
@@ -863,7 +866,7 @@ function LoginScreen({ onComplete }) {
         localStorage.setItem(`etf_passcode_${org.id}`, passcode);
         localStorage.setItem("etf_team_member", nameToUse);
         setLoading(false);
-        onComplete(nameToUse, title.trim(), org);
+        onComplete(nameToUse, title.trim(), org, email.trim());
         return;
       }
       if (res.status === 401) {
@@ -878,7 +881,7 @@ function LoginScreen({ onComplete }) {
     if (stored && passcode === stored) {
       localStorage.setItem("etf_team_member", nameToUse);
       setLoading(false);
-      onComplete(nameToUse, "", null);
+      onComplete(nameToUse, "", null, email.trim());
       return;
     }
     setError("Incorrect access code. Check with your team admin.");
@@ -907,7 +910,7 @@ function LoginScreen({ onComplete }) {
     if (title.trim()) localStorage.setItem("etf_team_title", title.trim());
     fetch("/api/orgs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newOrg) }).catch(() => {});
     setLoading(false);
-    onComplete(name.trim(), title.trim(), newOrg);
+    onComplete(name.trim(), title.trim(), newOrg, email.trim());
   };
 
   const s = {
@@ -950,6 +953,21 @@ function LoginScreen({ onComplete }) {
                 style={{ ...s.input, fontSize: 18, letterSpacing: ".1em" }}
               />
             </div>
+
+            {!storedEmail && (
+              <div style={s.field}>
+                <label style={s.label}>Your Work Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handlePasscodeLogin(storedName)}
+                  placeholder="you@yourorg.com"
+                  style={s.input}
+                />
+                <div style={{ fontSize: 11.5, color: "#7E9C8D", marginTop: 5 }}>For deadline reminders and monthly pipeline updates.</div>
+              </div>
+            )}
 
             <button
               onClick={() => handlePasscodeLogin(storedName)}
@@ -996,6 +1014,11 @@ function LoginScreen({ onComplete }) {
                     <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Director of Sports Tourism" style={s.input} />
                   </div>
                   <div style={s.field}>
+                    <label style={s.label}>Your Work Email</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourorg.com" style={s.input} />
+                    <div style={{ fontSize: 11.5, color: "#7E9C8D", marginTop: 5 }}>For deadline reminders and monthly pipeline updates.</div>
+                  </div>
+                  <div style={s.field}>
                     <label style={s.label}>Access Code</label>
                     <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="Your team's access code" style={s.input} />
                     <div style={{ fontSize: 11.5, color: "#7E9C8D", marginTop: 5 }}>Get this from your team admin.</div>
@@ -1011,6 +1034,11 @@ function LoginScreen({ onComplete }) {
                   <div style={s.field}>
                     <label style={s.label}>Your Title <span style={{ color: "#7E9C8D", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
                     <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Executive Director" style={s.input} />
+                  </div>
+                  <div style={s.field}>
+                    <label style={s.label}>Your Work Email</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourorg.com" style={s.input} />
+                    <div style={{ fontSize: 11.5, color: "#7E9C8D", marginTop: 5 }}>For deadline reminders and monthly pipeline updates.</div>
                   </div>
                   <div style={s.field}>
                     <label style={s.label}>Organization Name</label>
@@ -1898,6 +1926,79 @@ function StatusPill({ status }) {
 }
 
 // ————————————————————————————————————————————————————————————————
+// EmailCaptureBanner — one-time prompt for signed-in members who
+// don't have an email on file yet (they may not see the login screen
+// again for months, so we ask here too).
+// ————————————————————————————————————————————————————————————————
+function EmailCaptureBanner({ orgData, teamMember }) {
+  const [dismissed, setDismissed] = useState(() =>
+    typeof window !== "undefined" && (
+      !!localStorage.getItem("etf_member_email") ||
+      !!localStorage.getItem("etf_email_prompt_dismissed")
+    )
+  );
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState(""); // "" | saving | saved | error
+
+  if (dismissed) return null;
+
+  const save = async () => {
+    const clean = email.trim().toLowerCase();
+    if (!clean.includes("@")) { setStatus("error"); return; }
+    setStatus("saving");
+    try {
+      const memberId = localStorage.getItem("etf_member_id");
+      if (memberId && orgData?.id) {
+        const res = await fetch("/api/team", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: memberId, orgId: orgData.id, name: teamMember || "Unknown", email: clean }),
+        });
+        if (!res.ok) throw new Error();
+      }
+      localStorage.setItem("etf_member_email", clean);
+      setStatus("saved");
+      setTimeout(() => setDismissed(true), 1500);
+    } catch (_) {
+      setStatus("error");
+    }
+  };
+
+  return (
+    <section style={{ background: "#FBE4D8", border: "1px solid #E0784E55", borderRadius: 14, padding: "16px 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+      <div style={{ flex: "1 1 260px" }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "#B04E31", marginBottom: 2 }}>Get deadline reminders by email</div>
+        <div style={{ fontSize: 12.5, color: "#6C7065" }}>Add your work email to receive weekly deadline alerts and monthly pipeline updates.</div>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flex: "1 1 300px" }}>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); if (status === "error") setStatus(""); }}
+          onKeyDown={(e) => e.key === "Enter" && save()}
+          placeholder="you@yourorg.com"
+          style={{ flex: 1, padding: "9px 12px", border: `1px solid ${status === "error" ? "#dc2626" : "#DFDDD0"}`, borderRadius: 10, fontSize: 13.5, outline: "none", fontFamily: "inherit", background: "#fff" }}
+        />
+        <button
+          onClick={save}
+          disabled={status === "saving" || status === "saved"}
+          style={{ padding: "9px 16px", background: status === "saved" ? "#059669" : "#E0784E", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+        >
+          {status === "saved" ? "✓ Saved" : status === "saving" ? "Saving…" : "Save"}
+        </button>
+        <button
+          onClick={() => { localStorage.setItem("etf_email_prompt_dismissed", "1"); setDismissed(true); }}
+          title="Don't ask again"
+          style={{ background: "none", border: "none", color: "#979A8D", fontSize: 16, cursor: "pointer", padding: 4 }}
+        >
+          ✕
+        </button>
+      </div>
+    </section>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
 // Dashboard (no event selected)
 // ————————————————————————————————————————————————————————————————
 function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreated }) {
@@ -2071,6 +2172,8 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
           </div>
         </div>
       </header>
+
+      <EmailCaptureBanner orgData={orgData} teamMember={teamMember} />
 
       {!onboarding.complete && (
         <section style={{ background: "#fff", border: "1px solid #DFDDD0", borderRadius: 14, padding: "20px 24px", marginBottom: 24 }}>
