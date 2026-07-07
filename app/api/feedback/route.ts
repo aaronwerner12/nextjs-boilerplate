@@ -42,12 +42,21 @@ export async function POST(req: NextRequest) {
 
     let issueUrl: string | null = null;
 
-    // File a GitHub issue if a token is configured. Trim defends against
-    // stray whitespace/newlines from pasting the token into the env var.
-    const token = (process.env.GITHUB_FEEDBACK_TOKEN || "").trim();
+    // File a GitHub issue if a token is configured. The lookup tolerates
+    // whitespace and case differences in the key, and trims the value.
+    const tokenEntry = Object.entries(process.env).find(
+      ([k]) => k.trim().toUpperCase() === "GITHUB_FEEDBACK_TOKEN"
+    );
+    const token = (tokenEntry?.[1] || "").trim();
     const repo = (process.env.GITHUB_FEEDBACK_REPO || "aaronwerner12/nextjs-boilerplate").trim();
     if (!token) {
-      console.warn("feedback: GITHUB_FEEDBACK_TOKEN not set — storing in DB only");
+      // Log key names only (never values) to diagnose misconfiguration
+      const ghKeys = Object.keys(process.env).filter((k) => k.toUpperCase().includes("GITHUB"));
+      console.warn(
+        `feedback: GITHUB_FEEDBACK_TOKEN not set — storing in DB only. ` +
+        `GitHub-ish env keys visible: [${ghKeys.join(", ") || "none"}]` +
+        (tokenEntry ? ` (key found but value empty, length=${(tokenEntry[1] || "").length})` : "")
+      );
     } else {
       try {
         const labels = category === "idea" ? ["enhancement", "user-feedback"] : ["bug", "user-feedback"];
