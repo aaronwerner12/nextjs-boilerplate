@@ -161,10 +161,18 @@ const blankEvent = () => ({
     disbursement: { done: false, date: "" },
   },
   notes: "",
+  // Post-award outcome tracking
+  outcome: {
+    awardedAmount: "",     // from EDT award letter
+    awardDate: "",
+    actualAttendance: "",  // for the 45-day certification
+    disbursedAmount: "",   // final amount received
+    disbursedDate: "",
+  },
 });
 
 // Categories for attendee mix
-const ATTENDEE_CATS = [
+export const ATTENDEE_CATS = [
   { key: "players", label: "Players/Competitors", perRoom: 4 },
   { key: "coaches", label: "Coaches", perRoom: 2 },
   { key: "staff", label: "Staff", perRoom: 2 },
@@ -201,7 +209,7 @@ const DEFAULT_MCKINNEY_VENUES = [
 
 // Timeline deadlines (days relative to first day of event)
 // Per Event Trust Fund Guidelines Sept 2025
-const TIMELINE = [
+export const TIMELINE = [
   { key: "application", label: "Submit Application Packet", offset: -120, phase: "pre", critical: true, ref: "Guidelines p.4" },
   { key: "award", label: "Award Letter from EDT", offset: -90, phase: "pre", critical: false, ref: "Guidelines p.4 (~30 days after app)" },
   { key: "supportContract", label: "Event Support Contract Submitted", offset: -1, phase: "pre", critical: true, ref: "Guidelines p.6" },
@@ -215,7 +223,7 @@ const TIMELINE = [
 // ————————————————————————————————————————————————————————————————
 // Calculation engine — mirrors the Texas ETF tax methodology
 // ————————————————————————————————————————————————————————————————
-function calculateTrustFund(event) {
+export function calculateTrustFund(event) {
   if (!event) return { quickEstimate: 0, totalFund: 0, totalRoomNights: 0, requiredLocalMatch: 0, days: [] };
   const { calc = { days: [] }, roomNights, outOfMarketPct, attendeeEst, qualityPerAttendee } = event;
   const safeDays = calc?.days || [];
@@ -589,6 +597,48 @@ function ETFPlaybookInner() {
     try { await api.deleteEvent(id, orgId); } catch (_) {}
   };
 
+  // Duplicate an event for the next year — shifts all dates forward one year
+  // and resets application progress (docs, status, outcome) while keeping
+  // the attendance model and eligibility answers.
+  const cloneEvent = async (id) => {
+    const source = events.find((e) => e.id === id);
+    if (!source) return;
+    const shiftYear = (dateStr) => {
+      if (!dateStr) return "";
+      const [y, m, d] = dateStr.split("-").map(Number);
+      if (!y || !m || !d) return "";
+      return `${y + 1}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    };
+    const nextYear = source.firstDay ? parseInt(source.firstDay.split("-")[0]) + 1 : new Date().getFullYear() + 1;
+    const baseName = (source.name || "Untitled Event").replace(/\s*\(?\b(19|20)\d{2}\)?\s*$/, "").trim();
+    const clone = {
+      ...JSON.parse(JSON.stringify(source)),
+      id: "evt_" + Date.now(),
+      created: new Date().toISOString(),
+      name: `${baseName} ${nextYear}`,
+      firstDay: shiftYear(source.firstDay),
+      lastDay: shiftYear(source.lastDay),
+      status: "analysis",
+      docs: blankEvent().docs,
+      outcome: {},
+      shareToken: undefined,
+      notes: source.notes || "",
+      createdBy: teamMember,
+      orgId,
+    };
+    if (Array.isArray(clone.calc?.days)) {
+      clone.calc.days = clone.calc.days.map((day) => ({ ...day, date: shiftYear(day.date) }));
+    }
+    setEvents((prev) => {
+      const updated = [clone, ...prev];
+      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      return updated;
+    });
+    setCurrentEventId(clone.id);
+    setTab("overview");
+    try { await api.saveEvent(clone, orgId); } catch (_) {}
+  };
+
   const handleLoginComplete = async (name, title, newOrg) => {
     localStorage.setItem("etf_authed", "1");
     localStorage.setItem("etf_team_member", name);
@@ -720,6 +770,7 @@ function ETFPlaybookInner() {
         onSelect={(id) => { setCurrentEventId(id); setTab("overview"); setSidebarOpen(false); }}
         onCreate={() => { createEvent(); setSidebarOpen(false); }}
         onDelete={deleteEvent}
+        onClone={cloneEvent}
         onHome={() => { setCurrentEventId(null); setTab("dashboard"); setSidebarOpen(false); }}
         saveStatus={saveStatus}
         teamMember={teamMember}
@@ -1582,8 +1633,12 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
   );
 }
 
-function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam }) {
+function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam }) {
   const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
+  const [search, setSearch] = React.useState("");
+  const visibleEvents = search.trim()
+    ? events.filter((e) => (e.name || "").toLowerCase().includes(search.trim().toLowerCase()))
+    : events;
   return (
     <aside style={styles.sidebar} className={`etf-sidebar${isOpen ? " open" : ""}`}>
       <div style={styles.brand} onClick={onHome}>
@@ -1607,13 +1662,27 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
         <span style={styles.count}>{events.length}</span>
       </div>
 
+      {events.length > 7 && (
+        <div style={{ padding: "0 20px 8px" }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search events…"
+            style={{ width: "100%", padding: "7px 10px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#F2E8D6", fontSize: 12.5, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+          />
+        </div>
+      )}
+
       <div style={{ ...styles.eventList, overflowY: "auto", flex: 1 }}>
         {events.length === 0 && (
           <div style={styles.emptyList}>
             No events yet. Click <em>New Event</em> to begin an analysis.
           </div>
         )}
-        {events.map((e) => (
+        {events.length > 0 && visibleEvents.length === 0 && (
+          <div style={styles.emptyList}>No events match “{search}”.</div>
+        )}
+        {visibleEvents.map((e) => (
           <div
             key={e.id}
             style={{
@@ -1647,13 +1716,23 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
                 </button>
               </div>
             ) : (
-              <button
-                style={styles.deleteBtn}
-                onClick={(ev) => { ev.stopPropagation(); setConfirmDeleteId(e.id); }}
-                aria-label="Delete"
-              >
-                <Trash2 size={12} />
-              </button>
+              <>
+                <button
+                  style={{ ...styles.deleteBtn, right: 26 }}
+                  onClick={(ev) => { ev.stopPropagation(); onClone(e.id); }}
+                  aria-label="Duplicate for next year"
+                  title="Duplicate for next year"
+                >
+                  <Plus size={12} />
+                </button>
+                <button
+                  style={styles.deleteBtn}
+                  onClick={(ev) => { ev.stopPropagation(); setConfirmDeleteId(e.id); }}
+                  aria-label="Delete"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </>
             )}
           </div>
         ))}
@@ -1669,7 +1748,7 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onHome,
 
         {/* Name + admin badge */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-          {teamMember && <span style={{ color: "#2C1C0E", fontWeight: 600, fontSize: 13 }}>{teamMember}</span>}
+          {teamMember && <span style={{ color: "#F2E8D6", fontWeight: 600, fontSize: 13 }}>{teamMember}</span>}
           {memberRecord?.is_admin && (
             <span style={{ fontSize: 10, fontWeight: 700, background: "#D4784A", color: "#fff", borderRadius: 3, padding: "1px 6px", textTransform: "uppercase", letterSpacing: ".06em" }}>
               Admin
@@ -1739,14 +1818,70 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
   const stats = useMemo(() => {
     let projected = 0;
     let active = 0;
+    let awarded = 0;
+    let disbursed = 0;
     events.forEach((e) => {
       const calc = calculateTrustFund(e);
       const est = calc.totalFund > 0 ? calc.totalFund : calc.quickEstimate;
       projected += est;
       if (e.status !== "complete") active++;
+      awarded += Number(e.outcome?.awardedAmount) || 0;
+      disbursed += Number(e.outcome?.disbursedAmount) || 0;
     });
-    return { projected, active, total: events.length };
+    return { projected, active, total: events.length, awarded, disbursed };
   }, [events]);
+
+  // Every upcoming deadline across all events, computed from the TIMELINE
+  // offsets. Includes recently-missed ones (last 7 days) so they don't
+  // silently disappear.
+  const upcomingDeadlines = useMemo(() => {
+    const now = new Date();
+    const windowStart = new Date(now.getTime() - 7 * 86400000);
+    const windowEnd = new Date(now.getTime() + 180 * 86400000);
+    const list = [];
+    events.forEach((e) => {
+      if (!e.firstDay || e.status === "complete") return;
+      TIMELINE.forEach((t) => {
+        if (t.key === "eventStart") return;
+        const due = addDays(t.offset < 0 ? e.firstDay : (e.lastDay || e.firstDay), t.offset);
+        if (!due || due < windowStart || due > windowEnd) return;
+        const daysAway = Math.ceil((due - now) / 86400000);
+        list.push({ eventId: e.id, eventName: e.name || "Untitled event", label: t.label, critical: t.critical, due, daysAway });
+      });
+    });
+    return list.sort((a, b) => a.due - b.due).slice(0, 10);
+  }, [events]);
+
+  // Fiscal-year rollup based on the org's fiscal year start month
+  const fyStats = useMemo(() => {
+    const fyStart = Number(orgData?.fiscalYearStart) || 10;
+    const now = new Date();
+    const fyStartYear = now.getMonth() + 1 >= fyStart ? now.getFullYear() : now.getFullYear() - 1;
+    const fyBegin = new Date(fyStartYear, fyStart - 1, 1);
+    const fyEnd = new Date(fyStartYear + 1, fyStart - 1, 1);
+    let count = 0, value = 0, match = 0;
+    events.forEach((e) => {
+      if (!e.firstDay) return;
+      const d = new Date(e.firstDay + "T12:00:00");
+      if (d < fyBegin || d >= fyEnd) return;
+      const calc = calculateTrustFund(e);
+      count++;
+      value += calc.totalFund > 0 ? calc.totalFund : calc.quickEstimate;
+      match += calc.requiredLocalMatch || 0;
+    });
+    const fyLabel = `FY${String(fyStartYear + 1).slice(2)}`;
+    return { count, value, match, fyLabel };
+  }, [events, orgData]);
+
+  // Onboarding steps for fresh orgs
+  const onboarding = useMemo(() => {
+    const steps = [
+      { label: "Add your venues in Organization Settings", done: (orgData?.venues || []).length > 0 },
+      { label: "Fill out the ETF Application Profile (contact info, address, EIN)", done: !!(orgData?.contactName && orgData?.address) },
+      { label: "Create your first event analysis", done: events.length > 0 },
+    ];
+    return { steps, complete: steps.every((s) => s.done) };
+  }, [events, orgData]);
 
   useEffect(() => {
     (async () => {
@@ -1846,11 +1981,64 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
         </div>
       </header>
 
+      {!onboarding.complete && (
+        <section style={{ background: "#fff", border: "1px solid #DDD0BB", borderRadius: 14, padding: "20px 24px", marginBottom: 24 }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 600, marginBottom: 4 }}>Get set up</div>
+          <div style={{ fontSize: 12.5, color: "#7A6A58", marginBottom: 14 }}>Three quick steps so every analysis and application packet is pre-filled and ready.</div>
+          {onboarding.steps.map((s, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 13.5 }}>
+              <span style={{ width: 20, height: 20, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, background: s.done ? "#059669" : "#F2E8D6", color: s.done ? "#fff" : "#9A8E7E", border: s.done ? "none" : "1px solid #DDD0BB" }}>
+                {s.done ? "✓" : i + 1}
+              </span>
+              <span style={{ color: s.done ? "#9A8E7E" : "#2C1C0E", textDecoration: s.done ? "line-through" : "none" }}>{s.label}</span>
+            </div>
+          ))}
+        </section>
+      )}
+
       <div style={styles.statGrid} className="etf-stats-row">
         <StatCard label="Active Events" value={stats.active} icon={<Target size={16} />} />
         <StatCard label="Total in Pipeline" value={stats.total} icon={<Folder size={16} />} />
         <StatCard label="Projected Fund Value" value={fmtMoney(stats.projected)} icon={<DollarSign size={16} />} />
+        {stats.awarded > 0 && (
+          <StatCard label="Awarded to Date" value={fmtMoney(stats.awarded)} icon={<CheckCircle2 size={16} />} />
+        )}
       </div>
+
+      {/* Fiscal year summary */}
+      {fyStats.count > 0 && (
+        <section style={{ background: "#2C1C0E", borderRadius: 14, padding: "18px 24px", marginBottom: 24, display: "flex", gap: 36, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 17, fontWeight: 600, color: "#D4784A" }}>{fyStats.fyLabel} Outlook</div>
+          <div><span style={{ fontSize: 20, fontWeight: 700, color: "#F2E8D6", fontFamily: "'Fraunces', Georgia, serif" }}>{fyStats.count}</span> <span style={{ fontSize: 12, color: "#9E8E7C" }}>event{fyStats.count === 1 ? "" : "s"}</span></div>
+          <div><span style={{ fontSize: 20, fontWeight: 700, color: "#F2E8D6", fontFamily: "'Fraunces', Georgia, serif" }}>{fmtMoney(fyStats.value)}</span> <span style={{ fontSize: 12, color: "#9E8E7C" }}>projected ETF value</span></div>
+          <div><span style={{ fontSize: 20, fontWeight: 700, color: "#F2E8D6", fontFamily: "'Fraunces', Georgia, serif" }}>{fmtMoney(fyStats.match)}</span> <span style={{ fontSize: 12, color: "#9E8E7C" }}>local match required</span></div>
+        </section>
+      )}
+
+      {/* Upcoming deadlines across all events */}
+      {upcomingDeadlines.length > 0 && (
+        <section style={{ background: "#fff", border: "1px solid #DDD0BB", borderRadius: 14, padding: "20px 24px", marginBottom: 24 }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 18, fontWeight: 600, marginBottom: 2 }}>Upcoming Deadlines</div>
+          <div style={{ fontSize: 12.5, color: "#7A6A58", marginBottom: 14 }}>Every statutory deadline across your pipeline, soonest first.</div>
+          {upcomingDeadlines.map((d, i) => {
+            const overdue = d.daysAway < 0;
+            const urgent = d.daysAway >= 0 && d.daysAway <= 14;
+            return (
+              <div key={i} onClick={() => onOpen(d.eventId)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 12px", marginBottom: 4, background: overdue ? "#fef2f2" : urgent ? "#FDE8D8" : "#FBF3E8", border: `1px solid ${overdue ? "#fecaca" : urgent ? "#f5cbaa" : "#DDD0BB"}`, borderRadius: 10, cursor: "pointer", fontSize: 13 }}>
+                <span style={{ fontWeight: 700, minWidth: 86, color: overdue ? "#dc2626" : urgent ? "#9A572D" : "#7A6A58", fontSize: 12 }}>
+                  {overdue ? `${Math.abs(d.daysAway)}d overdue` : d.daysAway === 0 ? "Due today" : `in ${d.daysAway}d`}
+                </span>
+                <span style={{ flex: 1 }}>
+                  <strong>{d.label}</strong>
+                  <span style={{ color: "#7A6A58" }}> — {d.eventName}</span>
+                </span>
+                <span style={{ color: "#9A8E7E", fontSize: 12 }}>{fmtDate(d.due)}</span>
+                {d.critical && <span style={{ fontSize: 9.5, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: ".05em" }}>Statutory</span>}
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       {/* Intake — moved to top, most important action */}
       <section style={{ marginBottom: 40 }}>
@@ -2069,6 +2257,26 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
     strategic: orgData?.thresholdStrategic ?? 300000,
   }), [orgData]);
   const decision = useMemo(() => evaluateDecision(event, calc, thresholds), [event, calc, thresholds]);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  // Copy a public read-only link, minting the token on first use
+  const handleShare = async () => {
+    let token = event.shareToken;
+    if (!token) {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      token = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+      update((e) => ({ ...e, shareToken: token }));
+    }
+    const url = `${window.location.origin}/share/${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (_) {
+      window.prompt("Copy this read-only link:", url);
+    }
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2500);
+  };
 
   const exportPDF = () => {
     const deadlines = event.firstDay ? TIMELINE.map(item => ({
@@ -2279,6 +2487,15 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
               ↓ Export PDF
             </button>
           </div>
+          <div style={styles.headerStat}>
+            <button
+              onClick={handleShare}
+              style={{ padding: "6px 14px", background: shareCopied ? "#059669" : "transparent", color: shareCopied ? "#fff" : "#7A6A58", border: `1px solid ${shareCopied ? "#059669" : "#DDD0BB"}`, borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all .15s" }}
+              title="Copy a read-only link anyone can view without signing in"
+            >
+              {shareCopied ? "✓ Link copied" : "⇪ Share read-only link"}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -2311,7 +2528,7 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
         {tab === "timeline" && <TimelineTab event={event} update={update} />}
         {tab === "documents" && <DocumentsTab event={event} update={update} />}
         {tab === "costs" && <CostsTab />}
-        {tab === "apply" && <ApplyTab event={event} calc={calc} decision={decision} orgData={orgData} />}
+        {tab === "apply" && <ApplyTab event={event} update={update} calc={calc} decision={decision} orgData={orgData} />}
         {tab === "reference" && <ReferenceTab />}
       </div>
     </div>
@@ -3429,7 +3646,11 @@ function CostsTab() {
 // Shows when event passes decision framework. Links to all official
 // EDT documents and generates a pre-filled email draft.
 // ————————————————————————————————————————————————————————————————
-function ApplyTab({ event, calc, decision, orgData }) {
+function ApplyTab({ event, update, calc, decision, orgData }) {
+  const outcome = event.outcome || {};
+  const setOutcome = (key, value) => {
+    update((e) => ({ ...e, outcome: { ...(e.outcome || {}), [key]: value } }));
+  };
   const isEligible = decision.recommendation && decision.recommendation !== "DO NOT PURSUE";
   const appDeadline = event.firstDay ? addDays(event.firstDay, -120) : null;
   const daysUntilDeadline = appDeadline ? Math.ceil((appDeadline - new Date()) / (1000 * 60 * 60 * 24)) : null;
@@ -3746,6 +3967,41 @@ Complete application packet attached.`}
             </div>
           ))}
         </div>
+      </Section>
+
+      {/* Post-award outcome tracking */}
+      <Section title="Award & Outcome Tracking" subtitle="Record what actually happened — award, attendance, disbursement. Builds your projected-vs-actual track record for future applications and budget presentations.">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A6A58", display: "block", marginBottom: 5 }}>Awarded Amount ($)</label>
+            <input type="number" value={outcome.awardedAmount || ""} onChange={(e) => setOutcome("awardedAmount", e.target.value)} placeholder="From EDT award letter" style={{ width: "100%", padding: "10px 12px", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A6A58", display: "block", marginBottom: 5 }}>Award Date</label>
+            <input type="date" value={outcome.awardDate || ""} onChange={(e) => setOutcome("awardDate", e.target.value)} style={{ width: "100%", padding: "10px 12px", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A6A58", display: "block", marginBottom: 5 }}>Actual Attendance</label>
+            <input type="number" value={outcome.actualAttendance || ""} onChange={(e) => setOutcome("actualAttendance", e.target.value)} placeholder="For 45-day certification" style={{ width: "100%", padding: "10px 12px", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A6A58", display: "block", marginBottom: 5 }}>Disbursed Amount ($)</label>
+            <input type="number" value={outcome.disbursedAmount || ""} onChange={(e) => setOutcome("disbursedAmount", e.target.value)} placeholder="Final amount received" style={{ width: "100%", padding: "10px 12px", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#7A6A58", display: "block", marginBottom: 5 }}>Disbursement Date</label>
+            <input type="date" value={outcome.disbursedDate || ""} onChange={(e) => setOutcome("disbursedDate", e.target.value)} style={{ width: "100%", padding: "10px 12px", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+        </div>
+        {(Number(outcome.awardedAmount) > 0 && decision.estimate > 0) && (
+          <div style={{ marginTop: 16, padding: "12px 16px", background: "#FBF3E8", border: "1px solid #DDD0BB", borderRadius: 10, fontSize: 13, color: "#2C1C0E" }}>
+            Projected {fmtMoney(decision.estimate)} → Awarded {fmtMoney(Number(outcome.awardedAmount))}
+            {" "}({Math.round((Number(outcome.awardedAmount) / decision.estimate) * 100)}% of projection)
+            {Number(outcome.actualAttendance) > 0 && calc.totalAttendance > 0 && (
+              <span> · Attendance: {fmtNum(calc.totalAttendance)} projected → {fmtNum(Number(outcome.actualAttendance))} actual</span>
+            )}
+          </div>
+        )}
       </Section>
 
     </div>
