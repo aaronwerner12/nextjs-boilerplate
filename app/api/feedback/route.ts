@@ -42,10 +42,13 @@ export async function POST(req: NextRequest) {
 
     let issueUrl: string | null = null;
 
-    // File a GitHub issue if a token is configured
-    const token = process.env.GITHUB_FEEDBACK_TOKEN;
-    const repo = process.env.GITHUB_FEEDBACK_REPO || "aaronwerner12/nextjs-boilerplate";
-    if (token) {
+    // File a GitHub issue if a token is configured. Trim defends against
+    // stray whitespace/newlines from pasting the token into the env var.
+    const token = (process.env.GITHUB_FEEDBACK_TOKEN || "").trim();
+    const repo = (process.env.GITHUB_FEEDBACK_REPO || "aaronwerner12/nextjs-boilerplate").trim();
+    if (!token) {
+      console.warn("feedback: GITHUB_FEEDBACK_TOKEN not set — storing in DB only");
+    } else {
       try {
         const labels = category === "idea" ? ["enhancement", "user-feedback"] : ["bug", "user-feedback"];
         const ghRes = await fetch(`https://api.github.com/repos/${repo}/issues`, {
@@ -53,6 +56,8 @@ export async function POST(req: NextRequest) {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "etf-tool-feedback",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -72,9 +77,13 @@ export async function POST(req: NextRequest) {
         if (ghRes.ok) {
           const issue = await ghRes.json();
           issueUrl = issue.html_url || null;
+        } else {
+          const errBody = await ghRes.text().catch(() => "");
+          console.error(`feedback: GitHub issue creation failed — HTTP ${ghRes.status}: ${errBody.slice(0, 500)}`);
         }
-      } catch (_) {
+      } catch (err) {
         // GitHub failure shouldn't lose the feedback — it's stored in DB below
+        console.error("feedback: GitHub request threw:", err);
       }
     }
 
