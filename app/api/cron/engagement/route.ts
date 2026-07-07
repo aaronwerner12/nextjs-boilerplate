@@ -26,11 +26,7 @@ export async function GET(req: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://etfplaybook.vercel.app";
 
-    const orgs = await sql`
-      SELECT id, name, notify_email, contact_email FROM etf_orgs
-      WHERE (notify_email IS NOT NULL AND notify_email != '')
-         OR (contact_email IS NOT NULL AND contact_email != '')
-    `;
+    const orgs = await sql`SELECT id, name, notify_email, contact_email FROM etf_orgs`;
 
     const now = new Date();
     const results: Array<{ org: string; sent: boolean }> = [];
@@ -98,10 +94,17 @@ export async function GET(req: NextRequest) {
   </p>
 </div>`;
 
-      // Send to the org's notification email and the application-profile
-      // contact if it's a different address
+      // Send to the org's notification + contact emails plus every active
+      // team member who has added an email
+      const members = await sql`
+        SELECT email FROM etf_team_members
+        WHERE org_id = ${org.id} AND is_active = TRUE
+          AND email IS NOT NULL AND email != ''
+      `.catch(() => []);
       const recipients = Array.from(new Set(
-        [org.notify_email, org.contact_email].filter((e) => e && e.includes("@"))
+        [org.notify_email, org.contact_email, ...members.map((m) => m.email)]
+          .map((e) => (e || "").trim().toLowerCase())
+          .filter((e) => e.includes("@"))
       ));
       if (recipients.length === 0) {
         results.push({ org: org.name, sent: false });

@@ -25,6 +25,7 @@ async function ensureTable() {
     )
   `;
   await sql`ALTER TABLE etf_team_members ADD COLUMN IF NOT EXISTS title TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_team_members ADD COLUMN IF NOT EXISTS email TEXT`.catch(() => {});
 }
 
 // GET /api/team?org_id=xxx — list all members for an org
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
     if (!orgId) return NextResponse.json({ error: "org_id required" }, { status: 400 });
 
     const members = await sql`
-      SELECT id, name, title, is_admin, is_active, created_at, last_seen
+      SELECT id, name, title, email, is_admin, is_active, created_at, last_seen
       FROM etf_team_members
       WHERE org_id = ${orgId}
       ORDER BY is_admin DESC, created_at ASC
@@ -52,19 +53,27 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await ensureTable();
-    const { id, orgId, name, title } = await req.json();
+    const { id, orgId, name, title, email } = await req.json();
     if (!id || !orgId || !name) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+
+    const cleanEmail = (email || "").trim().toLowerCase();
+    if (cleanEmail && !cleanEmail.includes("@")) {
+      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    }
 
     // Check if this is the first member of the org — make them admin
     const existing = await sql`SELECT COUNT(*) as count FROM etf_team_members WHERE org_id = ${orgId}`;
     const isFirst = parseInt(existing[0]?.count || "0") === 0;
 
+    // Email only overwrites when a new value is provided — a login without
+    // an email never clears one that's already stored
     await sql`
-      INSERT INTO etf_team_members (id, org_id, name, title, is_admin, is_active, last_seen)
-      VALUES (${id}, ${orgId}, ${name}, ${title || ""}, ${isFirst}, TRUE, NOW())
+      INSERT INTO etf_team_members (id, org_id, name, title, email, is_admin, is_active, last_seen)
+      VALUES (${id}, ${orgId}, ${name}, ${title || ""}, ${cleanEmail || null}, ${isFirst}, TRUE, NOW())
       ON CONFLICT (id) DO UPDATE
         SET name = ${name},
-            title = ${title || ""},
+            title = CASE WHEN ${title || ""} != '' THEN ${title || ""} ELSE etf_team_members.title END,
+            email = COALESCE(NULLIF(${cleanEmail}, ''), etf_team_members.email),
             last_seen = NOW(),
             is_active = TRUE
     `;
