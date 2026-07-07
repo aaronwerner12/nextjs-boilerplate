@@ -32,64 +32,64 @@ async function sendNotificationEmail(submission: any, notifyEmail: string, orgNa
     .join("\n");
 
   const html = `
-    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; color: #1a1613;">
-      <div style="background: #1a1613; color: #f5f0e8; padding: 24px 32px; border-radius: 4px 4px 0 0;">
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; color: #1E4536;">
+      <div style="background: #1E4536; color: #F7F5EF; padding: 24px 32px; border-radius: 4px 4px 0 0;">
         <h1 style="margin: 0; font-size: 22px; font-weight: 600;">New Event Intake Submission</h1>
-        <p style="margin: 8px 0 0; font-size: 14px; color: #9e9890;">${orgName} · Texas Events Trust Fund Analysis Tool</p>
+        <p style="margin: 8px 0 0; font-size: 14px; color: #9FB8A9;">${orgName} · Texas Events Trust Fund Analysis Tool</p>
       </div>
-      <div style="padding: 32px; border: 1px solid #e8e3db; border-top: none; border-radius: 0 0 4px 4px;">
+      <div style="padding: 32px; border: 1px solid #DFDDD0; border-top: none; border-radius: 0 0 4px 4px;">
         
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
-          <tr style="border-bottom: 1px solid #e8e3db;">
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em; width: 40%;">Event Name</td>
+          <tr style="border-bottom: 1px solid #DFDDD0;">
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em; width: 40%;">Event Name</td>
             <td style="padding: 10px 0; font-size: 15px; font-weight: 600;">${submission.eventName || "—"}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #e8e3db;">
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em;">Organization</td>
+          <tr style="border-bottom: 1px solid #DFDDD0;">
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em;">Organization</td>
             <td style="padding: 10px 0; font-size: 14px;">${submission.orgName || "—"}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #e8e3db;">
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em;">Contact</td>
-            <td style="padding: 10px 0; font-size: 14px;">${submission.contactName || "—"} — <a href="mailto:${submission.contactEmail}" style="color: #1a1613;">${submission.contactEmail || "—"}</a>${submission.contactPhone ? ` · ${submission.contactPhone}` : ""}</td>
+          <tr style="border-bottom: 1px solid #DFDDD0;">
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em;">Contact</td>
+            <td style="padding: 10px 0; font-size: 14px;">${submission.contactName || "—"} — <a href="mailto:${submission.contactEmail}" style="color: #1E4536;">${submission.contactEmail || "—"}</a>${submission.contactPhone ? ` · ${submission.contactPhone}` : ""}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #e8e3db;">
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em;">Dates</td>
+          <tr style="border-bottom: 1px solid #DFDDD0;">
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em;">Dates</td>
             <td style="padding: 10px 0; font-size: 14px;">${submission.firstDay || "—"} → ${submission.lastDay || "—"}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #e8e3db;">
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em;">Attendance</td>
+          <tr style="border-bottom: 1px solid #DFDDD0;">
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em;">Attendance</td>
             <td style="padding: 10px 0; font-size: 14px;">${submission.totalAttendance || "—"} total · ${submission.outOfMarketPct || "—"} out-of-market</td>
           </tr>
-          <tr style="border-bottom: 1px solid #e8e3db;">
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em;">Room Nights</td>
+          <tr style="border-bottom: 1px solid #DFDDD0;">
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em;">Room Nights</td>
             <td style="padding: 10px 0; font-size: 14px;">${submission.roomNightsNeeded || "—"}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #e8e3db;">
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em;">Site Selection Org</td>
+          <tr style="border-bottom: 1px solid #DFDDD0;">
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em;">Site Selection Org</td>
             <td style="padding: 10px 0; font-size: 14px;">${submission.siteSelectionOrg || "—"}</td>
           </tr>
           <tr>
-            <td style="padding: 10px 0; font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em;">Budget</td>
+            <td style="padding: 10px 0; font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em;">Budget</td>
             <td style="padding: 10px 0; font-size: 14px;">${submission.estimatedEventBudget || "—"}</td>
           </tr>
         </table>
 
-        <div style="background: #faf8f4; border: 1px solid #e8e3db; border-radius: 4px; padding: 16px 20px; margin-bottom: 24px;">
-          <div style="font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;">Eligibility Pre-Screen</div>
-          <div style="font-size: 13px; font-family: monospace; color: #1a1613; white-space: pre-line;">${eligSummary || "Not answered"}</div>
+        <div style="background: #F1EFE6; border: 1px solid #DFDDD0; border-radius: 4px; padding: 16px 20px; margin-bottom: 24px;">
+          <div style="font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;">Eligibility Pre-Screen</div>
+          <div style="font-size: 13px; font-family: monospace; color: #1E4536; white-space: pre-line;">${eligSummary || "Not answered"}</div>
         </div>
 
         ${submission.notes ? `
         <div style="margin-bottom: 24px;">
-          <div style="font-size: 12px; color: #6b6660; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px;">Notes from organizer</div>
+          <div style="font-size: 12px; color: #6C7065; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px;">Notes from organizer</div>
           <div style="font-size: 14px; color: #374151; line-height: 1.6;">${submission.notes}</div>
         </div>
         ` : ""}
 
-        <div style="text-align: center; padding-top: 24px; border-top: 1px solid #e8e3db;">
-          <p style="font-size: 13px; color: #6b6660; margin: 0 0 16px;">This submission is waiting for your review in the ETF Analysis Tool.</p>
+        <div style="text-align: center; padding-top: 24px; border-top: 1px solid #DFDDD0;">
+          <p style="font-size: 13px; color: #6C7065; margin: 0 0 16px;">This submission is waiting for your review in the ETF Analysis Tool.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app.vercel.app"}" 
-             style="display: inline-block; padding: 12px 28px; background: #1a1613; color: #f5f0e8; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600;">
+             style="display: inline-block; padding: 12px 28px; background: #1E4536; color: #F7F5EF; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600;">
             Review in Tool →
           </a>
         </div>

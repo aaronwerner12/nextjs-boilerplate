@@ -10,12 +10,12 @@ const MONO = "'IBM Plex Mono', 'Courier New', monospace";
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#0f0e0c",
-    color: "#f5f0e8",
+    background: "#132E22",
+    color: "#F7F5EF",
     fontFamily: "'DM Sans', system-ui, sans-serif",
   },
   header: {
-    borderBottom: "1px solid #2a2720",
+    borderBottom: "1px solid #2E5644",
     padding: "20px 40px",
     display: "flex",
     alignItems: "center",
@@ -25,12 +25,12 @@ const styles = {
     fontFamily: SERIF,
     fontSize: 18,
     fontWeight: 600,
-    color: "#f5f0e8",
+    color: "#F7F5EF",
     letterSpacing: "-.01em",
   },
   logoSub: {
     fontSize: 11,
-    color: "#6b6660",
+    color: "#9FB8A9",
     textTransform: "uppercase" as const,
     letterSpacing: ".12em",
     marginTop: 2,
@@ -38,9 +38,9 @@ const styles = {
   badge: {
     fontSize: 11,
     fontWeight: 600,
-    color: "#c8b97a",
-    background: "#c8b97a18",
-    border: "1px solid #c8b97a33",
+    color: "#E0784E",
+    background: "#E0784E18",
+    border: "1px solid #E0784E33",
     borderRadius: 20,
     padding: "4px 12px",
     textTransform: "uppercase" as const,
@@ -54,7 +54,7 @@ const styles = {
   eyebrow: {
     fontSize: 11.5,
     fontWeight: 600,
-    color: "#c8b97a",
+    color: "#E0784E",
     textTransform: "uppercase" as const,
     letterSpacing: ".14em",
     marginBottom: 16,
@@ -65,15 +65,15 @@ const styles = {
     fontWeight: 600,
     lineHeight: 1.15,
     margin: "0 0 20px",
-    color: "#f5f0e8",
+    color: "#F7F5EF",
   },
   h1Em: {
     fontStyle: "italic",
-    color: "#c8b97a",
+    color: "#E0784E",
   },
   lede: {
     fontSize: 16,
-    color: "#9e9890",
+    color: "#9FB8A9",
     lineHeight: 1.7,
     margin: 0,
     maxWidth: 560,
@@ -92,14 +92,14 @@ const styles = {
     gap: 14,
     marginBottom: 24,
     paddingBottom: 16,
-    borderBottom: "1px solid #2a2720",
+    borderBottom: "1px solid #2E5644",
   },
   sectionNum: {
     fontFamily: MONO,
     fontSize: 11,
-    color: "#c8b97a",
-    background: "#c8b97a15",
-    border: "1px solid #c8b97a30",
+    color: "#E0784E",
+    background: "#E0784E15",
+    border: "1px solid #E0784E30",
     borderRadius: 3,
     padding: "3px 8px",
     flexShrink: 0,
@@ -108,7 +108,7 @@ const styles = {
     fontFamily: SERIF,
     fontSize: 20,
     fontWeight: 600,
-    color: "#f5f0e8",
+    color: "#F7F5EF",
     margin: 0,
   },
   fieldGroup: {
@@ -128,25 +128,25 @@ const styles = {
   label: {
     fontSize: 11.5,
     fontWeight: 600,
-    color: "#9e9890",
+    color: "#9FB8A9",
     textTransform: "uppercase" as const,
     letterSpacing: ".1em",
   },
   required: {
-    color: "#c8b97a",
+    color: "#E0784E",
     marginLeft: 3,
   },
   hint: {
     fontSize: 11.5,
-    color: "#6b6660",
+    color: "#9FB8A9",
     lineHeight: 1.5,
     marginTop: 4,
   },
   input: {
-    background: "#1a1814",
-    border: "1px solid #2a2720",
+    background: "#1A3F2F",
+    border: "1px solid #2E5644",
     borderRadius: 4,
-    color: "#f5f0e8",
+    color: "#F7F5EF",
     fontSize: 14,
     padding: "11px 14px",
     outline: "none",
@@ -156,10 +156,10 @@ const styles = {
     boxSizing: "border-box" as const,
   },
   textarea: {
-    background: "#1a1814",
-    border: "1px solid #2a2720",
+    background: "#1A3F2F",
+    border: "1px solid #2E5644",
     borderRadius: 4,
-    color: "#f5f0e8",
+    color: "#F7F5EF",
     fontSize: 14,
     padding: "11px 14px",
     outline: "none",
@@ -170,10 +170,10 @@ const styles = {
     boxSizing: "border-box" as const,
   },
   select: {
-    background: "#1a1814",
-    border: "1px solid #2a2720",
+    background: "#1A3F2F",
+    border: "1px solid #2E5644",
     borderRadius: 4,
-    color: "#f5f0e8",
+    color: "#F7F5EF",
     fontSize: 14,
     padding: "11px 14px",
     outline: "none",
@@ -193,29 +193,29 @@ const styles = {
     alignItems: "flex-start",
     gap: 12,
     padding: "12px 16px",
-    background: "#1a1814",
-    border: "1px solid #2a2720",
+    background: "#1A3F2F",
+    border: "1px solid #2E5644",
     borderRadius: 4,
     cursor: "pointer",
     transition: "border-color .15s",
   },
   radioOptionSelected: {
-    borderColor: "#c8b97a",
-    background: "#c8b97a08",
+    borderColor: "#E0784E",
+    background: "#E0784E08",
   },
   radioLabel: {
     fontSize: 14,
-    color: "#f5f0e8",
+    color: "#F7F5EF",
     lineHeight: 1.5,
   },
   radioHint: {
     fontSize: 12,
-    color: "#6b6660",
+    color: "#9FB8A9",
     marginTop: 2,
   },
   eligBox: {
-    background: "#1a1814",
-    border: "1px solid #2a2720",
+    background: "#1A3F2F",
+    border: "1px solid #2E5644",
     borderRadius: 6,
     padding: "20px 24px",
     marginTop: 8,
@@ -224,13 +224,13 @@ const styles = {
     display: "flex",
     gap: 12,
     padding: "10px 0",
-    borderBottom: "1px solid #2a2720",
+    borderBottom: "1px solid #2E5644",
     alignItems: "flex-start",
   },
   eligQ: {
     flex: 1,
     fontSize: 13.5,
-    color: "#c8c0b0",
+    color: "#C9CFC2",
     lineHeight: 1.5,
   },
   eligBtns: {
@@ -246,35 +246,35 @@ const styles = {
     cursor: "pointer",
     border: active
       ? `1px solid ${isYes ? "#4ade80" : "#f87171"}`
-      : "1px solid #2a2720",
+      : "1px solid #2E5644",
     background: active
       ? isYes ? "#4ade8018" : "#f8717118"
       : "transparent",
     color: active
       ? isYes ? "#4ade80" : "#f87171"
-      : "#6b6660",
+      : "#9FB8A9",
     transition: "all .15s",
   }),
   submitArea: {
-    borderTop: "1px solid #2a2720",
+    borderTop: "1px solid #2E5644",
     paddingTop: 32,
     marginTop: 8,
   },
   disclaimer: {
     fontSize: 12,
-    color: "#6b6660",
+    color: "#9FB8A9",
     lineHeight: 1.6,
     marginBottom: 20,
     padding: "12px 16px",
-    background: "#1a1814",
+    background: "#1A3F2F",
     borderRadius: 4,
-    border: "1px solid #2a2720",
+    border: "1px solid #2E5644",
   },
   submitBtn: {
     width: "100%",
     padding: "14px",
-    background: "#c8b97a",
-    color: "#0f0e0c",
+    background: "#E0784E",
+    color: "#132E22",
     border: "none",
     borderRadius: 4,
     fontSize: 15,
@@ -286,7 +286,7 @@ const styles = {
   },
   successPage: {
     minHeight: "100vh",
-    background: "#0f0e0c",
+    background: "#132E22",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -304,12 +304,12 @@ const styles = {
     fontFamily: SERIF,
     fontSize: 32,
     fontWeight: 600,
-    color: "#f5f0e8",
+    color: "#F7F5EF",
     marginBottom: 16,
   },
   successBody: {
     fontSize: 15,
-    color: "#9e9890",
+    color: "#9FB8A9",
     lineHeight: 1.7,
   },
 };
@@ -388,7 +388,7 @@ function IntakeForm() {
 
   const inputStyle = (focused?: boolean) => ({
     ...styles.input,
-    borderColor: focused ? "#c8b97a" : "#2a2720",
+    borderColor: focused ? "#E0784E" : "#2E5644",
   });
 
   const handleSubmit = async () => {
@@ -419,10 +419,10 @@ function IntakeForm() {
           <div style={styles.successIcon}>✓</div>
           <div style={styles.successTitle}>Submission received.</div>
           <p style={styles.successBody}>
-            Thank you for submitting <strong style={{ color: "#f5f0e8" }}>{form.eventName}</strong>.
+            Thank you for submitting <strong style={{ color: "#F7F5EF" }}>{form.eventName}</strong>.
             Our team will review your event details and be in touch if we'd like to move forward with an analysis.
           </p>
-          <p style={{ ...styles.successBody, marginTop: 16, fontSize: 13, color: "#6b6660" }}>
+          <p style={{ ...styles.successBody, marginTop: 16, fontSize: 13, color: "#9FB8A9" }}>
             Questions? Contact the organization you submitted to directly.
           </p>
         </div>
@@ -453,7 +453,7 @@ function IntakeForm() {
           Tell us about <em style={styles.h1Em}>your event.</em>
         </h1>
         <p style={styles.lede}>
-          Complete this form so {orgName ? <strong style={{ color: "#f5f0e8" }}>{orgName}</strong> : "we"} can evaluate your event for Texas Events Trust Fund eligibility.
+          Complete this form so {orgName ? <strong style={{ color: "#F7F5EF" }}>{orgName}</strong> : "we"} can evaluate your event for Texas Events Trust Fund eligibility.
           The more detail you provide, the faster we can complete our analysis.
           All information is kept confidential.
         </p>
@@ -607,7 +607,7 @@ function IntakeForm() {
                     style={{ ...styles.radioOption, ...(form.competitiveProcess === opt.val ? styles.radioOptionSelected : {}) }}
                     onClick={() => set("competitiveProcess", opt.val)}
                   >
-                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${form.competitiveProcess === opt.val ? "#c8b97a" : "#3a3730"}`, background: form.competitiveProcess === opt.val ? "#c8b97a" : "transparent", flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${form.competitiveProcess === opt.val ? "#E0784E" : "#55705F"}`, background: form.competitiveProcess === opt.val ? "#E0784E" : "transparent", flexShrink: 0, marginTop: 2 }} />
                     <div>
                       <div style={styles.radioLabel}>{opt.label}</div>
                       <div style={styles.radioHint}>{opt.hint}</div>
@@ -629,7 +629,7 @@ function IntakeForm() {
                     style={{ ...styles.radioOption, ...(form.selectionLetterAvailable === opt.val ? styles.radioOptionSelected : {}) }}
                     onClick={() => set("selectionLetterAvailable", opt.val)}
                   >
-                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${form.selectionLetterAvailable === opt.val ? "#c8b97a" : "#3a3730"}`, background: form.selectionLetterAvailable === opt.val ? "#c8b97a" : "transparent", flexShrink: 0, marginTop: 1 }} />
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${form.selectionLetterAvailable === opt.val ? "#E0784E" : "#55705F"}`, background: form.selectionLetterAvailable === opt.val ? "#E0784E" : "transparent", flexShrink: 0, marginTop: 1 }} />
                     <div style={styles.radioLabel}>{opt.label}</div>
                   </div>
                 ))}
@@ -644,7 +644,7 @@ function IntakeForm() {
             <span style={styles.sectionNum}>05</span>
             <h2 style={styles.sectionTitle}>Eligibility Questions</h2>
           </div>
-          <p style={{ fontSize: 13.5, color: "#6b6660", lineHeight: 1.6, marginBottom: 16, marginTop: 0 }}>
+          <p style={{ fontSize: 13.5, color: "#9FB8A9", lineHeight: 1.6, marginBottom: 16, marginTop: 0 }}>
             These questions help us determine if your event qualifies for the Texas Events Trust Fund program.
             Answer to the best of your knowledge — we'll verify details during our review.
           </p>
@@ -653,7 +653,7 @@ function IntakeForm() {
               <div key={q.key} style={{ ...styles.eligRow, ...(i === ELIG_QUESTIONS.length - 1 ? { borderBottom: "none", paddingBottom: 0 } : {}) }}>
                 <div style={{ flex: 1 }}>
                   <div style={styles.eligQ}>{q.q}</div>
-                  {q.hint && <div style={{ fontSize: 11.5, color: "#6b6660", marginTop: 4 }}>{q.hint}</div>}
+                  {q.hint && <div style={{ fontSize: 11.5, color: "#9FB8A9", marginTop: 4 }}>{q.hint}</div>}
                 </div>
                 <div style={styles.eligBtns}>
                   <button
@@ -728,7 +728,7 @@ function IntakeForm() {
 
 export default function IntakePage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0f0e0c" }} />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#132E22" }} />}>
       <IntakeForm />
     </Suspense>
   );

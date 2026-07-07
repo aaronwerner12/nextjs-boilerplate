@@ -66,27 +66,27 @@ export async function POST(req: NextRequest) {
         to: [normalizedEmail],
         subject: "Your sign-in link — Texas ETF Analysis Tool",
         html: `
-          <div style="font-family: Georgia, serif; max-width: 520px; margin: 0 auto; color: #1a1613;">
-            <div style="background: #1a1613; padding: 28px 36px; border-radius: 6px 6px 0 0;">
-              <div style="font-size: 20px; font-weight: 600; color: #f5f0e8;">Texas Events Trust Fund</div>
-              <div style="font-size: 12px; color: #9e9890; margin-top: 4px; text-transform: uppercase; letter-spacing: .1em;">Analysis Tool</div>
+          <div style="font-family: Georgia, serif; max-width: 520px; margin: 0 auto; color: #1E4536;">
+            <div style="background: #1E4536; padding: 28px 36px; border-radius: 6px 6px 0 0;">
+              <div style="font-size: 20px; font-weight: 600; color: #F7F5EF;">Texas Events Trust Fund</div>
+              <div style="font-size: 12px; color: #9FB8A9; margin-top: 4px; text-transform: uppercase; letter-spacing: .1em;">Analysis Tool</div>
             </div>
-            <div style="padding: 36px; border: 1px solid #e8e3db; border-top: none; border-radius: 0 0 6px 6px;">
+            <div style="padding: 36px; border: 1px solid #DFDDD0; border-top: none; border-radius: 0 0 6px 6px;">
               <p style="margin: 0 0 8px; font-size: 16px; font-weight: 600;">Sign in to ETF Analysis Tool</p>
-              <p style="margin: 0 0 28px; font-size: 14px; color: #6b6660; line-height: 1.6;">
+              <p style="margin: 0 0 28px; font-size: 14px; color: #6C7065; line-height: 1.6;">
                 Click the button below to sign in. This link expires in 15 minutes and can only be used once.
               </p>
               <a href="${magicLink}"
-                 style="display: inline-block; padding: 14px 32px; background: #1a1613; color: #f5f0e8; text-decoration: none; border-radius: 4px; font-size: 15px; font-weight: 600; letter-spacing: .01em;">
+                 style="display: inline-block; padding: 14px 32px; background: #1E4536; color: #F7F5EF; text-decoration: none; border-radius: 4px; font-size: 15px; font-weight: 600; letter-spacing: .01em;">
                 Sign In →
               </a>
-              <p style="margin: 24px 0 0; font-size: 12px; color: #9ca3af; line-height: 1.6;">
+              <p style="margin: 24px 0 0; font-size: 12px; color: #979A8D; line-height: 1.6;">
                 If you didn't request this, you can ignore this email.<br>
                 Link expires at ${new Date(Date.now() + 15 * 60 * 1000).toLocaleTimeString("en-US", { timeZone: "America/Chicago" })} CT
               </p>
-              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e8e3db; font-size: 11px; color: #9ca3af;">
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #DFDDD0; font-size: 11px; color: #979A8D;">
                 Can't click the button? Copy this link:<br>
-                <span style="color: #6b6660; word-break: break-all;">${magicLink}</span>
+                <span style="color: #6C7065; word-break: break-all;">${magicLink}</span>
               </div>
             </div>
           </div>
