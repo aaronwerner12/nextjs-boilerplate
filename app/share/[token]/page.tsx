@@ -34,14 +34,14 @@ export default function SharePage() {
   }, [params.token]);
 
   if (state === "loading") {
-    return <div style={{ minHeight: "100vh", background: "#F2E8D6", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, color: "#7A6A58", fontStyle: "italic", fontSize: 18 }}>Loading…</div>;
+    return <div style={{ minHeight: "100vh", background: "#F7F5EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, color: "#6C7065", fontStyle: "italic", fontSize: 18 }}>Loading…</div>;
   }
   if (state === "notfound") {
     return (
-      <div style={{ minHeight: "100vh", background: "#F2E8D6", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#F7F5EF", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', sans-serif" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, color: "#2C1C0E", marginBottom: 8 }}>Link not found</div>
-          <div style={{ fontSize: 14, color: "#7A6A58" }}>This share link is invalid or has been removed.</div>
+          <div style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, color: "#1E4536", marginBottom: 8 }}>Link not found</div>
+          <div style={{ fontSize: 14, color: "#6C7065" }}>This share link is invalid or has been removed.</div>
         </div>
       </div>
     );
@@ -54,23 +54,23 @@ export default function SharePage() {
   const days = event.calc?.days || [];
 
   const stat = (label, value) => (
-    <div style={{ background: "#fff", border: "1px solid #DDD0BB", borderRadius: 14, padding: "18px 22px" }}>
-      <div style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: "#9A572D" }}>{value}</div>
-      <div style={{ fontSize: 11, color: "#7A6A58", textTransform: "uppercase", letterSpacing: ".08em", marginTop: 4 }}>{label}</div>
+    <div style={{ background: "#fff", border: "1px solid #DFDDD0", borderRadius: 14, padding: "18px 22px" }}>
+      <div style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: "#B04E31" }}>{value}</div>
+      <div style={{ fontSize: 11, color: "#6C7065", textTransform: "uppercase", letterSpacing: ".08em", marginTop: 4 }}>{label}</div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F2E8D6", fontFamily: "'Inter', system-ui, sans-serif", color: "#2C1C0E" }}>
+    <div style={{ minHeight: "100vh", background: "#F7F5EF", fontFamily: "'Inter', system-ui, sans-serif", color: "#1E4536" }}>
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 24px 80px" }}>
 
-        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".15em", color: "#9A572D", fontWeight: 600, marginBottom: 10 }}>
+        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".15em", color: "#B04E31", fontWeight: 600, marginBottom: 10 }}>
           {orgName || "ETF Analysis"}{orgCity ? ` · ${orgCity}, ${orgState || "TX"}` : ""} · Read-only summary
         </div>
         <h1 style={{ fontFamily: SERIF, fontSize: 36, fontWeight: 500, letterSpacing: "-.02em", margin: "0 0 6px" }}>
           {event.name || "Untitled Event"}
         </h1>
-        <div style={{ fontSize: 15, color: "#7A6A58", marginBottom: 28 }}>
+        <div style={{ fontSize: 15, color: "#6C7065", marginBottom: 28 }}>
           {event.firstDay ? `${fmtDate(event.firstDay)} – ${fmtDate(event.lastDay || event.firstDay)}` : "Dates TBD"}
           {event.siteSelectionOrg ? ` · Site selection: ${event.siteSelectionOrg}` : ""}
         </div>
@@ -82,33 +82,33 @@ export default function SharePage() {
           {stat("Est. Room Nights", fmtNum(calc.totalRoomNights || event.roomNights || 0))}
         </div>
 
-        <div style={{ background: "#fff", border: "1px solid #DDD0BB", borderRadius: 14, padding: "22px 26px", marginBottom: 20 }}>
+        <div style={{ background: "#fff", border: "1px solid #DFDDD0", borderRadius: 14, padding: "22px 26px", marginBottom: 20 }}>
           <div style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Event Details</div>
           <div style={{ fontSize: 13.5, lineHeight: 2 }}>
-            <div><span style={{ color: "#7A6A58" }}>Venue(s):</span> {venues}</div>
-            <div><span style={{ color: "#7A6A58" }}>Total estimated attendance:</span> {fmtNum(calc.totalAttendance || event.attendeeEst || 0)}</div>
-            {days.length > 0 && <div><span style={{ color: "#7A6A58" }}>Event days modeled:</span> {days.length}</div>}
+            <div><span style={{ color: "#6C7065" }}>Venue(s):</span> {venues}</div>
+            <div><span style={{ color: "#6C7065" }}>Total estimated attendance:</span> {fmtNum(calc.totalAttendance || event.attendeeEst || 0)}</div>
+            {days.length > 0 && <div><span style={{ color: "#6C7065" }}>Event days modeled:</span> {days.length}</div>}
           </div>
         </div>
 
         {days.length > 0 && (
-          <div style={{ background: "#fff", border: "1px solid #DDD0BB", borderRadius: 14, padding: "22px 26px", marginBottom: 20, overflowX: "auto" }}>
+          <div style={{ background: "#fff", border: "1px solid #DFDDD0", borderRadius: 14, padding: "22px 26px", marginBottom: 20, overflowX: "auto" }}>
             <div style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Estimated Daily Attendance</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "6px 10px", borderBottom: "2px solid #DDD0BB", color: "#7A6A58", fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".06em" }}>Date</th>
+                  <th style={{ textAlign: "left", padding: "6px 10px", borderBottom: "2px solid #DFDDD0", color: "#6C7065", fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".06em" }}>Date</th>
                   {ATTENDEE_CATS.map((c) => (
-                    <th key={c.key} style={{ textAlign: "right", padding: "6px 10px", borderBottom: "2px solid #DDD0BB", color: "#7A6A58", fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".06em" }}>{c.label.split("/")[0]}</th>
+                    <th key={c.key} style={{ textAlign: "right", padding: "6px 10px", borderBottom: "2px solid #DFDDD0", color: "#6C7065", fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".06em" }}>{c.label.split("/")[0]}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {days.map((day, i) => (
                   <tr key={i}>
-                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #F2E8D6" }}>{day.date ? fmtDate(day.date) : `Day ${i + 1}`}</td>
+                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #F7F5EF" }}>{day.date ? fmtDate(day.date) : `Day ${i + 1}`}</td>
                     {ATTENDEE_CATS.map((c) => (
-                      <td key={c.key} style={{ textAlign: "right", padding: "6px 10px", borderBottom: "1px solid #F2E8D6" }}>{fmtNum(Number(day[c.key]) || 0)}</td>
+                      <td key={c.key} style={{ textAlign: "right", padding: "6px 10px", borderBottom: "1px solid #F7F5EF" }}>{fmtNum(Number(day[c.key]) || 0)}</td>
                     ))}
                   </tr>
                 ))}
@@ -117,7 +117,7 @@ export default function SharePage() {
           </div>
         )}
 
-        <div style={{ fontSize: 11, color: "#9A8E7E", textAlign: "center", lineHeight: 1.7, marginTop: 32 }}>
+        <div style={{ fontSize: 11, color: "#979A8D", textAlign: "center", lineHeight: 1.7, marginTop: 32 }}>
           Shared from the ETF Analysis Tool. Figures are internal planning estimates only.<br />
           Not affiliated with the Texas Office of the Governor or EDT.
         </div>

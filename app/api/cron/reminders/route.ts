@@ -83,23 +83,23 @@ export async function GET(req: NextRequest) {
         const status = d.daysAway < 0
           ? `<span style="color:#dc2626;font-weight:700">${Math.abs(d.daysAway)} days OVERDUE</span>`
           : d.daysAway <= 14
-            ? `<span style="color:#9A572D;font-weight:700">in ${d.daysAway} days</span>`
+            ? `<span style="color:#B04E31;font-weight:700">in ${d.daysAway} days</span>`
             : `in ${d.daysAway} days`;
         return `<tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #DDD0BB;font-size:14px">${status}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #DDD0BB;font-size:14px"><strong>${d.label}</strong><br><span style="color:#7A6A58;font-size:13px">${d.eventName}</span></td>
-          <td style="padding:8px 12px;border-bottom:1px solid #DDD0BB;font-size:13px;color:#7A6A58;white-space:nowrap">${fmtDate(d.due)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #DFDDD0;font-size:14px">${status}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #DFDDD0;font-size:14px"><strong>${d.label}</strong><br><span style="color:#6C7065;font-size:13px">${d.eventName}</span></td>
+          <td style="padding:8px 12px;border-bottom:1px solid #DFDDD0;font-size:13px;color:#6C7065;white-space:nowrap">${fmtDate(d.due)}</td>
         </tr>`;
       }).join("");
 
       const html = `
-<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:24px;background:#FBF3E8;border-radius:12px">
-  <h2 style="color:#2C1C0E;margin:0 0 4px">ETF Deadline Digest</h2>
-  <p style="color:#7A6A58;font-size:14px;margin:0 0 20px">${org.name} — ${upcoming.length} deadline${upcoming.length === 1 ? "" : "s"} in the next 45 days</p>
+<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:24px;background:#F1EFE6;border-radius:12px">
+  <h2 style="color:#1E4536;margin:0 0 4px">ETF Deadline Digest</h2>
+  <p style="color:#6C7065;font-size:14px;margin:0 0 20px">${org.name} — ${upcoming.length} deadline${upcoming.length === 1 ? "" : "s"} in the next 45 days</p>
   <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden">
     ${rows}
   </table>
-  <p style="color:#9A8E7E;font-size:12px;margin-top:20px">Sent weekly by your ETF Analysis Tool. Deadlines are computed from Texas Event Trust Fund Guidelines. Not affiliated with the Office of the Governor or EDT.</p>
+  <p style="color:#979A8D;font-size:12px;margin-top:20px">Sent weekly by your ETF Analysis Tool. Deadlines are computed from Texas Event Trust Fund Guidelines. Not affiliated with the Office of the Governor or EDT.</p>
 </div>`;
 
       const emailRes = await fetch("https://api.resend.com/emails", {
