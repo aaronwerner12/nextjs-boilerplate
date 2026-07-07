@@ -13,7 +13,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div style={{ background: "#0a0906", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", color: "#F7F5EF", overflowX: "hidden" }}>
+    <div style={{ background: "#132E22", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", color: "#F7F5EF", overflowX: "hidden" }}>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600&display=swap');
@@ -91,7 +91,7 @@ export default function LandingPage() {
         .land-btn-primary {
           padding: 14px 32px;
           background: #E0784E;
-          color: #0a0906;
+          color: #132E22;
           border: none; border-radius: 4px;
           font-size: 15px; font-weight: 700;
           cursor: pointer; text-decoration: none;
@@ -275,7 +275,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className={`land-nav${scrolled ? " scrolled" : ""}`}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: "#E0784E", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 13, color: "#0a0906" }}>ETF</div>
+          <div style={{ width: 32, height: 32, background: "#E0784E", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 13, color: "#132E22" }}>ETF</div>
           <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 15, fontWeight: 600, color: "#F7F5EF" }}>TX ETF Analysis Tool</span>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -375,7 +375,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="land-footer">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 24, height: 24, background: "#E0784E", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 10, color: "#0a0906" }}>ETF</div>
+          <div style={{ width: 24, height: 24, background: "#E0784E", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 10, color: "#132E22" }}>ETF</div>
           <span style={{ fontSize: 13, color: "#7E9C8D" }}>Texas Events Trust Fund Analysis Tool</span>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
