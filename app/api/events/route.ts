@@ -74,27 +74,57 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/events
+// Optimistic concurrency: when the client sends baseUpdatedAt (the
+// updated_at it last saw) and someone else has saved since, respond 409
+// with the newer version instead of silently overwriting it.
 export async function POST(req: NextRequest) {
   try {
     await ensureTable();
     const body = await req.json();
-    const { id, createdBy = "Unknown", orgId, ...data } = body;
+    const { id, createdBy = "Unknown", orgId, baseUpdatedAt, editedBy, ...data } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing event id" }, { status: 400 });
     }
 
-    await sql`
-      INSERT INTO etf_events (id, org_id, data, created_by, updated_at)
-      VALUES (${id}, ${orgId || null}, ${JSON.stringify(data)}, ${createdBy}, NOW())
+    await sql`ALTER TABLE etf_events ADD COLUMN IF NOT EXISTS last_edited_by TEXT`.catch(() => {});
+
+    if (baseUpdatedAt) {
+      const existing = await sql`
+        SELECT data, updated_at, last_edited_by, created_by FROM etf_events WHERE id = ${id}
+      `;
+      if (existing.length > 0) {
+        const dbTime = new Date(existing[0].updated_at).getTime();
+        const baseTime = new Date(baseUpdatedAt).getTime();
+        // 2s tolerance absorbs clock jitter between the client's copy
+        // of the timestamp and the DB value
+        if (dbTime - baseTime > 2000) {
+          return NextResponse.json({
+            error: "conflict",
+            latest: {
+              ...existing[0].data,
+              id,
+              updatedAt: existing[0].updated_at,
+              lastEditedBy: existing[0].last_edited_by || existing[0].created_by,
+            },
+          }, { status: 409 });
+        }
+      }
+    }
+
+    const rows = await sql`
+      INSERT INTO etf_events (id, org_id, data, created_by, last_edited_by, updated_at)
+      VALUES (${id}, ${orgId || null}, ${JSON.stringify(data)}, ${createdBy}, ${editedBy || createdBy}, NOW())
       ON CONFLICT (id) DO UPDATE
-        SET data       = ${JSON.stringify(data)},
-            org_id     = ${orgId || null},
-            created_by = ${createdBy},
-            updated_at = NOW()
+        SET data           = ${JSON.stringify(data)},
+            org_id         = ${orgId || null},
+            created_by     = ${createdBy},
+            last_edited_by = ${editedBy || createdBy},
+            updated_at     = NOW()
+      RETURNING updated_at
     `;
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, updatedAt: rows[0]?.updated_at });
   } catch (error) {
     console.error("POST /api/events error:", error);
     return NextResponse.json({ error: "Failed to save event" }, { status: 500 });
