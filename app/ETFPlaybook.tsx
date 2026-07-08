@@ -401,6 +401,49 @@ function evaluateDecision(event, calcResult, thresholds = {}) {
 
 
 // ————————————————————————————————————————————————————————————————
+// Crash reporter — auto-files crashes through the feedback pipeline
+// (GitHub issue when the token is configured, DB always). Throttled
+// per error signature so a crash loop can't spam the repo.
+// ————————————————————————————————————————————————————————————————
+function reportCrash(kind, error, componentStack) {
+  try {
+    const message = String(error?.message || error || "Unknown error").slice(0, 300);
+    const stack = String(error?.stack || "").slice(0, 1500);
+
+    // One report per unique error per 6 hours, per browser
+    const signature = "etf_crash_" + kind + "_" + message.slice(0, 80).replace(/[^a-z0-9]/gi, "_");
+    const last = Number(localStorage.getItem(signature) || 0);
+    if (Date.now() - last < 6 * 60 * 60 * 1000) return;
+    localStorage.setItem(signature, String(Date.now()));
+
+    let orgName = "";
+    try { orgName = JSON.parse(localStorage.getItem("etf_org_data") || "{}").name || ""; } catch (_) {}
+
+    // First line becomes the GitHub issue title
+    const body = [
+      `${kind}: ${message}`,
+      "",
+      stack ? "```\n" + stack + "\n```" : "",
+      componentStack ? "**Component stack:**\n```" + String(componentStack).slice(0, 800) + "\n```" : "",
+    ].filter(Boolean).join("\n");
+
+    fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: body,
+        category: "crash",
+        orgName,
+        memberName: localStorage.getItem("etf_team_member") || "",
+        page: window.location.pathname,
+      }),
+    }).catch(() => {});
+  } catch (_) {
+    // The crash reporter must never crash
+  }
+}
+
+// ————————————————————————————————————————————————————————————————
 // Error Boundary — catches crashes and shows a recovery screen
 // ————————————————————————————————————————————————————————————————
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
@@ -410,6 +453,9 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    reportCrash("render crash", error, errorInfo?.componentStack);
   }
   render() {
     if (this.state.hasError) {
@@ -821,6 +867,19 @@ function ETFPlaybookInner() {
 }
 
 export default function ETFPlaybook() {
+  // Catch what the ErrorBoundary can't: unhandled promise rejections
+  // (like the original iPhone login crash) and uncaught window errors.
+  useEffect(() => {
+    const onRejection = (e) => reportCrash("unhandled promise rejection", e.reason);
+    const onError = (e) => reportCrash("uncaught error", e.error || e.message);
+    window.addEventListener("unhandledrejection", onRejection);
+    window.addEventListener("error", onError);
+    return () => {
+      window.removeEventListener("unhandledrejection", onRejection);
+      window.removeEventListener("error", onError);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <ETFPlaybookInner />
