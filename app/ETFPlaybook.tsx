@@ -908,6 +908,31 @@ function LoginScreen({ onComplete }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(isReturning); // returning users already agreed
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotStatus, setForgotStatus] = useState(""); // "" | sending | sent
+
+  const handleForgot = async () => {
+    if (!forgotEmail.trim().includes("@")) { setError("Enter your organization's notification email."); return; }
+    setError("");
+    setForgotStatus("sending");
+    try {
+      const res = await fetch("/api/orgs/recover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Too many requests. Try again later.");
+        setForgotStatus("");
+        return;
+      }
+      setForgotStatus("sent");
+    } catch (_) {
+      setError("Connection problem — try again.");
+      setForgotStatus("");
+    }
+  };
 
   const handlePasscodeLogin = async (nameToUse) => {
     setLoading(true);
@@ -1042,19 +1067,84 @@ function LoginScreen({ onComplete }) {
               {loading ? "Signing in…" : "Enter →"}
             </button>
 
-            <div style={{ textAlign: "center" }}>
+            <div style={{ textAlign: "center", display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
               <button
                 onClick={() => { localStorage.removeItem("etf_team_member"); setMode("join"); setName(""); setAgreed(false); }}
                 style={{ background: "none", border: "none", color: "#7E9C8D", fontSize: 12.5, cursor: "pointer", textDecoration: "underline" }}
               >
                 Not {storedName.split(" ")[0]}? Switch account
               </button>
+              <button
+                onClick={() => { setMode("forgot"); setError(""); }}
+                style={{ background: "none", border: "none", color: "#7E9C8D", fontSize: 12.5, cursor: "pointer", textDecoration: "underline" }}
+              >
+                Forgot access code?
+              </button>
             </div>
           </div>
         )}
 
+        {/* Forgot access code */}
+        {mode === "forgot" && (
+          <div style={{ background: "#1A3F2F", border: "1px solid #2E5644", borderRadius: 14, padding: "32px 28px" }}>
+            {forgotStatus === "sent" ? (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>📬</div>
+                <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 19, fontWeight: 600, color: "#F7F5EF", marginBottom: 8 }}>Check that inbox</div>
+                <p style={{ fontSize: 13, color: "#9FB8A9", lineHeight: 1.6, marginBottom: 20 }}>
+                  If that email is registered to an organization, a reset link is on its way. It works for 30 minutes.
+                </p>
+                <button
+                  onClick={() => { setMode(isReturning ? "returning" : "join"); setForgotStatus(""); setForgotEmail(""); }}
+                  style={{ background: "none", border: "none", color: "#7E9C8D", fontSize: 12.5, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  ← Back to sign in
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600, color: "#F7F5EF", marginBottom: 6 }}>Forgot your access code?</div>
+                <p style={{ fontSize: 13, color: "#9FB8A9", lineHeight: 1.6, margin: "0 0 20px" }}>
+                  Enter your organization's <strong>notification email</strong> (set in Org Settings) and we'll send a link to create a new code for your whole team.
+                </p>
+
+                {error && <div style={{ padding: "10px 14px", background: "#7f1d1d22", border: "1px solid #7f1d1d", borderRadius: 10, fontSize: 13, color: "#fca5a5", marginBottom: 16 }}>{error}</div>}
+
+                <div style={s.field}>
+                  <input
+                    autoFocus
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleForgot()}
+                    placeholder="events@yourorg.com"
+                    style={s.input}
+                  />
+                </div>
+
+                <button
+                  onClick={handleForgot}
+                  disabled={forgotStatus === "sending" || !forgotEmail}
+                  style={{ width: "100%", padding: "13px", background: forgotEmail ? "#E0784E" : "#2E5644", color: forgotEmail ? "#fff" : "#6C7065", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: forgotEmail ? "pointer" : "default", fontFamily: "inherit", marginBottom: 14 }}
+                >
+                  {forgotStatus === "sending" ? "Sending…" : "Email Reset Link"}
+                </button>
+
+                <div style={{ textAlign: "center" }}>
+                  <button
+                    onClick={() => { setMode(isReturning ? "returning" : "join"); setError(""); }}
+                    style={{ background: "none", border: "none", color: "#7E9C8D", fontSize: 12.5, cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    ← Back to sign in
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* New user — full form with tabs */}
-        {mode !== "returning" && (
+        {mode !== "returning" && mode !== "forgot" && (
           <>
             <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
               <button onClick={() => { setMode("join"); setError(""); }} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", background: mode === "join" ? "#E0784E" : "#1A3F2F", color: mode === "join" ? "#fff" : "#6C7065", transition: "all .15s" }}>
@@ -1086,7 +1176,12 @@ function LoginScreen({ onComplete }) {
                   <div style={s.field}>
                     <label style={s.label}>Access Code</label>
                     <input type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} placeholder="Your team's access code" style={s.input} />
-                    <div style={{ fontSize: 11.5, color: "#7E9C8D", marginTop: 5 }}>Get this from your team admin.</div>
+                    <div style={{ fontSize: 11.5, color: "#7E9C8D", marginTop: 5 }}>
+                      Get this from your team admin.{" "}
+                      <button onClick={() => { setMode("forgot"); setError(""); }} style={{ background: "none", border: "none", color: "#7E9C8D", fontSize: 11.5, cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "inherit" }}>
+                        Forgot it?
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
