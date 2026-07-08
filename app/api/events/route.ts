@@ -18,6 +18,7 @@ async function ensureTable() {
   `;
   // Add org_id column if upgrading from old schema
   await sql`ALTER TABLE etf_events ADD COLUMN IF NOT EXISTS org_id TEXT`.catch(() => {});
+  await sql`ALTER TABLE etf_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`.catch(() => {});
 }
 
 // GET /api/events?org_id=xxx
@@ -26,20 +27,32 @@ export async function GET(req: NextRequest) {
     await ensureTable();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("org_id");
+    const wantDeleted = searchParams.get("deleted") === "1";
+
+    // Purge anything trashed more than 30 days ago
+    await sql`DELETE FROM etf_events WHERE deleted_at < NOW() - INTERVAL '30 days'`.catch(() => {});
 
     let rows;
-    if (orgId) {
+    if (orgId && wantDeleted) {
       rows = await sql`
-        SELECT id, org_id, data, created_by, created_at, updated_at
+        SELECT id, org_id, data, created_by, created_at, updated_at, deleted_at
         FROM etf_events
-        WHERE org_id = ${orgId}
+        WHERE org_id = ${orgId} AND deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC
+      `;
+    } else if (orgId) {
+      rows = await sql`
+        SELECT id, org_id, data, created_by, created_at, updated_at, deleted_at
+        FROM etf_events
+        WHERE org_id = ${orgId} AND deleted_at IS NULL
         ORDER BY updated_at DESC
       `;
     } else {
       // Fallback — return all (for backwards compat)
       rows = await sql`
-        SELECT id, org_id, data, created_by, created_at, updated_at
+        SELECT id, org_id, data, created_by, created_at, updated_at, deleted_at
         FROM etf_events
+        WHERE deleted_at IS NULL
         ORDER BY updated_at DESC
       `;
     }
@@ -51,6 +64,7 @@ export async function GET(req: NextRequest) {
       createdBy: row.created_by,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      deletedAt: row.deleted_at || null,
     }));
     return NextResponse.json(events);
   } catch (error) {
