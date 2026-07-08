@@ -675,6 +675,7 @@ function ETFPlaybookInner() {
   const [showTeamPanel, setShowTeamPanel] = useState(false);
   const [showOrgSettings, setShowOrgSettings] = useState(false);
   const [showAdminWelcome, setShowAdminWelcome] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   // Org + member identity — loaded from localStorage (SSR-safe)
   const [orgId, setOrgId] = useState("");
@@ -733,13 +734,18 @@ function ETFPlaybookInner() {
         const me = members.find((m) => m.id === storedMemberId);
         if (me) {
           setMemberRecord(me);
-          if (me.is_admin && !localStorage.getItem("etf_seen_admin_welcome")) {
+          // Admin welcome only fires once the tour's been seen — the
+          // first-run tour covers admins so they don't get two popups.
+          if (me.is_admin && localStorage.getItem("etf_seen_tour") && !localStorage.getItem("etf_seen_admin_welcome")) {
             setShowAdminWelcome(true);
             localStorage.setItem("etf_seen_admin_welcome", "1");
           }
         }
       }).catch(() => {});
     }
+
+    // First-run tool overview (everyone, once)
+    if (!localStorage.getItem("etf_seen_tour")) setShowAbout(true);
   }, []);
 
   // ── Load org data + events once org is known ──────────────────
@@ -977,12 +983,13 @@ function ETFPlaybookInner() {
         const record = await api.upsertMember({ id: memberId, orgId: resolvedOrgId, name, title: title || "", email: email || "" });
         if (record) {
           setMemberRecord(record);
-          if (record.is_admin && !localStorage.getItem("etf_seen_admin_welcome")) {
+          if (record.is_admin && localStorage.getItem("etf_seen_tour") && !localStorage.getItem("etf_seen_admin_welcome")) {
             setShowAdminWelcome(true);
             localStorage.setItem("etf_seen_admin_welcome", "1");
           }
         }
       } catch (_) {}
+      if (!localStorage.getItem("etf_seen_tour")) setShowAbout(true);
     }
 
     setSetupStep(null);
@@ -1057,6 +1064,13 @@ function ETFPlaybookInner() {
 
       {showAdminWelcome && (
         <AdminWelcomeModal onClose={() => setShowAdminWelcome(false)} onOpenTeam={() => { setShowAdminWelcome(false); setShowTeamPanel(true); }} />
+      )}
+
+      {showAbout && (
+        <AboutModal
+          isAdmin={!!memberRecord?.is_admin}
+          onClose={() => { localStorage.setItem("etf_seen_tour", "1"); localStorage.setItem("etf_seen_admin_welcome", "1"); setShowAbout(false); }}
+        />
       )}
 
       {showOrgSettings && (
@@ -1166,6 +1180,7 @@ function ETFPlaybookInner() {
         memberRecord={memberRecord}
         onOpenTeam={() => setShowTeamPanel(true)}
         onOpenTrash={() => setShowTrash(true)}
+        onOpenGuide={() => setShowAbout(true)}
       />
       <main style={styles.main} className="etf-main">
         {!currentEvent ? (
@@ -1606,6 +1621,56 @@ function AdminWelcomeModal({ onClose, onOpenTeam }) {
           </button>
           <button onClick={onOpenTeam} style={{ padding: "10px 20px", background: "#E0784E", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
             Manage Team & Access
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+// AboutModal — first-run tool overview, re-openable from the Guide link
+// ————————————————————————————————————————————————————————————————
+function AboutModal({ isAdmin, onClose }) {
+  const features = [
+    { icon: "🧭", title: "Analyze eligibility", body: "Answer the five statutory questions to see instantly whether an event can qualify for the Texas Events Trust Fund." },
+    { icon: "🧮", title: "Project the impact", body: "Enter day-by-day attendance and the calculator estimates state and local tax generation, room nights, and your projected fund value." },
+    { icon: "📅", title: "Track every deadline", body: "Set your event dates and the tool maps out all statutory deadlines — the 120-day application window, attendance certification, local share, and disbursement." },
+    { icon: "📁", title: "Manage documents", body: "A checklist of every required and notarized document, so nothing is missing when you submit." },
+    { icon: "📝", title: "Generate the application packet", body: "One click produces a pre-filled Word application and the attendance chart CSV, ready for the official state forms." },
+    { icon: "📮", title: "Collect events via the intake form", body: "Share a link or QR code with event organizers. Their submissions land straight in your pipeline — no manual data entry." },
+    { icon: "✅", title: "Pre-submission review", body: "Before you apply, a readiness scorecard flags anything that could get the application kicked back." },
+  ];
+  if (isAdmin) {
+    features.push({ icon: "👥", title: "Manage your team", body: "As admin you can invite teammates, control access, and reset your team's access code anytime from Manage Team & Access." });
+  }
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 320, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 32, maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto", color: "#1E4536" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div style={{ width: 40, height: 40, background: "#E0784E", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 14 }}>EFP</div>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600 }}>Welcome to Event Fund Playbook</div>
+        </div>
+        <p style={{ fontSize: 13.5, color: "#6C7065", lineHeight: 1.6, margin: "0 0 20px" }}>
+          Everything you need to take an event from "should we pursue this?" all the way through a Texas Events Trust Fund application. Here's what's inside:
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {features.map((f, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "12px 14px", background: "#F7F5EF", borderRadius: 10 }}>
+              <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1.2 }}>{f.icon}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{f.title}</div>
+                <div style={{ fontSize: 12.5, color: "#6C7065", lineHeight: 1.5 }}>{f.body}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: "#979A8D", marginTop: 16, lineHeight: 1.5 }}>
+          You can reopen this overview anytime from the <strong>Guide</strong> link at the bottom of the sidebar.
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+          <button onClick={onClose} style={{ padding: "11px 24px", background: "#E0784E", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+            Get started
           </button>
         </div>
       </div>
@@ -2194,7 +2259,7 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
   );
 }
 
-function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam, onOpenTrash }) {
+function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam, onOpenTrash, onOpenGuide }) {
   const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
   const [search, setSearch] = React.useState("");
   const visibleEvents = search.trim()
@@ -2334,6 +2399,10 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone
 
         {/* Links row */}
         <div style={{ display: "flex", gap: 10, fontSize: 11, flexWrap: "wrap" }}>
+          <button onClick={onOpenGuide} style={{ fontSize: 11, color: "#979A8D", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+            Guide
+          </button>
+          <span style={{ color: "#2E5644" }}>·</span>
           <button onClick={onManageVenues} style={{ fontSize: 11, color: "#979A8D", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
             Org settings
           </button>
