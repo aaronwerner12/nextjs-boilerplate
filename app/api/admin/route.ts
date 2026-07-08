@@ -64,6 +64,22 @@ export async function GET(req: NextRequest) {
       SELECT COUNT(*) as count FROM etf_events
     `.catch(() => [{ count: 0 }]);
 
+    // Recent feedback / crash reports
+    const feedback = await sql`
+      SELECT id, org_name, member_name, category, message, page, github_issue_url, created_at
+      FROM etf_feedback
+      ORDER BY created_at DESC
+      LIMIT 40
+    `.catch(() => []);
+
+    // Cron email health — last run of each job + recent history
+    const cronRuns = await sql`
+      SELECT job, recipients, sent, detail, created_at
+      FROM etf_cron_runs
+      ORDER BY created_at DESC
+      LIMIT 20
+    `.catch(() => []);
+
     // Merge org data with event counts
     const orgsWithStats = orgs.map((org) => {
       const stats = eventCounts.find((e) => e.org_id === org.id);
@@ -88,8 +104,11 @@ export async function GET(req: NextRequest) {
         totalOrgs: orgs.length,
         totalEvents: parseInt(totalEvents[0]?.count || "0"),
         intake: intakeStats[0],
+        openFeedback: feedback.filter((f) => f.category !== "crash").length,
       },
       orgs: orgsWithStats,
+      feedback,
+      cronRuns,
     });
   } catch (error) {
     console.error("GET /api/admin error:", error);
