@@ -31,12 +31,51 @@ const ORG_COLUMNS = sql`
   fiscal_year_start, threshold_min, threshold_strong, threshold_strategic
 `;
 
+// ── Rate limiting ─────────────────────────────────────────────────
+// Failed attempts are recorded per-IP in Postgres so the limit holds
+// across serverless instances and cold starts.
+const MAX_FAILURES = 5;          // allowed failures per window
+const WINDOW_MINUTES = 15;       // rolling window
+const FAIL_DELAY_MS = 1000;      // slow every failed response to blunt scripts
+
+async function ensureAttemptsTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS etf_login_attempts (
+      ip TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `.catch(() => {});
+}
+
+function clientIp(req: NextRequest): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  return (fwd ? fwd.split(",")[0] : "").trim() || "unknown";
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function POST(req: NextRequest) {
   try {
     const { passcode } = await req.json();
 
     if (!passcode) {
       return NextResponse.json({ error: "Passcode required" }, { status: 400 });
+    }
+
+    await ensureAttemptsTable();
+    const ip = clientIp(req);
+
+    // Reject before doing any passcode work if this IP is over the limit
+    const recent = await sql`
+      SELECT COUNT(*) as count FROM etf_login_attempts
+      WHERE ip = ${ip} AND created_at > NOW() - INTERVAL '15 minutes'
+    `;
+    if (parseInt(recent[0]?.count || "0") >= MAX_FAILURES) {
+      await sleep(FAIL_DELAY_MS);
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${WINDOW_MINUTES} minutes.` },
+        { status: 429 }
+      );
     }
 
     const hash = hashPasscode(passcode);
@@ -80,8 +119,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (rows.length === 0) {
+      // Record the failure, prune old rows, and slow the response
+      await sql`INSERT INTO etf_login_attempts (ip) VALUES (${ip})`.catch(() => {});
+      await sql`DELETE FROM etf_login_attempts WHERE created_at < NOW() - INTERVAL '1 day'`.catch(() => {});
+      await sleep(FAIL_DELAY_MS);
       return NextResponse.json({ error: "Invalid access code" }, { status: 401 });
     }
+
+    // Successful login clears this IP's failure history
+    await sql`DELETE FROM etf_login_attempts WHERE ip = ${ip}`.catch(() => {});
 
     const org = rows[0];
 

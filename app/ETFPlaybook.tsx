@@ -874,6 +874,12 @@ function LoginScreen({ onComplete }) {
         setLoading(false);
         return;
       }
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Too many attempts. Try again in 15 minutes.");
+        setLoading(false);
+        return;
+      }
     } catch (_) {}
     // Fallback localStorage check
     const storedOrgId = localStorage.getItem("etf_org_id");
@@ -898,7 +904,7 @@ function LoginScreen({ onComplete }) {
   const handleCreate = async () => {
     if (!name.trim()) { setError("Please enter your name."); return; }
     if (!orgName.trim()) { setError("Please enter your organization name."); return; }
-    if (!newPasscode.trim() || newPasscode.length < 4) { setError("Access code must be at least 4 characters."); return; }
+    if (!newPasscode.trim() || newPasscode.length < 8) { setError("Access code must be at least 8 characters."); return; }
     if (!agreed) { setError("Please agree to the Terms of Service and Privacy Policy."); return; }
     setLoading(true);
     const id = orgName.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 40) + "_" + Date.now().toString(36);
@@ -1046,7 +1052,7 @@ function LoginScreen({ onComplete }) {
                   </div>
                   <div style={s.field}>
                     <label style={s.label}>Create Access Code</label>
-                    <input type="password" value={newPasscode} onChange={(e) => setNewPasscode(e.target.value)} placeholder="Min. 4 characters" style={s.input} />
+                    <input type="password" value={newPasscode} onChange={(e) => setNewPasscode(e.target.value)} placeholder="Min. 8 characters" style={s.input} />
                     <div style={{ fontSize: 11.5, color: "#7E9C8D", marginTop: 5 }}>Share this with teammates so they can sign in.</div>
                   </div>
                 </>
@@ -1527,7 +1533,7 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
   };
 
   const handlePasscodeChange = async () => {
-    if (newPasscode.length < 4) { setPasscodeMsg("Must be at least 4 characters."); return; }
+    if (newPasscode.length < 8) { setPasscodeMsg("Must be at least 8 characters."); return; }
     try {
       await api.teamAction({ action: "change_passcode", requesterId: memberRecord?.id, orgId, newPasscode });
       localStorage.setItem(`etf_passcode_${orgId}`, newPasscode);

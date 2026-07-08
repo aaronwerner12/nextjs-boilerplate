@@ -114,8 +114,8 @@ export async function PATCH(req: NextRequest) {
     } else if (action === "reactivate") {
       await sql`UPDATE etf_team_members SET is_active = TRUE WHERE id = ${memberId} AND org_id = ${orgId}`;
     } else if (action === "change_passcode") {
-      if (!newPasscode || newPasscode.length < 4) {
-        return NextResponse.json({ error: "Passcode must be at least 4 characters" }, { status: 400 });
+      if (!newPasscode || newPasscode.length < 8) {
+        return NextResponse.json({ error: "Passcode must be at least 8 characters" }, { status: 400 });
       }
       await sql`UPDATE etf_orgs SET passcode_hash = ${hashPasscode(newPasscode)}, passcode = NULL WHERE id = ${orgId}`;
     }
