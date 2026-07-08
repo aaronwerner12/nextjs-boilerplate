@@ -118,7 +118,7 @@ export default function SharePage() {
         )}
 
         <div style={{ fontSize: 11, color: "#979A8D", textAlign: "center", lineHeight: 1.7, marginTop: 32 }}>
-          Shared from the ETF Analysis Tool. Figures are internal planning estimates only.<br />
+          Shared from Event Fund Playbook. Figures are internal planning estimates only.<br />
           Not affiliated with the Texas Office of the Governor or EDT.
         </div>
       </div>

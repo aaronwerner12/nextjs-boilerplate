@@ -1045,7 +1045,7 @@ function ETFPlaybookInner() {
           </svg>
         </button>
         <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 600, fontSize: 15 }}>
-          {orgData?.name || "ETF Analysis Tool"}
+          {orgData?.name || "Event Fund Playbook"}
         </div>
         <button
           onClick={createEvent}
@@ -1349,7 +1349,7 @@ function LoginScreen({ onComplete }) {
 
   const logo = (
     <div style={{ textAlign: "center", marginBottom: 32 }}>
-      <div style={{ width: 52, height: 52, background: "#E0784E", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#132E22" }}>ETF</div>
+      <div style={{ width: 52, height: 52, background: "#E0784E", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 18, color: "#132E22" }}>EFP</div>
       <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, color: "#F7F5EF" }}>Texas Events Trust Fund</div>
       <div style={{ fontSize: 12, color: "#6C7065", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Analysis Tool</div>
     </div>
@@ -1978,7 +1978,7 @@ function TeamPanel({ orgId, memberRecord, onClose }) {
   const storedPasscode = typeof window !== "undefined" ? (localStorage.getItem(`etf_passcode_${orgId}`) || "your-access-code") : "your-access-code";
   const appUrl = typeof window !== "undefined" ? window.location.origin : "https://etfplaybook.vercel.app";
 
-  const inviteEmail = `Subject: Join our ETF Analysis Tool — ${orgData.name || "Our Team"}
+  const inviteEmail = `Subject: Join our team on Event Fund Playbook — ${orgData.name || "Our Team"}
 
 Hi,
 
@@ -2006,7 +2006,7 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
   };
 
   const emailInvite = () => {
-    const subject = encodeURIComponent(`Join our ETF Analysis Tool — ${orgData.name || "Our Team"}`);
+    const subject = encodeURIComponent(`Join our team on Event Fund Playbook — ${orgData.name || "Our Team"}`);
     const body = encodeURIComponent(inviteEmail.replace(/^Subject:.*\n\n/, ""));
     window.open(`mailto:?subject=${subject}&body=${body}`);
   };
@@ -2174,10 +2174,10 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone
         {orgData?.logoUrl ? (
           <img src={orgData.logoUrl} alt={orgData.name} style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 10, background: "#fff", padding: 2 }} onError={(e) => { e.target.style.display = 'none'; }} />
         ) : (
-          <div style={styles.brandMark}>ETF</div>
+          <div style={styles.brandMark}>EFP</div>
         )}
         <div>
-          <div style={styles.brandTitle}>{orgData?.name || "TX ETF Analysis Tool"}</div>
+          <div style={styles.brandTitle}>{orgData?.name || "Event Fund Playbook"}</div>
           <div style={styles.brandSub}>{orgData?.city ? `${orgData.city}, ${orgData.state || "TX"}` : "Texas Events Trust Fund"}</div>
         </div>
       </div>

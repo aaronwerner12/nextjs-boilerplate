@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
+import { EMAIL_FROM } from "../../email-from";
 
 export const dynamic = 'force-dynamic';
 
@@ -62,9 +63,9 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "ETF Analysis Tool <onboarding@resend.dev>",
+        from: EMAIL_FROM,
         to: [normalizedEmail],
-        subject: "Your sign-in link — Texas ETF Analysis Tool",
+        subject: "Your sign-in link — Event Fund Playbook",
         html: `
           <div style="font-family: Georgia, serif; max-width: 520px; margin: 0 auto; color: #1E4536;">
             <div style="background: #1E4536; padding: 28px 36px; border-radius: 6px 6px 0 0;">
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
               <div style="font-size: 12px; color: #9FB8A9; margin-top: 4px; text-transform: uppercase; letter-spacing: .1em;">Analysis Tool</div>
             </div>
             <div style="padding: 36px; border: 1px solid #DFDDD0; border-top: none; border-radius: 0 0 6px 6px;">
-              <p style="margin: 0 0 8px; font-size: 16px; font-weight: 600;">Sign in to ETF Analysis Tool</p>
+              <p style="margin: 0 0 8px; font-size: 16px; font-weight: 600;">Sign in to Event Fund Playbook</p>
               <p style="margin: 0 0 28px; font-size: 14px; color: #6C7065; line-height: 1.6;">
                 Click the button below to sign in. This link expires in 15 minutes and can only be used once.
               </p>

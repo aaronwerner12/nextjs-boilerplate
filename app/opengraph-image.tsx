@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "ETF Playbook — Texas Events Trust Fund Analysis for DMOs";
+export const alt = "Event Fund Playbook — Texas event funding, simplified";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -42,10 +42,10 @@ export default function OgImage() {
               fontWeight: 700,
             }}
           >
-            ETF
+            EFP
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ color: "#F7F5EF", fontSize: "34px", fontWeight: 600 }}>ETF Playbook</div>
+            <div style={{ color: "#F7F5EF", fontSize: "34px", fontWeight: 600 }}>Event Fund Playbook</div>
             <div style={{ color: "#9FB8A9", fontSize: "18px", letterSpacing: "2px", textTransform: "uppercase" }}>
               Texas Events Trust Fund
             </div>

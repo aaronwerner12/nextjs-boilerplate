@@ -275,8 +275,8 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className={`land-nav${scrolled ? " scrolled" : ""}`}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: "#E0784E", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 13, color: "#132E22" }}>ETF</div>
-          <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 15, fontWeight: 600, color: "#F7F5EF" }}>TX ETF Analysis Tool</span>
+          <div style={{ width: 32, height: 32, background: "#E0784E", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 13, color: "#132E22" }}>EFP</div>
+          <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 15, fontWeight: 600, color: "#F7F5EF" }}>Event Fund Playbook</span>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <a href="/?signin=1" className="land-btn-secondary" style={{ padding: "9px 20px", fontSize: 13.5 }}>Sign In</a>
@@ -377,7 +377,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="land-footer">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 24, height: 24, background: "#E0784E", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 10, color: "#132E22" }}>ETF</div>
+          <div style={{ width: 24, height: 24, background: "#E0784E", borderRadius: 3, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 10, color: "#132E22" }}>EFP</div>
           <span style={{ fontSize: 13, color: "#7E9C8D" }}>Texas Events Trust Fund Analysis Tool</span>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
