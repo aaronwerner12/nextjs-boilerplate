@@ -2776,9 +2776,9 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
     <div style={styles.dashboard}>
       <header style={styles.dashHeader}>
         <div>
-          <div style={styles.eyebrow}>Texas Events Trust Fund · Independent DMO Planning Tool</div>
+          <div style={styles.eyebrow}>Texas Events Trust Fund · Independent Planning Tool</div>
           <h1 style={styles.h1}>
-            Built for DMOs pursuing the <em>Texas Events Trust Fund.</em>
+            Built for the teams pursuing the <em>Texas Events Trust Fund.</em>
           </h1>
           <p style={styles.lede}>
             Analyze prospective events against ETF eligibility requirements,
@@ -4979,7 +4979,7 @@ function ReferenceTab() {
       body: (
         <div>
           <p><strong>$6–$12 per attendee quick estimate:</strong> Based on observed patterns across completed ETFs. A regional youth sports event averages ~$9/attendee in ETF generation; premium national events hit $12+.</p>
-          <p><strong>$75K minimum:</strong> Below this, the administrative lift (application, support contract, cert, disbursement paperwork) typically consumes more staff time than the fund is worth for most DMOs.</p>
+          <p><strong>$75K minimum:</strong> Below this, the administrative lift (application, support contract, cert, disbursement paperwork) typically consumes more staff time than the fund is worth for most teams.</p>
           <p><strong>$150K target:</strong> Comparable to the Adidas 3SSB benchmark ($168K). Enough to materially subsidize facility rental, staffing, and safety costs.</p>
           <p><strong>1,500–2,000 room nights minimum:</strong> Validates that the event is drawing overnight visitors — the single biggest driver of both state HOT tax and local HOT tax, which is what makes the math work.</p>
           <p><strong>50%+ out-of-market:</strong> Ensures incremental tax gain is real, not cannibalized from existing local visitors.</p>
