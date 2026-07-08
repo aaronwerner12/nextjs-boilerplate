@@ -74,6 +74,29 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  const [running, setRunning] = useState("");
+
+  // Trigger a scheduled email job immediately (sends real emails)
+  const runCron = async (job) => {
+    const label = job === "reminders" ? "weekly deadline digest" : "monthly pipeline check-in";
+    if (!window.confirm(`Send the ${label} to all real recipients right now?\n\nThis sends actual emails — use the Preview buttons if you just want to see the design.`)) return;
+    setRunning(job);
+    try {
+      const res = await fetch(`/api/cron/${job}`, { headers: { "x-admin-pwd": pwd } });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const sent = (json.results || []).filter((r) => r.sent).length;
+        alert(`Done — ${sent} email${sent === 1 ? "" : "s"} sent.`);
+        await refresh();
+      } else {
+        alert(json.error || "Run failed.");
+      }
+    } catch (_) {
+      alert("Run failed — check your connection.");
+    }
+    setRunning("");
+  };
+
   // Render the exact email HTML the cron jobs send, in a new tab
   const previewEmail = async (type) => {
     try {
@@ -331,7 +354,17 @@ export default function AdminPage() {
         {/* Email health */}
         {view === "health" && (
           <div style={{ background: "#1A3F2F", border: "1px solid #2E5644", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid #2E5644", fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>Scheduled Email History</div>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #2E5644", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>Scheduled Email History</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => runCron("reminders")} disabled={running === "reminders"} style={{ padding: "6px 12px", background: "transparent", border: "1px solid #E0784E", borderRadius: 10, color: "#E0784E", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {running === "reminders" ? "Sending…" : "▶ Run weekly now"}
+                </button>
+                <button onClick={() => runCron("engagement")} disabled={running === "engagement"} style={{ padding: "6px 12px", background: "transparent", border: "1px solid #E0784E", borderRadius: 10, color: "#E0784E", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {running === "engagement" ? "Sending…" : "▶ Run monthly now"}
+                </button>
+              </div>
+            </div>
             {(data?.cronRuns || []).length === 0 ? (
               <div style={{ padding: 32, textAlign: "center", color: "#55705F", fontSize: 13.5 }}>
                 No scheduled emails have run yet. The weekly digest runs Mondays; the monthly check-in runs on the 1st.

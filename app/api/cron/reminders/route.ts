@@ -32,9 +32,12 @@ function fmtDate(d: Date): string {
 
 export async function GET(req: NextRequest) {
   try {
-    // Vercel Cron sends Authorization: Bearer <CRON_SECRET> when the env var is set
+    // Vercel Cron sends Authorization: Bearer <CRON_SECRET>. An admin can
+    // also trigger a run on demand with the admin password header.
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
+    const adminPwd = process.env.ADMIN_PASSWORD;
+    const isAdmin = !!adminPwd && req.headers.get("x-admin-pwd") === adminPwd;
+    if (cronSecret && !isAdmin) {
       const auth = req.headers.get("authorization");
       if (auth !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
