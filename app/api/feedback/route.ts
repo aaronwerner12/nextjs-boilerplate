@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
       );
     } else {
       try {
-        const labels = category === "idea" ? ["enhancement", "user-feedback"] : ["bug", "user-feedback"];
+        const labels =
+          category === "idea" ? ["enhancement", "user-feedback"]
+          : category === "crash" ? ["bug", "crash", "auto-reported"]
+          : ["bug", "user-feedback"];
         const ghRes = await fetch(`https://api.github.com/repos/${repo}/issues`, {
           method: "POST",
           headers: {
@@ -70,7 +73,7 @@ export async function POST(req: NextRequest) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            title: `[${category === "idea" ? "Idea" : "Bug"}] ${message.trim().slice(0, 80)}${message.length > 80 ? "…" : ""}`,
+            title: `[${category === "idea" ? "Idea" : category === "crash" ? "Crash" : "Bug"}] ${message.trim().slice(0, 80)}${message.length > 80 ? "…" : ""}`,
             body: [
               `**Reported from the app** by ${memberName || "unknown user"} at ${orgName || "unknown org"}`,
               page ? `**Page:** ${page}` : "",
