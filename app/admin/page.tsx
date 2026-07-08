@@ -73,6 +73,22 @@ export default function AdminPage() {
     setLoading(false);
   };
 
+  // Render the exact email HTML the cron jobs send, in a new tab
+  const previewEmail = async (type) => {
+    try {
+      const res = await fetch(`/api/email-preview?type=${type}`, {
+        headers: { "x-admin-pwd": pwd },
+      });
+      if (!res.ok) return;
+      const html = await res.text();
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+      }
+    } catch (_) {}
+  };
+
   const filteredOrgs = (data?.orgs || [])
     .filter(o => !search || o.name.toLowerCase().includes(search.toLowerCase()) || o.city?.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
@@ -146,10 +162,16 @@ export default function AdminPage() {
           <div style={styles.logo}>ETF Analysis Tool</div>
           <div style={styles.badge}>Admin</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div style={{ fontSize: 12, color: "#6C7065" }}>
             {loading ? "Refreshing…" : fetchedAt ? `Last updated ${fmtTime(fetchedAt)}` : ""}
           </div>
+          <button onClick={() => previewEmail("digest")} style={{ padding: "6px 14px", background: "transparent", border: "1px solid #2E5644", borderRadius: 10, color: "#E0784E", fontSize: 12, cursor: "pointer" }}>
+            ✉ Weekly digest
+          </button>
+          <button onClick={() => previewEmail("pulse")} style={{ padding: "6px 14px", background: "transparent", border: "1px solid #2E5644", borderRadius: 10, color: "#E0784E", fontSize: 12, cursor: "pointer" }}>
+            ✉ Monthly check-in
+          </button>
           <button onClick={refresh} style={{ padding: "6px 14px", background: "transparent", border: "1px solid #2E5644", borderRadius: 10, color: "#9FB8A9", fontSize: 12, cursor: "pointer" }}>
             Refresh
           </button>

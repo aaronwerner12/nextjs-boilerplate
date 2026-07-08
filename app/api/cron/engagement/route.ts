@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
+import { buildPulseHtml } from "../email-templates";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -65,34 +66,12 @@ export async function GET(req: NextRequest) {
         nudge = `Heard about a new event considering your area? Even a rough analysis with estimated attendance tells you whether it's worth pursuing ETF funding — before you commit staff time.`;
       }
 
-      const statRow = (num: string | number, label: string) => `
-        <td style="padding:14px 18px;background:#fff;border-radius:10px;text-align:center">
-          <div style="font-size:26px;font-weight:700;color:#B04E31;font-family:Georgia,serif">${num}</div>
-          <div style="font-size:11px;color:#6C7065;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">${label}</div>
-        </td>`;
-
-      const html = `
-<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:28px;background:#F1EFE6;border-radius:12px">
-  <h2 style="color:#1E4536;margin:0 0 4px">Your ETF pipeline check-in</h2>
-  <p style="color:#6C7065;font-size:14px;margin:0 0 20px">${org.name} · ${now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
-
-  <table style="width:100%;border-collapse:separate;border-spacing:8px;margin-bottom:20px"><tr>
-    ${statRow(events.length, "Events tracked")}
-    ${statRow(active, "Active")}
-    ${statRow(daysSinceActivity === null ? "—" : `${daysSinceActivity}d`, "Since last activity")}
-  </tr></table>
-
-  <div style="background:#fff;border-radius:10px;padding:16px 20px;font-size:14px;color:#1E4536;line-height:1.6;margin-bottom:20px">
-    ${nudge}
-  </div>
-
-  <a href="${appUrl}" style="display:inline-block;padding:12px 28px;background:#E0784E;color:#fff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600">Open the ETF Tool →</a>
-
-  <p style="color:#979A8D;font-size:12px;margin-top:24px;line-height:1.6">
-    You get this check-in monthly, plus a separate weekly digest when deadlines are approaching.
-    Not affiliated with the Texas Office of the Governor or EDT.
-  </p>
-</div>`;
+      const html = buildPulseHtml(
+        org.name,
+        { totalEvents: events.length, active, daysSinceActivity, nudge },
+        appUrl,
+        now.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+      );
 
       // Send to the org's notification + contact emails plus every active
       // team member who has added an email
