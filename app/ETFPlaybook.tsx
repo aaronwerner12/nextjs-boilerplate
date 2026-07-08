@@ -1582,6 +1582,37 @@ function LoginScreen({ onComplete }) {
   );
 }
 
+// ————————————————————————————————————————————————————————————————
+// AdminWelcomeModal — shown once to the first admin of an org
+// ————————————————————————————————————————————————————————————————
+function AdminWelcomeModal({ onClose, onOpenTeam }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 32, maxWidth: 460, width: "100%", color: "#1E4536" }}>
+        <div style={{ width: 48, height: 48, background: "#E0784E", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: "'Fraunces', Georgia, serif", fontWeight: 700, fontSize: 16, marginBottom: 16 }}>EFP</div>
+        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 22, fontWeight: 600, marginBottom: 8 }}>You're the admin 🎉</div>
+        <p style={{ fontSize: 14, color: "#6C7065", lineHeight: 1.6, marginBottom: 16 }}>
+          You created this organization, so you manage its team and access. As admin you can:
+        </p>
+        <ul style={{ fontSize: 13.5, color: "#1E4536", lineHeight: 1.9, margin: "0 0 22px", paddingLeft: 20 }}>
+          <li>Invite teammates and share your access code</li>
+          <li>Promote others to admin or deactivate members</li>
+          <li>Change the team access code anytime</li>
+          <li>Set up your organization profile and venues</li>
+        </ul>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "10px 18px", background: "transparent", border: "1px solid #DFDDD0", borderRadius: 10, fontSize: 14, cursor: "pointer", color: "#6C7065" }}>
+            Explore first
+          </button>
+          <button onClick={onOpenTeam} style={{ padding: "10px 20px", background: "#E0784E", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+            Manage Team & Access
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrgSettingsModal({ orgData, orgId, onClose, onSave }) {
   const [name, setName] = useState(orgData?.name || "");
   const [city, setCity] = useState(orgData?.city || "");
