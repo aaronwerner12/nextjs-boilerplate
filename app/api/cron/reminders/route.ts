@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 import { buildDigestHtml } from "../email-templates";
+import { logCronRun } from "../run-log";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -98,6 +99,10 @@ export async function GET(req: NextRequest) {
 
       results.push({ org: org.name, sent: emailRes.ok, deadlines: upcoming.length });
     }
+
+    const sentCount = results.filter((r) => r.sent).length;
+    await logCronRun("reminders", results.length, sentCount,
+      `${sentCount}/${results.length} orgs with deadlines emailed`).catch(() => {});
 
     return NextResponse.json({ ok: true, results });
   } catch (error) {

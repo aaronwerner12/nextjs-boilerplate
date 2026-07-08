@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("joinedAt");
+  const [view, setView] = useState("orgs"); // orgs | feedback | health
 
   const fetchData = async (password: string) => {
     const res = await fetch("/api/admin", {
@@ -204,7 +205,25 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* View tabs */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {[
+            ["orgs", "Organizations"],
+            ["feedback", `Feedback${data?.summary?.openFeedback ? ` (${data.summary.openFeedback})` : ""}`],
+            ["health", "Email Health"],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid #2E5644", fontSize: 13, fontWeight: 600, cursor: "pointer", background: view === key ? "#E0784E" : "transparent", color: view === key ? "#fff" : "#9FB8A9" }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Org table */}
+        {view === "orgs" && (
         <div style={{ background: "#1A3F2F", border: "1px solid #2E5644", borderRadius: 12, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #2E5644", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
             <div style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>Organizations</div>
@@ -278,10 +297,69 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
+        )}
 
-        <div style={{ marginTop: 16, fontSize: 11.5, color: "#55705F", textAlign: "center" }}>
-          Aggregate data only — no event names, financial details, or proprietary information is displayed.
-        </div>
+        {/* Feedback */}
+        {view === "feedback" && (
+          <div style={{ background: "#1A3F2F", border: "1px solid #2E5644", borderRadius: 12, padding: "8px 0" }}>
+            {(data?.feedback || []).length === 0 ? (
+              <div style={{ padding: 32, textAlign: "center", color: "#55705F", fontSize: 13.5 }}>No feedback or crash reports yet.</div>
+            ) : (
+              (data?.feedback || []).map((f) => {
+                const catColor = f.category === "crash" ? "#dc2626" : f.category === "idea" ? "#2563eb" : "#E0784E";
+                const catLabel = f.category === "crash" ? "Crash" : f.category === "idea" ? "Idea" : "Bug";
+                return (
+                  <div key={f.id} style={{ padding: "14px 20px", borderBottom: "1px solid #24493827" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: catColor, border: `1px solid ${catColor}55`, borderRadius: 6, padding: "2px 7px" }}>{catLabel}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#F7F5EF" }}>{f.member_name || "Unknown"}</span>
+                      <span style={{ fontSize: 12, color: "#6C7065" }}>· {f.org_name || "—"}</span>
+                      <span style={{ fontSize: 12, color: "#55705F", marginLeft: "auto" }}>{fmtDate(f.created_at)} · {fmtTime(f.created_at)}</span>
+                    </div>
+                    <div style={{ fontSize: 13.5, color: "#C9CFC2", lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{f.message}</div>
+                    <div style={{ display: "flex", gap: 14, marginTop: 6 }}>
+                      {f.page && <span style={{ fontSize: 11.5, color: "#55705F" }}>Page: {f.page}</span>}
+                      {f.github_issue_url && <a href={f.github_issue_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: "#E0784E" }}>View GitHub issue →</a>}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* Email health */}
+        {view === "health" && (
+          <div style={{ background: "#1A3F2F", border: "1px solid #2E5644", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #2E5644", fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>Scheduled Email History</div>
+            {(data?.cronRuns || []).length === 0 ? (
+              <div style={{ padding: 32, textAlign: "center", color: "#55705F", fontSize: 13.5 }}>
+                No scheduled emails have run yet. The weekly digest runs Mondays; the monthly check-in runs on the 1st.
+              </div>
+            ) : (
+              <div style={{ padding: "8px 0" }}>
+                {(data?.cronRuns || []).map((r, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid #24493827", fontSize: 13.5 }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#9FB8A9", minWidth: 90 }}>
+                      {r.job === "reminders" ? "Weekly" : r.job === "engagement" ? "Monthly" : r.job}
+                    </span>
+                    <span style={{ flex: 1, color: "#C9CFC2" }}>{r.detail || `${r.sent}/${r.recipients} sent`}</span>
+                    <span style={{ color: r.sent > 0 || r.recipients === 0 ? "#059669" : "#dc2626", fontWeight: 600, fontSize: 12 }}>
+                      {r.sent > 0 ? "✓ Sent" : r.recipients === 0 ? "— None due" : "✗ Failed"}
+                    </span>
+                    <span style={{ color: "#55705F", fontSize: 12, minWidth: 130, textAlign: "right" }}>{fmtDate(r.created_at)} · {fmtTime(r.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {view === "orgs" && (
+          <div style={{ marginTop: 16, fontSize: 11.5, color: "#55705F", textAlign: "center" }}>
+            Aggregate data only — no event names, financial details, or proprietary information is displayed.
+          </div>
+        )}
       </div>
     </div>
   );
