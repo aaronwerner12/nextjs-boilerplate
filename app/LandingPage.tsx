@@ -293,7 +293,7 @@ export default function LandingPage() {
           Turn events into <em>Texas state funding.</em>
         </h1>
         <p className="land-lede">
-          The Texas Events Trust Fund helps cover the cost of hosting events that draw out-of-state visitors — but the process is complex and the deadlines are unforgiving. This tool helps cities, CVBs, sports commissions, and tourism offices evaluate events, calculate economic impact, manage every deadline, and prepare applications, all in one place.
+          The Texas Events Trust Fund helps cover the cost of hosting events that draw out-of-state visitors. This tool helps cities, CVBs, sports commissions, and tourism offices evaluate opportunities, calculate economic impact, stay ahead of every deadline, and prepare complete applications, all in one place.
         </p>
         <div className="land-cta-row">
           <a href="/?signin=1" className="land-btn-primary">Create Your Organization →</a>
