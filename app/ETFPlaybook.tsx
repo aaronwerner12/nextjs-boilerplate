@@ -2972,7 +2972,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                 onClick={() => {
                   const subject = encodeURIComponent("Submit Your Event — ETF Analysis");
                   const body = encodeURIComponent(`Hi,\n\nWe'd love to evaluate your event for Texas Events Trust Fund eligibility. Please complete our quick intake form:\n\n${intakeUrl}\n\nIt takes about 5 minutes and helps us determine if your event qualifies for funding support.\n\nLet us know if you have any questions!`);
-                  window.open(`mailto:?subject=${subject}&body=${body}`);
+                  window.location.href = `mailto:?subject=${subject}&body=${body}`;
                 }}
                 style={{ padding: "9px 18px", background: "transparent", border: "1px solid #2E5644", borderRadius: 10, fontSize: 13.5, color: "#9FB8A9", cursor: "pointer" }}
               >
