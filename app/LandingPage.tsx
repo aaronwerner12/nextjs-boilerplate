@@ -287,13 +287,13 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="land-hero">
         <div className="land-eyebrow">
-          <span>●</span> Built for Texas DMOs
+          <span>●</span> Built for the teams that bring events to Texas
         </div>
         <h1 className="land-h1">
-          The ETF process, <em>simplified.</em>
+          Turn events into <em>Texas state funding.</em>
         </h1>
         <p className="land-lede">
-          The Texas Events Trust Fund Analysis Tool helps CVBs and DMOs evaluate events, calculate economic impact, manage deadlines, and prepare applications — all in one place.
+          The Texas Events Trust Fund helps cover the cost of hosting events that draw out-of-state visitors — but the process is complex and the deadlines are unforgiving. This tool helps cities, CVBs, sports commissions, and tourism offices evaluate events, calculate economic impact, manage every deadline, and prepare applications, all in one place.
         </p>
         <div className="land-cta-row">
           <a href="/?signin=1" className="land-btn-primary">Create Your Organization →</a>
