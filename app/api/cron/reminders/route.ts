@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 import { buildDigestHtml } from "../email-templates";
 import { logCronRun } from "../run-log";
-import { EMAIL_FROM, APP_URL } from "../../email-from";
+import { EMAIL_FROM, APP_URL, REPLY_TO } from "../../email-from";
 import { getOptedOut, unsubscribeUrl } from "../../unsubscribe-lib";
 
 export const dynamic = "force-dynamic";
@@ -103,6 +103,7 @@ export async function GET(req: NextRequest) {
         },
         body: JSON.stringify({
           from: EMAIL_FROM,
+          ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
           to: [org.notify_email],
           subject: `ETF deadlines: ${upcoming.length} coming up${upcoming.some(d => d.daysAway < 0) ? " (some OVERDUE)" : ""} — ${org.name}`,
           html,
