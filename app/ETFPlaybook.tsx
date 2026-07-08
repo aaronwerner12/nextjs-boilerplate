@@ -2039,7 +2039,8 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
   const emailInvite = () => {
     const subject = encodeURIComponent(`Join our team on Event Fund Playbook — ${orgData.name || "Our Team"}`);
     const body = encodeURIComponent(inviteEmail.replace(/^Subject:.*\n\n/, ""));
-    window.open(`mailto:?subject=${subject}&body=${body}`);
+    // Gmail web compose — reliable when there's no desktop mail app
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, "_blank", "noopener");
   };
 
   useEffect(() => {
@@ -2158,7 +2159,7 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
               Copy Email
             </button>
             <button onClick={emailInvite} style={{ flex: 1, padding: "9px", background: "transparent", border: "1px solid #2E5644", borderRadius: 10, color: "#9FB8A9", fontSize: 12.5, cursor: "pointer" }}>
-              Open in Mail
+              Open in Gmail
             </button>
           </div>
         </div>
@@ -2972,7 +2973,7 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
                 onClick={() => {
                   const subject = encodeURIComponent("Submit Your Event — ETF Analysis");
                   const body = encodeURIComponent(`Hi,\n\nWe'd love to evaluate your event for Texas Events Trust Fund eligibility. Please complete our quick intake form:\n\n${intakeUrl}\n\nIt takes about 5 minutes and helps us determine if your event qualifies for funding support.\n\nLet us know if you have any questions!`);
-                  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+                  window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, "_blank", "noopener");
                 }}
                 style={{ padding: "9px 18px", background: "transparent", border: "1px solid #2E5644", borderRadius: 10, fontSize: 13.5, color: "#9FB8A9", cursor: "pointer" }}
               >
@@ -4884,10 +4885,12 @@ Complete application packet attached.`}
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <a
-            href={`mailto:eventsfund@gov.texas.gov?subject=${emailSubject}&body=${emailBody}`}
+            href={`https://mail.google.com/mail/?view=cm&fs=1&to=eventsfund@gov.texas.gov&su=${emailSubject}&body=${emailBody}`}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "#1E4536", color: "#fff", borderRadius: 10, textDecoration: "none", fontSize: 14, fontWeight: 600 }}
           >
-            <ArrowRight size={14} /> Open in Email Client
+            <ArrowRight size={14} /> Open in Gmail
           </a>
           <div style={{ fontSize: 12, color: "#979A8D", display: "flex", alignItems: "center", lineHeight: 1.4 }}>
             ⚠ Always attach your full application packet before sending. This tool does not transmit files to EDT.
