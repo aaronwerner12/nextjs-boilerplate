@@ -4604,6 +4604,81 @@ function ApplyTab({ event, update, calc, decision, orgData }) {
   const appDeadline = event.firstDay ? addDays(event.firstDay, -120) : null;
   const daysUntilDeadline = appDeadline ? Math.ceil((appDeadline - new Date()) / (1000 * 60 * 60 * 24)) : null;
 
+  // ── Pre-submission readiness (rules-based, no AI) ──────────────
+  const org = orgData || {};
+  const elig = event.elig || {};
+  const eligPassed = elig.competitiveBid && elig.siteSelectionLetter && elig.annualOrOnce && elig.soleSiteOrRegional && elig.notHeldElsewhere;
+  const missingEvent = [
+    !event.name && "event name",
+    !event.firstDay && "start date",
+    !event.lastDay && "end date",
+    !(event.venues?.length || event.venue) && "venue(s)",
+    !event.siteSelectionOrg && "site selection organization",
+  ].filter(Boolean);
+  const missingProfile = [
+    !org.address && "mailing address",
+    !org.contactName && "contact name",
+    !org.contactPhone && "contact phone",
+    !org.taxId && "federal tax ID",
+  ].filter(Boolean);
+  const modelBuilt = (calc.totalAttendance || 0) > 0 || (calc.totalRoomNights || 0) > 0 || (event.roomNights || 0) > 0;
+  const docs = event.docs || {};
+  const criticalDocs = [
+    ["selectionLetter", "Site Selection Letter"],
+    ["affidavitEndorsing", "Affidavit of Endorsing Entity"],
+    ["affidavitEIS", "Affidavit for Economic Impact"],
+  ];
+  const missingDocs = criticalDocs.filter(([k]) => !docs[k]?.done).map(([, label]) => label);
+
+  const flags = [
+    {
+      status: eligPassed ? "pass" : "fail",
+      label: eligPassed ? "Meets all 5 statutory eligibility criteria" : "Statutory eligibility not met",
+      fix: eligPassed ? "" : "Answer all five eligibility questions Yes on the Decision Framework tab. Any No means the event can't qualify.",
+    },
+    {
+      status: decision.estimate >= (decision.thresholds?.min ?? 75000) ? "pass" : "fail",
+      label: `Projected ETF value: ${fmtMoney(decision.estimate)}`,
+      fix: decision.estimate >= (decision.thresholds?.min ?? 75000) ? "" : `Below your ${fmtMoney(decision.thresholds?.min ?? 75000)} viability floor — the paperwork likely outweighs the fund.`,
+    },
+    {
+      status: daysUntilDeadline === null ? "warn" : daysUntilDeadline < 0 ? "fail" : daysUntilDeadline < 14 ? "warn" : "pass",
+      label: daysUntilDeadline === null
+        ? "Application deadline: add event dates to calculate"
+        : daysUntilDeadline < 0
+          ? `120-day deadline passed ${Math.abs(daysUntilDeadline)} days ago`
+          : `${daysUntilDeadline} days until the 120-day deadline`,
+      fix: daysUntilDeadline !== null && daysUntilDeadline < 0
+        ? "Applications must be in at least 120 days before the first event day. This event is likely past the window."
+        : daysUntilDeadline !== null && daysUntilDeadline < 14
+          ? "The window closes soon — submit as soon as the packet is complete."
+          : "",
+    },
+    {
+      status: modelBuilt ? "pass" : "warn",
+      label: modelBuilt ? "Economic impact model built" : "No attendance model yet",
+      fix: modelBuilt ? "" : "Enter day-by-day attendance on the Impact Calculator tab so the projection and attendance chart are accurate.",
+    },
+    {
+      status: missingEvent.length === 0 ? "pass" : "warn",
+      label: missingEvent.length === 0 ? "Event details complete" : `Missing event details: ${missingEvent.join(", ")}`,
+      fix: missingEvent.length === 0 ? "" : "Fill these in on the Overview tab.",
+    },
+    {
+      status: missingProfile.length === 0 ? "pass" : "warn",
+      label: missingProfile.length === 0 ? "Organization application profile complete" : `Application profile missing: ${missingProfile.join(", ")}`,
+      fix: missingProfile.length === 0 ? "" : "Add these once in Organization Settings → ETF Application Profile; they pre-fill your packet.",
+    },
+    {
+      status: missingDocs.length === 0 ? "pass" : "warn",
+      label: missingDocs.length === 0 ? "Required signed/notarized documents marked complete" : `Documents still outstanding: ${missingDocs.join(", ")}`,
+      fix: missingDocs.length === 0 ? "" : "Track these on the Documents tab. Affidavits must be signed AND notarized.",
+    },
+  ];
+  const fails = flags.filter((f) => f.status === "fail").length;
+  const warns = flags.filter((f) => f.status === "warn").length;
+  const readyState = fails > 0 ? "blocked" : warns > 0 ? "review" : "ready";
+
   const generatePacket = async () => {
     const org = orgData || {};
     const safeDays = event.calc?.days || [];
@@ -4798,6 +4873,38 @@ Thank you,
           </div>
         </div>
       )}
+
+      {/* Pre-Submission Review scorecard */}
+      <div style={{ background: "#fff", border: "1px solid #DFDDD0", borderRadius: 12, marginBottom: 24, overflow: "hidden" }}>
+        <div style={{
+          padding: "16px 20px",
+          background: readyState === "ready" ? "#f0fdf4" : readyState === "review" ? "#FDF6EC" : "#fef2f2",
+          borderBottom: "1px solid #DFDDD0",
+        }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: readyState === "ready" ? "#065f46" : readyState === "review" ? "#9A572D" : "#991b1b" }}>
+            {readyState === "ready" ? "✓ Ready to submit" : readyState === "review" ? `${warns} item${warns === 1 ? "" : "s"} to review before submitting` : `${fails} issue${fails === 1 ? "" : "s"} to resolve before submitting`}
+          </div>
+          <div style={{ fontSize: 12.5, color: "#6C7065", marginTop: 3 }}>
+            Automatic pre-submission check. Fix the flagged items to give your application the best shot at approval.
+          </div>
+        </div>
+        <div style={{ padding: "8px 20px 14px" }}>
+          {flags.map((f, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: i < flags.length - 1 ? "1px solid #F1EFE6" : "none" }}>
+              <span style={{ flexShrink: 0, marginTop: 1, fontSize: 14, color: f.status === "pass" ? "#059669" : f.status === "warn" ? "#E0784E" : "#dc2626" }}>
+                {f.status === "pass" ? "✓" : f.status === "warn" ? "!" : "✕"}
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13.5, color: "#1E4536", fontWeight: f.status === "pass" ? 400 : 600 }}>{f.label}</div>
+                {f.fix && <div style={{ fontSize: 12.5, color: "#6C7065", marginTop: 2, lineHeight: 1.5 }}>{f.fix}</div>}
+              </div>
+            </div>
+          ))}
+          <div style={{ fontSize: 11, color: "#979A8D", marginTop: 10, lineHeight: 1.5 }}>
+            This is an automated readiness check based on your data, not an official EDT determination. Always confirm against the current ETF Guidelines before submitting.
+          </div>
+        </div>
+      </div>
 
       {/* Generate Application Packet */}
       <div style={{ background: "#F1EFE6", border: "1px solid #DFDDD0", borderRadius: 12, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
