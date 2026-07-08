@@ -6,3 +6,8 @@ export const EMAIL_FROM =
 
 export const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL || "https://eventfundplaybook.com";
+
+// Optional reply-to address. Set EMAIL_REPLY_TO in Vercel to route
+// replies somewhere real (e.g. a monitored inbox) without exposing it in
+// the from line. Empty = replies go to the from address.
+export const REPLY_TO = process.env.EMAIL_REPLY_TO || "";

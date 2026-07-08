@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 import { buildPulseHtml } from "../email-templates";
 import { logCronRun } from "../run-log";
-import { EMAIL_FROM } from "../../email-from";
+import { EMAIL_FROM, REPLY_TO } from "../../email-from";
 import { getOptedOut, unsubscribeUrl } from "../../unsubscribe-lib";
 
 export const dynamic = "force-dynamic";
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ from: EMAIL_FROM, to: [rcpt], subject, html }),
+          body: JSON.stringify({ from: EMAIL_FROM, ...(REPLY_TO ? { reply_to: REPLY_TO } : {}), to: [rcpt], subject, html }),
         }).catch(() => null);
         if (r && r.ok) anySent = true;
       }

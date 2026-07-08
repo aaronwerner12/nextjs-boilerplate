@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
-import { EMAIL_FROM } from "../../email-from";
+import { EMAIL_FROM, REPLY_TO } from "../../email-from";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         from: EMAIL_FROM,
+        ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
         to: [cleanEmail],
         subject: "Reset your Event Fund Playbook access code",
         html: `

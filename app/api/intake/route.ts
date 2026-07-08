@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
-import { EMAIL_FROM } from "../email-from";
+import { EMAIL_FROM, REPLY_TO } from "../email-from";
 
 export const dynamic = 'force-dynamic';
 
@@ -106,6 +106,7 @@ async function sendNotificationEmail(submission: any, notifyEmail: string, orgNa
     },
     body: JSON.stringify({
       from: EMAIL_FROM,
+      ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
       to: [notifyEmail],
       subject: `New ETF Intake: ${submission.eventName || "Untitled"} — ${submission.orgName || "Unknown org"}`,
       html,
