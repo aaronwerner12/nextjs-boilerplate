@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
+import { EMAIL_FROM } from "../email-from";
 
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +88,7 @@ async function sendNotificationEmail(submission: any, notifyEmail: string, orgNa
         ` : ""}
 
         <div style="text-align: center; padding-top: 24px; border-top: 1px solid #DFDDD0;">
-          <p style="font-size: 13px; color: #6C7065; margin: 0 0 16px;">This submission is waiting for your review in the ETF Analysis Tool.</p>
+          <p style="font-size: 13px; color: #6C7065; margin: 0 0 16px;">This submission is waiting for your review in Event Fund Playbook.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://your-app.vercel.app"}" 
              style="display: inline-block; padding: 12px 28px; background: #1E4536; color: #F7F5EF; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 600;">
             Review in Tool →
@@ -104,7 +105,7 @@ async function sendNotificationEmail(submission: any, notifyEmail: string, orgNa
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "ETF Tool <noreply@yourdomain.com>", // update with your verified domain
+      from: EMAIL_FROM,
       to: [notifyEmail],
       subject: `New ETF Intake: ${submission.eventName || "Untitled"} — ${submission.orgName || "Unknown org"}`,
       html,

@@ -151,7 +151,7 @@ export default function AdminPage() {
       <div style={{ minHeight: "100vh", background: "#132E22", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
         <div style={{ width: "100%", maxWidth: 380 }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, color: "#F7F5EF" }}>ETF Tool</div>
+            <div style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, color: "#F7F5EF" }}>Event Fund Playbook</div>
             <div style={{ fontSize: 12, color: "#6C7065", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 4 }}>Admin Dashboard</div>
           </div>
           <div style={{ background: "#1A3F2F", border: "1px solid #2E5644", borderRadius: 14, padding: "32px 28px" }}>
@@ -183,7 +183,7 @@ export default function AdminPage() {
     <div style={styles.page}>
       <header style={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={styles.logo}>ETF Analysis Tool</div>
+          <div style={styles.logo}>Event Fund Playbook</div>
           <div style={styles.badge}>Admin</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>

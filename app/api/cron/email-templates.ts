@@ -8,7 +8,12 @@ export type DigestDeadline = {
   daysAway: number;
 };
 
-export function buildDigestHtml(orgName: string, upcoming: DigestDeadline[]): string {
+function unsubFooter(unsubscribeUrl?: string): string {
+  if (!unsubscribeUrl) return "";
+  return `<p style="color:#979A8D;font-size:11px;margin-top:8px"><a href="${unsubscribeUrl}" style="color:#979A8D">Unsubscribe from these emails</a></p>`;
+}
+
+export function buildDigestHtml(orgName: string, upcoming: DigestDeadline[], unsubscribeUrl?: string): string {
   const fmtDate = (d: Date) =>
     d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
@@ -32,7 +37,8 @@ export function buildDigestHtml(orgName: string, upcoming: DigestDeadline[]): st
   <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden">
     ${rows}
   </table>
-  <p style="color:#979A8D;font-size:12px;margin-top:20px">Sent weekly by your ETF Analysis Tool. Deadlines are computed from Texas Event Trust Fund Guidelines. Not affiliated with the Office of the Governor or EDT.</p>
+  <p style="color:#979A8D;font-size:12px;margin-top:20px">Sent weekly by Event Fund Playbook. Deadlines are computed from Texas Event Trust Fund Guidelines. Not affiliated with the Office of the Governor or EDT.</p>
+  ${unsubFooter(unsubscribeUrl)}
 </div>`;
 }
 
@@ -43,7 +49,7 @@ export type PulseStats = {
   nudge: string;
 };
 
-export function buildPulseHtml(orgName: string, stats: PulseStats, appUrl: string, monthLabel: string): string {
+export function buildPulseHtml(orgName: string, stats: PulseStats, appUrl: string, monthLabel: string, unsubscribeUrl?: string): string {
   const statCell = (num: string | number, label: string) => `
     <td style="padding:14px 18px;background:#fff;border-radius:10px;text-align:center">
       <div style="font-size:26px;font-weight:700;color:#B04E31;font-family:Georgia,serif">${num}</div>
@@ -65,11 +71,12 @@ export function buildPulseHtml(orgName: string, stats: PulseStats, appUrl: strin
     ${stats.nudge}
   </div>
 
-  <a href="${appUrl}" style="display:inline-block;padding:12px 28px;background:#E0784E;color:#fff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600">Open the ETF Tool →</a>
+  <a href="${appUrl}" style="display:inline-block;padding:12px 28px;background:#E0784E;color:#fff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600">Open Event Fund Playbook →</a>
 
   <p style="color:#979A8D;font-size:12px;margin-top:24px;line-height:1.6">
     You get this check-in monthly, plus a separate weekly digest when deadlines are approaching.
     Not affiliated with the Texas Office of the Governor or EDT.
   </p>
+  ${unsubFooter(unsubscribeUrl)}
 </div>`;
 }

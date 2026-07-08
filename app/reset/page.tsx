@@ -50,7 +50,7 @@ function ResetForm() {
     <div style={{ minHeight: "100vh", background: "#132E22", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ width: 52, height: 52, background: "#E0784E", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontFamily: SERIF, fontWeight: 700, fontSize: 18, color: "#fff" }}>ETF</div>
+          <div style={{ width: 52, height: 52, background: "#E0784E", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontFamily: SERIF, fontWeight: 700, fontSize: 18, color: "#fff" }}>EFP</div>
           <div style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 600, color: "#F7F5EF" }}>Reset Access Code</div>
         </div>
 

@@ -2,6 +2,8 @@ import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 import { buildDigestHtml } from "../email-templates";
 import { logCronRun } from "../run-log";
+import { EMAIL_FROM, APP_URL } from "../../email-from";
+import { getOptedOut, unsubscribeUrl } from "../../unsubscribe-lib";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -54,6 +56,7 @@ export async function GET(req: NextRequest) {
       WHERE notify_email IS NOT NULL AND notify_email != ''
     `;
 
+    const optedOut = await getOptedOut();
     const now = new Date();
     const windowEnd = new Date(now.getTime() + 45 * 86400000);
     const windowStart = new Date(now.getTime() - 7 * 86400000);
@@ -82,9 +85,15 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
+      const to = (org.notify_email || "").trim().toLowerCase();
+      if (optedOut.has(to)) {
+        results.push({ org: org.name, sent: false, deadlines: upcoming.length });
+        continue;
+      }
+
       upcoming.sort((a, b) => a.due.getTime() - b.due.getTime());
 
-      const html = buildDigestHtml(org.name, upcoming);
+      const html = buildDigestHtml(org.name, upcoming, unsubscribeUrl(to, APP_URL));
 
       const emailRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -93,7 +102,7 @@ export async function GET(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "ETF Analysis Tool <onboarding@resend.dev>",
+          from: EMAIL_FROM,
           to: [org.notify_email],
           subject: `ETF deadlines: ${upcoming.length} coming up${upcoming.some(d => d.daysAway < 0) ? " (some OVERDUE)" : ""} — ${org.name}`,
           html,

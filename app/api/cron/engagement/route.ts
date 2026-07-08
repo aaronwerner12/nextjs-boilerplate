@@ -2,6 +2,8 @@ import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 import { buildPulseHtml } from "../email-templates";
 import { logCronRun } from "../run-log";
+import { EMAIL_FROM } from "../../email-from";
+import { getOptedOut, unsubscribeUrl } from "../../unsubscribe-lib";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -34,6 +36,7 @@ export async function GET(req: NextRequest) {
 
     const orgs = await sql`SELECT id, name, notify_email, contact_email FROM etf_orgs`;
 
+    const optedOut = await getOptedOut();
     const now = new Date();
     const results: Array<{ org: string; sent: boolean }> = [];
 
@@ -71,13 +74,6 @@ export async function GET(req: NextRequest) {
         nudge = `Heard about a new event considering your area? Even a rough analysis with estimated attendance tells you whether it's worth pursuing ETF funding — before you commit staff time.`;
       }
 
-      const html = buildPulseHtml(
-        org.name,
-        { totalEvents: events.length, active, daysSinceActivity, nudge },
-        appUrl,
-        now.toLocaleDateString("en-US", { month: "long", year: "numeric" })
-      );
-
       // Send to the org's notification + contact emails plus every active
       // team member who has added an email
       const members = await sql`
@@ -89,27 +85,37 @@ export async function GET(req: NextRequest) {
         [org.notify_email, org.contact_email, ...members.map((m) => m.email)]
           .map((e) => (e || "").trim().toLowerCase())
           .filter((e) => e.includes("@"))
-      ));
+      )).filter((e) => !optedOut.has(e));
       if (recipients.length === 0) {
         results.push({ org: org.name, sent: false });
         continue;
       }
 
-      const emailRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "ETF Analysis Tool <onboarding@resend.dev>",
-          to: recipients,
-          subject: `${org.name}: your ETF pipeline check-in — ${events.length} event${events.length === 1 ? "" : "s"} tracked`,
-          html,
-        }),
-      });
+      const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      const subject = `${org.name}: your ETF pipeline check-in — ${events.length} event${events.length === 1 ? "" : "s"} tracked`;
 
-      results.push({ org: org.name, sent: emailRes.ok });
+      // Send individually so each recipient gets their own unsubscribe link
+      let anySent = false;
+      for (const rcpt of recipients) {
+        const html = buildPulseHtml(
+          org.name,
+          { totalEvents: events.length, active, daysSinceActivity, nudge },
+          appUrl,
+          monthLabel,
+          unsubscribeUrl(rcpt, appUrl)
+        );
+        const r = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ from: EMAIL_FROM, to: [rcpt], subject, html }),
+        }).catch(() => null);
+        if (r && r.ok) anySent = true;
+      }
+
+      results.push({ org: org.name, sent: anySent });
     }
 
     const sentCount = results.filter((r) => r.sent).length;

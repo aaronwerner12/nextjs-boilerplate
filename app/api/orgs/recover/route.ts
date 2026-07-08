@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
+import { EMAIL_FROM } from "../../email-from";
 
 export const dynamic = "force-dynamic";
 
@@ -101,9 +102,9 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "ETF Analysis Tool <onboarding@resend.dev>",
+        from: EMAIL_FROM,
         to: [cleanEmail],
-        subject: "Reset your ETF Tool access code",
+        subject: "Reset your Event Fund Playbook access code",
         html: `
 <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:28px;background:#F1EFE6;border-radius:12px">
   <h2 style="color:#1E4536;margin:0 0 8px">Reset your access code</h2>
