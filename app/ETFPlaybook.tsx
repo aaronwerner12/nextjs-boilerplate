@@ -199,6 +199,152 @@ const blankEvent = () => ({
   },
 });
 
+// ————————————————————————————————————————————————————————————————
+// Demo mode — a fully-loaded sample org so visitors can explore
+// without creating an account. Nothing in demo mode is saved.
+// ————————————————————————————————————————————————————————————————
+const DEMO_ORG = {
+  id: "demo_org",
+  demo: true,
+  name: "Visit Maplewood (Demo)",
+  city: "Maplewood",
+  state: "TX",
+  notifyEmail: "events@visitmaplewood.demo",
+  fiscalYearStart: 10,
+  thresholdMin: 75000,
+  thresholdStrong: 150000,
+  thresholdStrategic: 300000,
+  contactName: "Jamie Rodriguez",
+  contactTitle: "Director of Sports Tourism",
+  contactPhone: "(972) 555-0142",
+  contactEmail: "jamie@visitmaplewood.demo",
+  address: "100 Main Street, Maplewood, TX 75000",
+  venues: [
+    { name: "Maplewood Sports Complex", address: "4200 Championship Dr" },
+    { name: "Riverside Soccer Fields", address: "801 River Rd" },
+    { name: "Maplewood Convention Center", address: "55 Center Plaza" },
+  ],
+};
+
+function buildDemoEvents() {
+  const iso = (offsetDays) => {
+    const d = new Date(Date.now() + offsetDays * 86400000);
+    return d.toISOString().split("T")[0];
+  };
+  const demoDays = (startOffset, counts) => counts.map((c, i) => ({
+    date: iso(startOffset + i),
+    schedule: "",
+    players: c[0], coaches: c[1], staff: c[2], scouts: c[3], media: c[4], spectators: c[5],
+  }));
+  const base = blankEvent();
+
+  return [
+    {
+      ...JSON.parse(JSON.stringify(base)),
+      id: "demo_evt_1",
+      name: "National Youth Volleyball Qualifier",
+      siteSelectionOrg: "US Youth Volleyball Federation",
+      firstDay: iso(160),
+      lastDay: iso(163),
+      venues: ["Maplewood Sports Complex"],
+      status: "analysis",
+      elig: { competitiveBid: true, siteSelectionLetter: true, annualOrOnce: true, soleSiteOrRegional: true, notHeldElsewhere: true },
+      attendeeEst: 6800,
+      qualityPerAttendee: 10,
+      roomNights: 2400,
+      calc: {
+        ...base.calc,
+        days: demoDays(160, [
+          [900, 140, 60, 10, 6, 1100],
+          [900, 140, 60, 18, 8, 1400],
+          [820, 130, 60, 25, 10, 1500],
+          [520, 90, 50, 30, 12, 1600],
+        ]),
+      },
+      createdBy: "Jamie Rodriguez",
+      notes: "Strong candidate — federation confirmed out-of-state alternatives were Tulsa and Baton Rouge. Selection letter promised by end of month.",
+    },
+    {
+      ...JSON.parse(JSON.stringify(base)),
+      id: "demo_evt_2",
+      name: "State Soccer Championship",
+      siteSelectionOrg: "TX Youth Soccer Association",
+      firstDay: iso(135),
+      lastDay: iso(137),
+      venues: ["Riverside Soccer Fields"],
+      status: "application",
+      elig: { competitiveBid: true, siteSelectionLetter: true, annualOrOnce: true, soleSiteOrRegional: true, notHeldElsewhere: true },
+      attendeeEst: 4200,
+      qualityPerAttendee: 9,
+      roomNights: 1600,
+      calc: {
+        ...base.calc,
+        days: demoDays(135, [
+          [1200, 180, 70, 8, 4, 2000],
+          [1200, 180, 70, 12, 6, 2400],
+          [700, 110, 60, 15, 8, 2600],
+        ]),
+      },
+      docs: {
+        ...base.docs,
+        application: { done: true, date: iso(-10) },
+        endorsement: { done: true, date: iso(-8) },
+        selectionLetter: { done: true, date: iso(-15) },
+        attendanceChart: { done: true, date: iso(-10) },
+      },
+      createdBy: "Jamie Rodriguez",
+      notes: "Application submitted. Waiting on EDT award letter — affidavits at the notary now.",
+    },
+    {
+      ...JSON.parse(JSON.stringify(base)),
+      id: "demo_evt_3",
+      name: "Regional BBQ Festival",
+      siteSelectionOrg: "",
+      firstDay: iso(90),
+      lastDay: iso(91),
+      venues: ["Maplewood Convention Center"],
+      status: "analysis",
+      elig: { competitiveBid: false, siteSelectionLetter: null, annualOrOnce: true, soleSiteOrRegional: true, notHeldElsewhere: true },
+      attendeeEst: 9000,
+      qualityPerAttendee: 6,
+      createdBy: "Sam Patel",
+      notes: "Fails the competitive site selection test — the festival has always been here with no out-of-state bid process. Not ETF-eligible; keeping for reference.",
+    },
+    {
+      ...JSON.parse(JSON.stringify(base)),
+      id: "demo_evt_4",
+      name: "Junior Golf Invitational",
+      siteSelectionOrg: "American Junior Golf Circuit",
+      firstDay: iso(-140),
+      lastDay: iso(-137),
+      venues: ["Maplewood Sports Complex"],
+      status: "complete",
+      elig: { competitiveBid: true, siteSelectionLetter: true, annualOrOnce: true, soleSiteOrRegional: true, notHeldElsewhere: true },
+      attendeeEst: 2800,
+      qualityPerAttendee: 11,
+      roomNights: 1900,
+      calc: {
+        ...base.calc,
+        days: demoDays(-140, [
+          [400, 90, 40, 20, 10, 700],
+          [400, 90, 40, 22, 10, 800],
+          [380, 85, 40, 24, 12, 900],
+          [300, 70, 35, 26, 14, 950],
+        ]),
+      },
+      outcome: {
+        awardedAmount: "128500",
+        awardDate: iso(-200),
+        actualAttendance: "5100",
+        disbursedAmount: "117200",
+        disbursedDate: iso(-60),
+      },
+      createdBy: "Jamie Rodriguez",
+      notes: "Wrapped and disbursed. Actual attendance came in ~8% under estimate — spectator counts were optimistic. Adjust next year's model.",
+    },
+  ];
+}
+
 // Categories for attendee mix
 export const ATTENDEE_CATS = [
   { key: "players", label: "Players/Competitors", perRoom: 4 },
@@ -536,10 +682,28 @@ function ETFPlaybookInner() {
   const [teamMember, setTeamMember] = useState("");
   const [setupStep, setSetupStep] = useState(null); // null | "login" | "org" | "name"
   const [loading, setLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+
+  // Demo sessions never touch the shared localStorage cache
+  const cacheEvents = (list) => {
+    if (demoMode) return;
+    try { localStorage.setItem("etf_events_cache", JSON.stringify(list)); } catch (_) {}
+  };
 
   // ── Bootstrap: check auth ─────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Demo mode: sample org + events, nothing persists, no auth needed
+    if (new URLSearchParams(window.location.search).get("demo") === "1") {
+      setDemoMode(true);
+      setOrgId(DEMO_ORG.id);
+      setOrgData(DEMO_ORG);
+      setTeamMember("Demo Explorer");
+      setEvents(buildDemoEvents());
+      return;
+    }
+
     const storedAuth = localStorage.getItem("etf_authed");
     const storedMember = localStorage.getItem("etf_team_member");
     const storedOrg = localStorage.getItem("etf_org_id");
@@ -580,7 +744,7 @@ function ETFPlaybookInner() {
 
   // ── Load org data + events once org is known ──────────────────
   useEffect(() => {
-    if (!orgId || setupStep) return;
+    if (!orgId || setupStep || demoMode) return;
     (async () => {
       // Load org data and events independently — don't let one block the other
       const storedOrgData = localStorage.getItem("etf_org_data");
@@ -604,7 +768,7 @@ function ETFPlaybookInner() {
       try {
         const evts = await api.getEvents(orgId);
         setEvents(evts);
-        localStorage.setItem("etf_events_cache", JSON.stringify(evts));
+        cacheEvents(evts);
       } catch (e) {
         console.error("Failed to load events:", e);
       } finally {
@@ -615,7 +779,7 @@ function ETFPlaybookInner() {
 
   // ── Refresh events every 30s to pick up teammates' changes ───
   useEffect(() => {
-    if (!orgId || setupStep) return;
+    if (!orgId || setupStep || demoMode) return;
     const interval = setInterval(async () => {
       try {
         const evts = await api.getEvents(orgId);
@@ -637,6 +801,11 @@ function ETFPlaybookInner() {
     setSaveStatus("saving");
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
+      if (demoMode) {
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(""), 2000);
+        return;
+      }
       try {
         const result = await api.saveEvent({
           ...updated,
@@ -650,7 +819,7 @@ function ETFPlaybookInner() {
           const updated2 = prev.map((e) =>
             e.id === updated.id ? { ...updated, updatedAt: result?.updatedAt || e.updatedAt } : e
           );
-          localStorage.setItem("etf_events_cache", JSON.stringify(updated2));
+          cacheEvents(updated2);
           return updated2;
         });
         setSaveStatus("saved");
@@ -671,7 +840,7 @@ function ETFPlaybookInner() {
     if (!conflict) return;
     setEvents((prev) => {
       const updated = prev.map((e) => e.id === conflict.eventId ? { ...conflict.latest, orgId } : e);
-      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      cacheEvents(updated);
       return updated;
     });
     setConflict(null);
@@ -686,7 +855,7 @@ function ETFPlaybookInner() {
       const result = await api.saveEvent({ ...mine, createdBy: mine.createdBy || teamMember, editedBy: teamMember, baseUpdatedAt: undefined }, orgId);
       setEvents((prev) => {
         const updated = prev.map((e) => e.id === mine.id ? { ...mine, updatedAt: result?.updatedAt || e.updatedAt } : e);
-        localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+        cacheEvents(updated);
         return updated;
       });
       setSaveStatus("saved");
@@ -705,18 +874,18 @@ function ETFPlaybookInner() {
       setShowWalkthrough(true);
       localStorage.setItem("etf_seen_walkthrough", "1");
     }
-    try { await api.saveEvent(e, orgId); } catch (_) {}
+    if (!demoMode) try { await api.saveEvent(e, orgId); } catch (_) {}
   };
 
   const deleteEvent = async (id) => {
     const deleted = events.find((e) => e.id === id);
     setEvents((prev) => {
       const updated = prev.filter((e) => e.id !== id);
-      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      cacheEvents(updated);
       return updated;
     });
     if (currentEventId === id) setCurrentEventId(null);
-    try { await api.deleteEvent(id, orgId); } catch (_) {}
+    if (!demoMode) try { await api.deleteEvent(id, orgId); } catch (_) {}
     // Offer undo for 8 seconds; the event stays in the trash for 30 days either way
     if (deleted) {
       clearTimeout(undoTimerRef.current);
@@ -732,10 +901,10 @@ function ETFPlaybookInner() {
     setLastDeleted(null);
     setEvents((prev) => {
       const updated = [restored, ...prev];
-      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      cacheEvents(updated);
       return updated;
     });
-    try { await api.restoreEvent(restored.id, orgId); } catch (_) {}
+    if (!demoMode) try { await api.restoreEvent(restored.id, orgId); } catch (_) {}
   };
 
   // Duplicate an event for the next year — shifts all dates forward one year
@@ -772,12 +941,12 @@ function ETFPlaybookInner() {
     }
     setEvents((prev) => {
       const updated = [clone, ...prev];
-      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      cacheEvents(updated);
       return updated;
     });
     setCurrentEventId(clone.id);
     setTab("overview");
-    try { await api.saveEvent(clone, orgId); } catch (_) {}
+    if (!demoMode) try { await api.saveEvent(clone, orgId); } catch (_) {}
   };
 
   const handleLoginComplete = async (name, title, newOrg, email) => {
@@ -834,7 +1003,7 @@ function ETFPlaybookInner() {
     try {
       const evts = await api.getEvents(resolvedOrgId);
       setEvents(Array.isArray(evts) ? evts : []);
-      localStorage.setItem("etf_events_cache", JSON.stringify(evts));
+      cacheEvents(evts);
     } catch (e) {
       console.error("Failed to load events after login:", e);
       const cached = localStorage.getItem("etf_events_cache");
@@ -913,11 +1082,25 @@ function ETFPlaybookInner() {
           onRestored={(restored) => {
             setEvents((prev) => {
               const updated = [restored, ...prev.filter((e) => e.id !== restored.id)];
-              localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+              cacheEvents(updated);
               return updated;
             });
           }}
         />
+      )}
+
+      {/* Demo mode banner */}
+      {demoMode && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 500, background: "#E0784E", color: "#fff", padding: "9px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 14, fontSize: 13, fontWeight: 600, flexWrap: "wrap" }}>
+          <span>🧭 You're exploring the demo — click around freely, nothing is saved.</span>
+          <a
+            href="/?signin=1"
+            style={{ background: "#fff", color: "#B04E31", padding: "5px 14px", borderRadius: 8, textDecoration: "none", fontSize: 12.5, fontWeight: 700 }}
+          >
+            Create your organization →
+          </a>
+          <a href="/" style={{ color: "#fff", fontSize: 12, textDecoration: "underline" }}>Exit demo</a>
+        </div>
       )}
 
       {/* Edit conflict — someone else saved while we were editing */}
@@ -1390,7 +1573,10 @@ function LoginScreen({ onComplete }) {
           </>
         )}
 
-        <p style={{ textAlign: "center", fontSize: 11, color: "#55705F", marginTop: 16, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
+        <p style={{ textAlign: "center", fontSize: 12, marginTop: 16 }}>
+          <a href="/?demo=1" style={{ color: "#9FB8A9", textDecoration: "underline" }}>Just looking? Explore the demo →</a>
+        </p>
+        <p style={{ textAlign: "center", fontSize: 11, color: "#55705F", marginTop: 10, lineHeight: 1.6 }}>Not affiliated with the Texas Office of the Governor or EDT.</p>
       </div>
     </div>
   );
@@ -2385,7 +2571,7 @@ function EmailCaptureBanner({ orgData, teamMember }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState(""); // "" | saving | saved | error
 
-  if (dismissed) return null;
+  if (dismissed || orgData?.demo) return null;
 
   const save = async () => {
     const clean = email.trim().toLowerCase();
@@ -2944,7 +3130,7 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
   // Presence heartbeat: tell the server we're viewing this event and
   // learn who else has it open right now
   useEffect(() => {
-    if (!event?.id) return;
+    if (!event?.id || orgData?.demo) return;
     let cancelled = false;
     const beat = async () => {
       try {
@@ -2970,6 +3156,10 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
 
   // Copy a public read-only link, minting the token on first use
   const handleShare = async () => {
+    if (orgData?.demo) {
+      alert("Sharing is disabled in the demo. Create your organization to share real analyses.");
+      return;
+    }
     let token = event.shareToken;
     if (!token) {
       const bytes = new Uint8Array(16);

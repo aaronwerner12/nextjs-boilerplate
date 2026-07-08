@@ -297,6 +297,7 @@ export default function LandingPage() {
         </p>
         <div className="land-cta-row">
           <a href="/?signin=1" className="land-btn-primary">Create Your Organization →</a>
+          <a href="/?demo=1" className="land-btn-secondary">Explore the Demo</a>
           <a href="#how-it-works" className="land-btn-secondary">See How It Works</a>
         </div>
 
@@ -366,6 +367,7 @@ export default function LandingPage() {
         </p>
         <div className="land-cta-row">
           <a href="/?signin=1" className="land-btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>Create Your Organization →</a>
+          <a href="/?demo=1" className="land-btn-secondary" style={{ fontSize: 16, padding: "16px 36px" }}>Explore the Demo First</a>
         </div>
         <p style={{ marginTop: 20, fontSize: 12.5, color: "#7E9C8D" }}>
           Not affiliated with the Texas Office of the Governor or its Economic Development and Tourism division. This is an independently operated tool and is not affiliated with any DMO, CVB, or municipality.

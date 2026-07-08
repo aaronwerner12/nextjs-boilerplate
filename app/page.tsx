@@ -13,6 +13,12 @@ export default function Page() {
       const isAuthed = !!localStorage.getItem("etf_authed");
       const wantsSignIn = window.location.search.includes("signin=1");
 
+      // Demo mode — straight into the app with sample data, no auth
+      if (params.get("demo") === "1") {
+        setState("app");
+        return;
+      }
+
       // Handle email verification redirect from /api/auth/verify
       // auth param contains encoded session=...&email=...&userId=...&orgId=...
       const authParam = params.get("auth");
