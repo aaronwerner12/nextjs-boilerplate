@@ -52,6 +52,19 @@ const api = {
     const res = await fetch(`/api/events/${id}${qs}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete event");
   },
+  async getDeletedEvents(orgId) {
+    const res = await fetch(`/api/events?org_id=${orgId}&deleted=1`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  },
+  async restoreEvent(id, orgId) {
+    const res = await fetch(`/api/events/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "restore", orgId }),
+    });
+    if (!res.ok) throw new Error("Failed to restore event");
+  },
   async getTeam(orgId) {
     const res = await fetch(`/api/team?org_id=${orgId}`, { cache: "no-store" });
     if (!res.ok) return [];
@@ -488,6 +501,9 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 function ETFPlaybookInner() {
   const [events, setEvents] = useState([]);
   const [currentEventId, setCurrentEventId] = useState(null);
+  const [lastDeleted, setLastDeleted] = useState(null);
+  const undoTimerRef = React.useRef(null);
+  const [showTrash, setShowTrash] = useState(false);
   const [tab, setTab] = useState("dashboard");
   const [saveStatus, setSaveStatus] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -634,6 +650,7 @@ function ETFPlaybookInner() {
   };
 
   const deleteEvent = async (id) => {
+    const deleted = events.find((e) => e.id === id);
     setEvents((prev) => {
       const updated = prev.filter((e) => e.id !== id);
       localStorage.setItem("etf_events_cache", JSON.stringify(updated));
@@ -641,6 +658,25 @@ function ETFPlaybookInner() {
     });
     if (currentEventId === id) setCurrentEventId(null);
     try { await api.deleteEvent(id, orgId); } catch (_) {}
+    // Offer undo for 8 seconds; the event stays in the trash for 30 days either way
+    if (deleted) {
+      clearTimeout(undoTimerRef.current);
+      setLastDeleted(deleted);
+      undoTimerRef.current = setTimeout(() => setLastDeleted(null), 8000);
+    }
+  };
+
+  const undoDelete = async () => {
+    if (!lastDeleted) return;
+    const restored = lastDeleted;
+    clearTimeout(undoTimerRef.current);
+    setLastDeleted(null);
+    setEvents((prev) => {
+      const updated = [restored, ...prev];
+      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      return updated;
+    });
+    try { await api.restoreEvent(restored.id, orgId); } catch (_) {}
   };
 
   // Duplicate an event for the next year — shifts all dates forward one year
@@ -811,6 +847,35 @@ function ETFPlaybookInner() {
         <TeamPanel orgId={orgId} memberRecord={memberRecord} onClose={() => setShowTeamPanel(false)} />
       )}
 
+      {showTrash && (
+        <TrashPanel
+          orgId={orgId}
+          onClose={() => setShowTrash(false)}
+          onRestored={(restored) => {
+            setEvents((prev) => {
+              const updated = [restored, ...prev.filter((e) => e.id !== restored.id)];
+              localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+              return updated;
+            });
+          }}
+        />
+      )}
+
+      {/* Undo delete toast */}
+      {lastDeleted && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 400, background: "#1E4536", color: "#F7F5EF", borderRadius: 12, padding: "12px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 8px 24px rgba(0,0,0,0.25)", fontSize: 13.5, maxWidth: "90vw" }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            Moved “{lastDeleted.name || "Untitled event"}” to trash
+          </span>
+          <button
+            onClick={undoDelete}
+            style={{ background: "#E0784E", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+          >
+            Undo
+          </button>
+        </div>
+      )}
+
       <Sidebar
         events={events}
         currentEventId={currentEventId}
@@ -828,6 +893,7 @@ function ETFPlaybookInner() {
         onClose={() => setSidebarOpen(false)}
         memberRecord={memberRecord}
         onOpenTeam={() => setShowTeamPanel(true)}
+        onOpenTrash={() => setShowTrash(true)}
       />
       <main style={styles.main} className="etf-main">
         {!currentEvent ? (
@@ -1821,7 +1887,7 @@ ${memberRecord?.name || ""}${orgData.name ? "\n" + orgData.name : ""}`;
   );
 }
 
-function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam }) {
+function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone, onHome, saveStatus, teamMember, orgData, onChangeName, onManageVenues, isOpen, onClose, memberRecord, onOpenTeam, onOpenTrash }) {
   const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
   const [search, setSearch] = React.useState("");
   const visibleEvents = search.trim()
@@ -1965,6 +2031,10 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone
             Org settings
           </button>
           <span style={{ color: "#2E5644" }}>·</span>
+          <button onClick={onOpenTrash} style={{ fontSize: 11, color: "#979A8D", background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+            Trash
+          </button>
+          <span style={{ color: "#2E5644" }}>·</span>
           <button
             onClick={() => {
               localStorage.removeItem("etf_authed");
@@ -1981,6 +2051,74 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone
         </div>
       </div>
     </aside>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
+// TrashPanel — deleted events, restorable for 30 days
+// ————————————————————————————————————————————————————————————————
+function TrashPanel({ orgId, onClose, onRestored }) {
+  const [items, setItems] = useState(null); // null = loading
+  const [restoring, setRestoring] = useState(null);
+
+  useEffect(() => {
+    api.getDeletedEvents(orgId).then(setItems).catch(() => setItems([]));
+  }, [orgId]);
+
+  const restore = async (item) => {
+    setRestoring(item.id);
+    try {
+      await api.restoreEvent(item.id, orgId);
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      onRestored(item);
+    } catch (_) {}
+    setRestoring(null);
+  };
+
+  const daysLeft = (deletedAt) => {
+    if (!deletedAt) return 30;
+    const elapsed = (Date.now() - new Date(deletedAt).getTime()) / 86400000;
+    return Math.max(0, Math.ceil(30 - elapsed));
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 28, maxWidth: 520, width: "100%", maxHeight: "80vh", overflowY: "auto", color: "#1E4536" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600 }}>Trash</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#979A8D" }}>✕</button>
+        </div>
+        <div style={{ fontSize: 12.5, color: "#6C7065", marginBottom: 18 }}>
+          Deleted events stay here for 30 days, then they're gone for good.
+        </div>
+
+        {items === null ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#979A8D", fontSize: 13, fontStyle: "italic" }}>Loading…</div>
+        ) : items.length === 0 ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#979A8D", fontSize: 13 }}>Trash is empty.</div>
+        ) : (
+          items.map((item) => (
+            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#F1EFE6", border: "1px solid #DFDDD0", borderRadius: 10, marginBottom: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {item.name || "Untitled event"}
+                </div>
+                <div style={{ fontSize: 11.5, color: "#979A8D" }}>
+                  {item.firstDay ? fmtDate(item.firstDay) + " · " : ""}{daysLeft(item.deletedAt)} days until permanent deletion
+                </div>
+              </div>
+              <button
+                onClick={() => restore(item)}
+                disabled={restoring === item.id}
+                style={{ padding: "7px 14px", background: "#1E4536", color: "#fff", border: "none", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+              >
+                {restoring === item.id ? "Restoring…" : "Restore"}
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
