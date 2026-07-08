@@ -45,7 +45,15 @@ const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...event, orgId }),
     });
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}));
+      const err = new Error("conflict");
+      err.isConflict = true;
+      err.latest = data.latest;
+      throw err;
+    }
     if (!res.ok) throw new Error("Failed to save event");
+    return res.json().catch(() => ({}));
   },
   async deleteEvent(id, orgId) {
     const qs = orgId ? `?org_id=${encodeURIComponent(orgId)}` : "";
@@ -504,6 +512,7 @@ function ETFPlaybookInner() {
   const [lastDeleted, setLastDeleted] = useState(null);
   const undoTimerRef = React.useRef(null);
   const [showTrash, setShowTrash] = useState(false);
+  const [conflict, setConflict] = useState(null);
   const [tab, setTab] = useState("dashboard");
   const [saveStatus, setSaveStatus] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -622,17 +631,60 @@ function ETFPlaybookInner() {
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       try {
-        await api.saveEvent({ ...updated, createdBy: teamMember }, orgId);
-        // Update local cache so events persist on refresh if API is slow
+        const result = await api.saveEvent({
+          ...updated,
+          createdBy: updated.createdBy || teamMember,
+          editedBy: teamMember,
+          baseUpdatedAt: updated.updatedAt,
+        }, orgId);
+        // Track the server's timestamp so our own next save isn't
+        // mistaken for someone else's conflicting edit
         setEvents((prev) => {
-          const updated2 = prev.map((e) => e.id === updated.id ? updated : e);
+          const updated2 = prev.map((e) =>
+            e.id === updated.id ? { ...updated, updatedAt: result?.updatedAt || e.updatedAt } : e
+          );
           localStorage.setItem("etf_events_cache", JSON.stringify(updated2));
           return updated2;
         });
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus(""), 2000);
-      } catch (_) { setSaveStatus("error"); }
+      } catch (err) {
+        if (err?.isConflict) {
+          setConflict({ eventId: updated.id, latest: err.latest, mine: updated });
+          setSaveStatus("");
+        } else {
+          setSaveStatus("error");
+        }
+      }
     }, 800);
+  };
+
+  // Conflict resolution: someone else saved this event while we were editing
+  const resolveConflictTheirs = () => {
+    if (!conflict) return;
+    setEvents((prev) => {
+      const updated = prev.map((e) => e.id === conflict.eventId ? { ...conflict.latest, orgId } : e);
+      localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+      return updated;
+    });
+    setConflict(null);
+  };
+
+  const resolveConflictMine = async () => {
+    if (!conflict) return;
+    const mine = conflict.mine;
+    setConflict(null);
+    try {
+      // Save without baseUpdatedAt = deliberate overwrite
+      const result = await api.saveEvent({ ...mine, createdBy: mine.createdBy || teamMember, editedBy: teamMember, baseUpdatedAt: undefined }, orgId);
+      setEvents((prev) => {
+        const updated = prev.map((e) => e.id === mine.id ? { ...mine, updatedAt: result?.updatedAt || e.updatedAt } : e);
+        localStorage.setItem("etf_events_cache", JSON.stringify(updated));
+        return updated;
+      });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus(""), 2000);
+    } catch (_) { setSaveStatus("error"); }
   };
 
   const createEvent = async () => {
@@ -859,6 +911,36 @@ function ETFPlaybookInner() {
             });
           }}
         />
+      )}
+
+      {/* Edit conflict — someone else saved while we were editing */}
+      {conflict && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 350, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 28, maxWidth: 440, width: "100%", color: "#1E4536" }}>
+            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 19, fontWeight: 600, marginBottom: 8 }}>
+              ⚠ Someone else saved this event
+            </div>
+            <p style={{ fontSize: 13.5, color: "#6C7065", lineHeight: 1.6, marginBottom: 20 }}>
+              {conflict.latest?.lastEditedBy || "A teammate"} saved changes to
+              {" "}<strong>{conflict.mine?.name || "this event"}</strong>{" "}
+              while you were editing. Pick which version to keep — the other one's changes will be lost.
+            </p>
+            <div style={{ display: "flex", gap: 10, flexDirection: "column" }}>
+              <button
+                onClick={resolveConflictTheirs}
+                style={{ padding: "11px", background: "#1E4536", color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                Use {conflict.latest?.lastEditedBy ? `${conflict.latest.lastEditedBy}'s` : "their"} version (discard my edits)
+              </button>
+              <button
+                onClick={resolveConflictMine}
+                style={{ padding: "11px", background: "transparent", color: "#B04E31", border: "1px solid #E0784E", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                Keep my version (overwrite theirs)
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Undo delete toast */}
@@ -2488,6 +2570,47 @@ function Dashboard({ events, onOpen, onCreate, teamMember, orgData, onEventCreat
         </section>
       )}
 
+      {events.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+          <button
+            onClick={() => {
+              const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+              const rows = [[
+                "Event", "Status", "First Day", "Last Day", "Venues", "Site Selection Org",
+                "Est. Attendance", "Est. Room Nights", "Projected State Share",
+                "Required Local Match", "Projected Fund Value",
+                "Awarded", "Disbursed", "Actual Attendance", "Created By",
+              ]];
+              events.forEach((e) => {
+                const c = calculateTrustFund(e);
+                rows.push([
+                  e.name || "Untitled", e.status || "", e.firstDay || "", e.lastDay || "",
+                  Array.isArray(e.venues) ? e.venues.join("; ") : (e.venue || ""),
+                  e.siteSelectionOrg || "",
+                  Math.round(c.totalAttendance || e.attendeeEst || 0),
+                  Math.round(c.totalRoomNights || e.roomNights || 0),
+                  Math.round(c.stateTaxTotal || 0),
+                  Math.round(c.requiredLocalMatch || 0),
+                  Math.round(c.totalFund > 0 ? c.totalFund : c.quickEstimate),
+                  e.outcome?.awardedAmount || "", e.outcome?.disbursedAmount || "",
+                  e.outcome?.actualAttendance || "", e.createdBy || "",
+                ]);
+              });
+              const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
+              const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `${(orgData?.name || "ETF").replace(/[^a-z0-9]/gi, "-")}-Pipeline-${new Date().toISOString().split("T")[0]}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "transparent", border: "1px solid #DFDDD0", borderRadius: 10, fontSize: 12.5, fontWeight: 600, color: "#6C7065", cursor: "pointer" }}
+          >
+            <Download size={13} /> Export Pipeline CSV
+          </button>
+        </div>
+      )}
+
       <div style={styles.statGrid} className="etf-stats-row">
         <StatCard label="Active Events" value={stats.active} icon={<Target size={16} />} />
         <StatCard label="Total in Pipeline" value={stats.total} icon={<Folder size={16} />} />
@@ -2750,6 +2873,34 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
   }), [orgData]);
   const decision = useMemo(() => evaluateDecision(event, calc, thresholds), [event, calc, thresholds]);
   const [shareCopied, setShareCopied] = useState(false);
+  const [viewers, setViewers] = useState([]);
+
+  // Presence heartbeat: tell the server we're viewing this event and
+  // learn who else has it open right now
+  useEffect(() => {
+    if (!event?.id) return;
+    let cancelled = false;
+    const beat = async () => {
+      try {
+        const res = await fetch("/api/presence", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId: event.id,
+            memberId: localStorage.getItem("etf_member_id") || "anon",
+            memberName: localStorage.getItem("etf_team_member") || "Someone",
+          }),
+        });
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setViewers(Array.isArray(data.others) ? data.others : []);
+        }
+      } catch (_) {}
+    };
+    beat();
+    const interval = setInterval(beat, 30000);
+    return () => { cancelled = true; clearInterval(interval); setViewers([]); };
+  }, [event?.id]);
 
   // Copy a public read-only link, minting the token on first use
   const handleShare = async () => {
@@ -2948,6 +3099,11 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
           placeholder="Name this event..."
           onChange={(e) => update((ev) => ({ ...ev, name: e.target.value }))}
         />
+        {viewers.length > 0 && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: "#FBE4D8", border: "1px solid #E0784E55", borderRadius: 10, fontSize: 12.5, color: "#B04E31", fontWeight: 600, marginBottom: 12 }}>
+            👀 {viewers.join(", ")} {viewers.length === 1 ? "is" : "are"} also viewing this event — careful with simultaneous edits
+          </div>
+        )}
         <div style={styles.eventHeaderMeta}>
           <div style={styles.headerStat}>
             <span style={styles.headerStatLabel}>Projected Fund</span>
