@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
+import { logActivity } from "../activity-lib";
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,7 @@ export async function DELETE(
       UPDATE etf_events SET deleted_at = NOW()
       WHERE id = ${id} AND org_id = ${orgId}
     `;
+    await logActivity(id, orgId, searchParams.get("by") || "Someone", "moved this event to trash").catch(() => {});
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /api/events/[id] error:", error);
@@ -42,7 +44,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = params;
-    const { action, orgId } = await req.json();
+    const { action, orgId, by } = await req.json();
 
     if (!orgId) {
       return NextResponse.json({ error: "orgId required" }, { status: 400 });
@@ -55,6 +57,7 @@ export async function PATCH(
       UPDATE etf_events SET deleted_at = NULL, updated_at = NOW()
       WHERE id = ${id} AND org_id = ${orgId}
     `;
+    await logActivity(id, orgId, by || "Someone", "restored this event from trash").catch(() => {});
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("PATCH /api/events/[id] error:", error);

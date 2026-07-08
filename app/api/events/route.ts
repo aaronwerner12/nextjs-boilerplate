@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
+import { logActivity, summarizeChanges } from "./activity-lib";
 
 export const dynamic = 'force-dynamic';
 
@@ -89,26 +90,25 @@ export async function POST(req: NextRequest) {
 
     await sql`ALTER TABLE etf_events ADD COLUMN IF NOT EXISTS last_edited_by TEXT`.catch(() => {});
 
-    if (baseUpdatedAt) {
-      const existing = await sql`
-        SELECT data, updated_at, last_edited_by, created_by FROM etf_events WHERE id = ${id}
-      `;
-      if (existing.length > 0) {
-        const dbTime = new Date(existing[0].updated_at).getTime();
-        const baseTime = new Date(baseUpdatedAt).getTime();
-        // 2s tolerance absorbs clock jitter between the client's copy
-        // of the timestamp and the DB value
-        if (dbTime - baseTime > 2000) {
-          return NextResponse.json({
-            error: "conflict",
-            latest: {
-              ...existing[0].data,
-              id,
-              updatedAt: existing[0].updated_at,
-              lastEditedBy: existing[0].last_edited_by || existing[0].created_by,
-            },
-          }, { status: 409 });
-        }
+    const existing = await sql`
+      SELECT data, updated_at, last_edited_by, created_by FROM etf_events WHERE id = ${id}
+    `;
+
+    if (baseUpdatedAt && existing.length > 0) {
+      const dbTime = new Date(existing[0].updated_at).getTime();
+      const baseTime = new Date(baseUpdatedAt).getTime();
+      // 2s tolerance absorbs clock jitter between the client's copy
+      // of the timestamp and the DB value
+      if (dbTime - baseTime > 2000) {
+        return NextResponse.json({
+          error: "conflict",
+          latest: {
+            ...existing[0].data,
+            id,
+            updatedAt: existing[0].updated_at,
+            lastEditedBy: existing[0].last_edited_by || existing[0].created_by,
+          },
+        }, { status: 409 });
       }
     }
 
@@ -123,6 +123,17 @@ export async function POST(req: NextRequest) {
             updated_at     = NOW()
       RETURNING updated_at
     `;
+
+    // Record what changed (never blocks the save)
+    try {
+      const member = editedBy || createdBy;
+      if (existing.length === 0) {
+        await logActivity(id, orgId || null, member, "created this event");
+      } else {
+        const summary = summarizeChanges(existing[0].data, data);
+        if (summary) await logActivity(id, orgId || null, member, `updated ${summary}`);
+      }
+    } catch (_) {}
 
     return NextResponse.json({ ok: true, updatedAt: rows[0]?.updated_at });
   } catch (error) {

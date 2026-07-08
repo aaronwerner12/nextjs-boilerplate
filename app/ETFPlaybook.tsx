@@ -56,7 +56,8 @@ const api = {
     return res.json().catch(() => ({}));
   },
   async deleteEvent(id, orgId) {
-    const qs = orgId ? `?org_id=${encodeURIComponent(orgId)}` : "";
+    const by = typeof window !== "undefined" ? localStorage.getItem("etf_team_member") || "" : "";
+    const qs = orgId ? `?org_id=${encodeURIComponent(orgId)}&by=${encodeURIComponent(by)}` : "";
     const res = await fetch(`/api/events/${id}${qs}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Failed to delete event");
   },
@@ -66,12 +67,18 @@ const api = {
     return res.json();
   },
   async restoreEvent(id, orgId) {
+    const by = typeof window !== "undefined" ? localStorage.getItem("etf_team_member") || "" : "";
     const res = await fetch(`/api/events/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "restore", orgId }),
+      body: JSON.stringify({ action: "restore", orgId, by }),
     });
     if (!res.ok) throw new Error("Failed to restore event");
+  },
+  async getActivity(eventId, orgId) {
+    const res = await fetch(`/api/events/${eventId}/activity?org_id=${encodeURIComponent(orgId)}`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
   },
   async getTeam(orgId) {
     const res = await fetch(`/api/team?org_id=${orgId}`, { cache: "no-store" });
@@ -2137,6 +2144,64 @@ function Sidebar({ events, currentEventId, onSelect, onCreate, onDelete, onClone
 }
 
 // ————————————————————————————————————————————————————————————————
+// ActivityHistoryModal — who changed what on an event, and when
+// ————————————————————————————————————————————————————————————————
+function ActivityHistoryModal({ event, orgData, onClose }) {
+  const [rows, setRows] = useState(null); // null = loading
+
+  useEffect(() => {
+    api.getActivity(event.id, orgData?.id || "").then(setRows).catch(() => setRows([]));
+  }, [event.id, orgData?.id]);
+
+  const relative = (d) => {
+    const diff = Date.now() - new Date(d).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 28, maxWidth: 480, width: "100%", maxHeight: "75vh", overflowY: "auto", color: "#1E4536" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 20, fontWeight: 600 }}>History</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#979A8D" }}>✕</button>
+        </div>
+        <div style={{ fontSize: 12.5, color: "#6C7065", marginBottom: 18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {event.name || "Untitled event"}
+        </div>
+
+        {rows === null ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#979A8D", fontSize: 13, fontStyle: "italic" }}>Loading…</div>
+        ) : rows.length === 0 ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#979A8D", fontSize: 13 }}>
+            No history recorded yet — changes made from now on will show up here.
+          </div>
+        ) : (
+          rows.map((row, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: i < rows.length - 1 ? "1px solid #F1EFE6" : "none", fontSize: 13 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 14, background: "#FBE4D8", color: "#B04E31", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                {(row.member_name || "?").charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontWeight: 600 }}>{row.member_name}</span>{" "}
+                <span style={{ color: "#6C7065" }}>{row.summary}</span>
+                <div style={{ fontSize: 11.5, color: "#979A8D", marginTop: 1 }}>{relative(row.created_at)}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ————————————————————————————————————————————————————————————————
 // TrashPanel — deleted events, restorable for 30 days
 // ————————————————————————————————————————————————————————————————
 function TrashPanel({ orgId, onClose, onRestored }) {
@@ -2874,6 +2939,7 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
   const decision = useMemo(() => evaluateDecision(event, calc, thresholds), [event, calc, thresholds]);
   const [shareCopied, setShareCopied] = useState(false);
   const [viewers, setViewers] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Presence heartbeat: tell the server we're viewing this event and
   // learn who else has it open right now
@@ -3144,8 +3210,21 @@ function EventView({ event, update, tab, setTab, orgVenues, orgData }) {
               {shareCopied ? "✓ Link copied" : "⇪ Share read-only link"}
             </button>
           </div>
+          <div style={styles.headerStat}>
+            <button
+              onClick={() => setShowHistory(true)}
+              style={{ padding: "6px 14px", background: "transparent", color: "#6C7065", border: "1px solid #DFDDD0", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+              title="Who changed what, and when"
+            >
+              <Clock size={12} /> History
+            </button>
+          </div>
         </div>
       </header>
+
+      {showHistory && (
+        <ActivityHistoryModal event={event} orgData={orgData} onClose={() => setShowHistory(false)} />
+      )}
 
       <nav style={styles.tabs} className="etf-tabs">
         {TABS.map((t) => (
